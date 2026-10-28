@@ -1,0 +1,56 @@
+[package]
+name = "tauri-app"
+version = "0.1.0"
+description = "Decentralize Money Manager - Local-First P2P Finance Tracker"
+authors = ["Decentralize Money Manager Team"]
+edition = "2021"
+
+[lib]
+name = "tauri_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "macros", "fs"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+uuid = { version = "1", features = ["v4", "v5", "v7", "serde"] }
+unicode-normalization = "0.1"
+rand = "0.8"
+hex = "0.4"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std", "serde"] }
+blake3 = "1"
+chacha20poly1305 = "0.10"
+argon2 = "0.5"
+zeroize = { version = "1", features = ["derive"] }
+hmac = "0.12"
+sha2 = "0.10"
+postcard = { version = "1", features = ["alloc", "use-std"] }
+iroh = { version = "=1.4.1", default-features = false, features = ["tls-ring"] }
+
+
+[dev-dependencies]
+tempfile = "3"
+proptest = "1"
+
+[profile.dev]
+debug = 0
+strip = "debuginfo"
+
+[profile.test]
+debug = 0
+strip = "debuginfo"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true
+

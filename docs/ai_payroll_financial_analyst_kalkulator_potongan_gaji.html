@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Payroll & Financial Analyst — Potongan Telat vs Casual Leave</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 8px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 8px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    input[type="range"] {
+      accent-color: #4f46e5;
+    }
+  </style>
+</head>
+<body class="text-slate-800 antialiased selection:bg-indigo-600 selection:text-white min-h-screen flex flex-col">
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+    <div class="bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 border border-slate-700">
+      <svg class="w-5 h-5 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+      </svg>
+      <span id="toastMessage" class="text-sm font-medium">JSON berhasil disalin ke clipboard!</span>
+    </div>
+  </div>
+
+  <!-- Top Navigation / Header -->
+  <header class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300 shadow-inner">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">HRIS & Payroll Intelligence</span>
+          </div>
+          <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white mt-0.5">AI Payroll & Financial Analyst</h1>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+        <div class="bg-slate-800/80 border border-slate-700 rounded-xl px-3 py-1.5 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="text-slate-300">Simulasi Real-Time:</span>
+          <span class="font-semibold text-white">Telat vs Casual Leave</span>
+        </div>
+        <button id="resetBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 px-3 py-1.5 rounded-xl font-medium transition flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          Reset Default
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex-1">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- LEFT COLUMN: Input Parameters & Formula Mode -->
+      <section class="lg:col-span-4 space-y-6">
+        <!-- Parameter Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 sm:p-6">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
+            <div>
+              <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                </svg>
+                Parameter Input Karyawan
+              </h2>
+              <p class="text-xs text-slate-500 mt-0.5">Sesuaikan gaji dan durasi keterlambatan</p>
+            </div>
+          </div>
+
+          <div class="space-y-5">
+            <!-- 1. Gaji Bulanan Kotor -->
+            <div>
+              <label for="gajiDisplay" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                1. Gaji Bulanan Kotor (`gaji`)
+              </label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 font-semibold text-sm pointer-events-none">Rp</span>
+                <input
+                  type="text"
+                  id="gajiDisplay"
+                  value="10.000.000"
+                  inputmode="numeric"
+                  class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-base font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white transition"
+                />
+              </div>
+              <!-- Quick Presets -->
+              <div class="flex flex-wrap gap-1.5 mt-2">
+                <button type="button" data-gaji="5000000" class="preset-gaji text-xs px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-600 font-medium transition border border-slate-200">5 Jt</button>
+                <button type="button" data-gaji="7043520" class="preset-gaji text-xs px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 font-medium transition border border-amber-200" title="Titik impas tarif per menit Rp667/menit">7,04 Jt (Impas Tarif)</button>
+                <button type="button" data-gaji="10000000" class="preset-gaji text-xs px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-semibold transition border border-indigo-200">10 Jt</button>
+                <button type="button" data-gaji="15000000" class="preset-gaji text-xs px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-600 font-medium transition border border-slate-200">15 Jt</button>
+                <button type="button" data-gaji="25000000" class="preset-gaji text-xs px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-600 font-medium transition border border-slate-200">25 Jt</button>
+              </div>
+            </div>
+
+            <!-- 2. Hari Kerja & 3. Telat Hari -->
+            <div class="grid grid-cols-2 gap-3.5">
+              <div>
+                <label for="hariKerjaInput" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                  2. Hari Kerja / Bln
+                </label>
+                <div class="relative">
+                  <input
+                    type="number"
+                    id="hariKerjaInput"
+                    value="22"
+                    min="1"
+                    max="31"
+                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition"
+                  />
+                  <span class="absolute inset-y-0 right-0 pr-3 flex items-center text-xs text-slate-400 pointer-events-none">hari</span>
+                </div>
+              </div>
+
+              <div>
+                <label for="telatHariInput" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                  3. `telat_hari` <span class="text-rose-600 font-bold">(Min 1)</span>
+                </label>
+                <div class="relative">
+                  <input
+                    type="number"
+                    id="telatHariInput"
+                    value="1"
+                    min="1"
+                    max="31"
+                    class="w-full px-3.5 py-2.5 bg-rose-50/50 border border-rose-300 rounded-xl font-mono text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:bg-white transition"
+                  />
+                  <span class="absolute inset-y-0 right-0 pr-3 flex items-center text-xs text-slate-400 pointer-events-none">hari</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Info Guardrail telat_hari >= 1 -->
+            <div class="bg-amber-50/90 border border-amber-200/80 rounded-xl p-3 flex items-start gap-2.5">
+              <svg class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <p class="text-xs text-amber-900 leading-relaxed">
+                <strong>Aturan Validasi:</strong> <code class="font-mono bg-amber-100 px-1 py-0.5 rounded">telat_hari</code> dikunci minimal <strong>1 hari</strong> (tidak mungkin 0 saat terjadi keterlambatan).
+              </p>
+            </div>
+
+            <!-- 4. Telat Menit + Slider -->
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label for="telatMenitInput" class="block text-xs font-semibold uppercase tracking-wider text-slate-600">
+                  4. Durasi Menit (`telat_menit`)
+                </label>
+                <span id="jamKonversiBadge" class="text-xs font-mono font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
+                  0 jam 30 mnt
+                </span>
+              </div>
+              <div class="flex items-center gap-3">
+                <input
+                  type="range"
+                  id="telatMenitSlider"
+                  min="1"
+                  max="480"
+                  value="30"
+                  class="w-full h-2 bg-slate-200 rounded-lg cursor-pointer"
+                />
+                <div class="relative w-28 shrink-0">
+                  <input
+                    type="number"
+                    id="telatMenitInput"
+                    value="30"
+                    min="1"
+                    max="480"
+                    class="w-full pl-3 pr-9 py-2 bg-slate-50 border border-slate-300 rounded-xl font-mono text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"
+                  />
+                  <span class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-xs text-slate-400 pointer-events-none">mnt</span>
+                </div>
+              </div>
+              <div class="flex justify-between text-[11px] text-slate-400 mt-1 font-mono">
+                <span>1 mnt</span>
+                <span>60 mnt</span>
+                <span>120 mnt</span>
+                <span>240 mnt</span>
+                <span>480 mnt (8j)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mode Perhitungan Rumus Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 sm:p-6">
+          <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2 mb-1">
+            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+            </svg>
+            Skema Interpretasi Rumus `telat_hari`
+          </h3>
+          <p class="text-xs text-slate-500 mb-3.5">Pilih bagaimana <code class="font-mono">telat_hari = 1</code> dihitung pada rumus:</p>
+
+          <div class="space-y-2.5" id="modeSelectorGroup">
+            <!-- Mode 1 -->
+            <label class="block cursor-pointer">
+              <input type="radio" name="calcMode" value="frekuensi" class="peer sr-only" checked />
+              <div class="p-3.5 rounded-xl border border-slate-200 peer-checked:border-indigo-600 peer-checked:bg-indigo-50/60 hover:bg-slate-50 transition">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-slate-900">Mode 1: Frekuensi Hari Telat (Realistis HR)</span>
+                  <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-indigo-100 text-indigo-700">Rekomendasi</span>
+                </div>
+                <p class="text-[11px] text-slate-600 mt-1 leading-relaxed">
+                  <code class="font-mono">telat_hari</code> memicu denda dasar Rp20.000/hari, sedangkan akumulasi menit tetap sebesar <code class="font-mono">telat_menit</code>.
+                </p>
+              </div>
+            </label>
+
+            <!-- Mode 2 -->
+            <label class="block cursor-pointer">
+              <input type="radio" name="calcMode" value="tertulis" class="peer sr-only" />
+              <div class="p-3.5 rounded-xl border border-slate-200 peer-checked:border-indigo-600 peer-checked:bg-indigo-50/60 hover:bg-slate-50 transition">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-slate-900">Mode 2: Rumus Eksplisit (`telat_hari * 480`)</span>
+                </div>
+                <p class="text-[11px] text-slate-600 mt-1 leading-relaxed">
+                  Menghitung <code class="font-mono">total_menit = (telat_hari * 480) + telat_menit</code> secara setara untuk Telat &amp; Casual Leave.
+                </p>
+              </div>
+            </label>
+
+            <!-- Mode 3 -->
+            <label class="block cursor-pointer">
+              <input type="radio" name="calcMode" value="kode_asli" class="peer sr-only" />
+              <div class="p-3.5 rounded-xl border border-slate-200 peer-checked:border-indigo-600 peer-checked:bg-indigo-50/60 hover:bg-slate-50 transition">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-slate-900">Mode 3: Sesuai Kode Fungsi JS Asli</span>
+                </div>
+                <p class="text-[11px] text-slate-600 mt-1 leading-relaxed">
+                  Telat memakai <code class="font-mono">(inputHari * 480 + m)</code>, sedangkan grafik Casual Leave memakai <code class="font-mono">(m / 480)</code>.
+                </p>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Metrik Dasar Gaji Card -->
+        <div class="bg-slate-900 text-white rounded-2xl p-5 shadow-sm border border-slate-800">
+          <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Indeks Tarif Gaji Karyawan</h3>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-slate-800/90 rounded-xl p-3 border border-slate-700/80">
+              <span class="text-[11px] text-slate-400 block">Gaji per Hari</span>
+              <span id="statGajiPerHari" class="font-mono text-sm font-bold text-white mt-0.5 block">Rp454.545</span>
+              <span class="text-[10px] text-slate-400">Gaji / Hari Kerja</span>
+            </div>
+            <div class="bg-slate-800/90 rounded-xl p-3 border border-slate-700/80">
+              <span class="text-[11px] text-slate-400 block">Tarif Casual / Menit</span>
+              <span id="statTarifPerMenit" class="font-mono text-sm font-bold text-emerald-400 mt-0.5 block">Rp947 / mnt</span>
+              <span class="text-[10px] text-slate-400">vs Telat Rp667 / mnt</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT COLUMN: Analytics Cards, Chart, Table, and JSON -->
+      <section class="lg:col-span-8 space-y-6">
+
+        <!-- Top 3 Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Card 1: Potongan Telat -->
+          <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex flex-col justify-between relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-20 h-20 bg-rose-500/5 rounded-bl-full pointer-events-none"></div>
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-rose-600 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200/60">Opsi 1: Late Penalty</span>
+                <span id="badgeWinnerTelat" class="hidden text-[11px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">Hemat!</span>
+              </div>
+              <h3 class="text-sm font-medium text-slate-500 mt-3">Total Potongan Telat</h3>
+              <p id="cardPotonganTelat" class="text-2xl sm:text-3xl font-extrabold font-mono text-slate-900 mt-1">Rp40.010</p>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 space-y-1">
+              <div class="flex justify-between">
+                <span>Denda Harian:</span>
+                <span id="detailDendaHari" class="font-mono font-medium text-slate-700">1 x Rp20.000</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Denda Menit:</span>
+                <span id="detailDendaMenit" class="font-mono font-medium text-slate-700">30 mnt x Rp667</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Potongan Casual Leave -->
+          <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm flex flex-col justify-between relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-20 h-20 bg-sky-500/5 rounded-bl-full pointer-events-none"></div>
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-sky-600 bg-sky-50 px-2.5 py-1 rounded-lg border border-sky-200/60">Opsi 2: Casual Leave</span>
+                <span id="badgeWinnerCasual" class="hidden text-[11px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">Hemat!</span>
+              </div>
+              <h3 class="text-sm font-medium text-slate-500 mt-3">Total Potongan Casual Leave</h3>
+              <p id="cardPotonganCasual" class="text-2xl sm:text-3xl font-extrabold font-mono text-slate-900 mt-1">Rp28.409</p>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 space-y-1">
+              <div class="flex justify-between">
+                <span>Proporsi Jam Kerja:</span>
+                <span id="detailProporsiCasual" class="font-mono font-medium text-slate-700">30 / 480 mnt</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Basis Gaji Harian:</span>
+                <span id="detailBasisGajiHarian" class="font-mono font-medium text-slate-700">Rp454.545</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Rekomendasi AI Analyst -->
+          <div id="cardRekomendasiBox" class="rounded-2xl p-5 border shadow-sm flex flex-col justify-between bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-emerald-500">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-wider bg-white/20 text-white px-2.5 py-1 rounded-lg backdrop-blur-sm">Keputusan Terbaik</span>
+                <svg class="w-5 h-5 text-emerald-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <h3 id="cardRekomendasiTitle" class="text-lg sm:text-xl font-extrabold mt-3 leading-snug">Lebih baik Casual Leave</h3>
+              <div class="mt-2 inline-flex items-baseline gap-1.5 bg-black/20 px-3 py-1 rounded-xl">
+                <span class="text-xs text-emerald-100">Hemat:</span>
+                <span id="cardSelisih" class="font-mono text-base font-bold text-white">Rp11.601</span>
+              </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-white/15 text-xs text-emerald-50">
+              <p id="cardBreakEvenInfo" class="leading-relaxed">
+                Titik impas (break-even) berada pada <strong>71,4 menit</strong>.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive Line Chart Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 sm:p-6">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-4 mb-5">
+            <div>
+              <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+                Kurva Perbandingan Potongan Telat vs Casual Leave
+              </h2>
+              <p id="chartSubtitle" class="text-xs text-slate-500 mt-0.5">
+                Simulasi kurva potongan dari 10 menit s.d 120 menit (interval 10 menit)
+              </p>
+            </div>
+
+            <!-- Rentang Menit Selector -->
+            <div class="flex items-center gap-2 self-start sm:self-auto">
+              <label for="chartMaxMinutes" class="text-xs font-medium text-slate-500">Rentang Grafik:</label>
+              <select id="chartMaxMinutes" class="text-xs font-semibold bg-slate-100 border border-slate-200 rounded-xl px-3 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="120" selected>10 – 120 Menit (Default)</option>
+                <option value="240">10 – 240 Menit (4 Jam)</option>
+                <option value="480">10 – 480 Menit (8 Jam / 1 Hari)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Chart Container -->
+          <div class="relative w-full h-72 sm:h-80">
+            <canvas id="comparisonChart"></canvas>
+          </div>
+
+          <!-- Insight Banner below Chart -->
+          <div class="mt-4 bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-600">
+            <div class="flex items-start sm:items-center gap-2.5">
+              <span class="w-2 h-2 rounded-full bg-indigo-500 shrink-0 mt-1 sm:mt-0"></span>
+              <span id="insightBannerText">
+                Pada durasi <strong>30 menit</strong>, potongan <strong>Casual Leave</strong> lebih murah Rp11.601 dibandingkan Potongan Telat.
+              </span>
+            </div>
+            <span id="formulaActiveBadge" class="font-mono text-[11px] bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-slate-700 shrink-0">
+              Mode 1 Aktif
+            </span>
+          </div>
+        </div>
+
+        <!-- Tabs: Table Simulation & JSON Output -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+          <div class="border-b border-slate-200 px-5 pt-4 flex items-center justify-between flex-wrap gap-2 bg-slate-50/60">
+            <div class="flex gap-2">
+              <button type="button" id="tabBtnTable" class="px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 border-indigo-600 text-indigo-600 transition">
+                Tabel Simulasi Kurva (10–120 Menit)
+              </button>
+              <button type="button" id="tabBtnJson" class="px-4 py-2.5 text-xs sm:text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition">
+                Output JSON &amp; Kode JS (`generatePerbandinganData`)
+              </button>
+            </div>
+
+            <button
+              type="button"
+              id="copyJsonBtn"
+              class="mb-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 rounded-xl shadow-sm transition flex items-center gap-1.5"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+              </svg>
+              Salin JSON
+            </button>
+          </div>
+
+          <!-- Panel 1: Simulation Table -->
+          <div id="panelTable" class="p-5 overflow-x-auto max-h-96">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500 bg-slate-50">
+                  <th class="py-3 px-3 rounded-tl-lg">Durasi Menit</th>
+                  <th class="py-3 px-3">Potongan Telat</th>
+                  <th class="py-3 px-3">Potongan Casual Leave</th>
+                  <th class="py-3 px-3">Selisih Nominal</th>
+                  <th class="py-3 px-3 rounded-tr-lg">Opsi Lebih Hemat</th>
+                </tr>
+              </thead>
+              <tbody id="simulationTableBody" class="divide-y divide-slate-100 text-xs sm:text-sm font-mono">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Panel 2: JSON Output -->
+          <div id="panelJson" class="hidden p-5 bg-slate-950 text-slate-100">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-mono text-slate-400">// Return value dari generatePerbandinganData()</span>
+              <span class="text-[11px] font-mono text-emerald-400">Format: JSON Ready for Line Chart Widget</span>
+            </div>
+            <pre id="jsonOutputPre" class="font-mono text-xs leading-relaxed overflow-x-auto max-h-96 p-4 bg-slate-900 rounded-xl border border-slate-800 text-emerald-300"></pre>
+          </div>
+        </div>
+
+      </section>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-xs text-slate-400 border-t border-slate-200/70 mt-8">
+    AI Payroll &amp; Financial Analyst &bull; Kalkulasi Presisi Potongan Keterlambatan vs Casual Leave (`telat_hari >= 1`)
+  </footer>
+
+  <!-- Application Script -->
+  <script>
+    // --- Helper Formatters ---
+    const formatRupiah = (number) => {
+      return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        maximumFractionDigits: 0
+      }).format(Math.round(number));
+    };
+
+    const formatThousand = (number) => {
+      return new Intl.NumberFormat('id-ID').format(Math.round(number));
+    };
+
+    // --- Core Payroll Calculation Function ---
+    function generatePerbandinganData({
+      gaji = 10000000,
+      hariKerja = 22,
+      inputHari = 1,
+      inputMenit = 30,
+      mode = 'frekuensi',
+      maxChartMinutes = 120
+    }) {
+      // Pastikan inputHari minimal 1 (tidak mungkin 0)
+      const validHari = Math.max(1, Number(inputHari) || 1);
+      const validHariKerja = Math.max(1, Number(hariKerja) || 22);
+      const validMenit = Math.max(1, Number(inputMenit) || 30);
+
+      const gajiPerHari = gaji / validHariKerja;
+      const tarifCasualPerMenit = gajiPerHari / 480;
+
+      let totalMenitTelatAktual = 0;
+      let totalMenitCasualAktual = 0;
+
+      if (mode === 'frekuensi') {
+        // Mode 1: telat_hari adalah frekuensi hari terjadinya telat (penalti Rp20.000/hari), menit adalah durasi keterlambatan
+        totalMenitTelatAktual = validMenit;
+        totalMenitCasualAktual = validMenit;
+      } else if (mode === 'tertulis') {
+        // Mode 2: (telat_hari * 480) + telat_menit untuk keduanya
+        totalMenitTelatAktual = (validHari * 480) + validMenit;
+        totalMenitCasualAktual = (validHari * 480) + validMenit;
+      } else {
+        // Mode 3: Sesuai kode fungsi asli di prompt
+        totalMenitTelatAktual = (validHari * 480) + validMenit;
+        totalMenitCasualAktual = (validHari * 480) + validMenit;
+      }
+
+      const potonganTelatAktual = (validHari * 20000) + (totalMenitTelatAktual * 667);
+      const potonganCasualAktual = (totalMenitCasualAktual / 480) * gajiPerHari;
+
+      const selisih = Math.abs(potonganTelatAktual - potonganCasualAktual);
+      const rekomendasi = potonganTelatAktual < potonganCasualAktual
+        ? "Lebih baik Telat"
+        : (potonganTelatAktual > potonganCasualAktual ? "Lebih baik Casual Leave" : "Biaya Sama (Impas)");
+
+      // Generate data kurva untuk chart
+      const chartLabels = [];
+      const seriesTelat = [];
+      const seriesCasual = [];
+      const step = maxChartMinutes > 240 ? 20 : 10;
+
+      for (let m = 10; m <= maxChartMinutes; m += step) {
+        chartLabels.push(`${m} Menit`);
+        let t = 0;
+        let c = 0;
+
+        if (mode === 'frekuensi') {
+          t = (validHari * 20000) + (m * 667);
+          c = (m / 480) * gajiPerHari;
+        } else if (mode === 'tertulis') {
+          t = (validHari * 20000) + (((validHari * 480) + m) * 667);
+          c = (((validHari * 480) + m) / 480) * gajiPerHari;
+        } else {
+          // Mode 3: Sesuai kode asli di prompt
+          t = (validHari * 20000) + (((validHari * 480) + m) * 667);
+          c = (m / 480) * gajiPerHari;
+        }
+
+        seriesTelat.push(Math.round(t));
+        seriesCasual.push(Math.round(c));
+      }
+
+      // Hitung Break-Even Point (menit m di mana Potongan Telat == Potongan Casual Leave)
+      // Pada Mode 1: (validHari * 20000) + 667 * m = tarifCasualPerMenit * m
+      // m = (validHari * 20000) / (tarifCasualPerMenit - 667)
+      let breakEvenMinutes = null;
+      if (mode === 'frekuensi') {
+        const diffRate = tarifCasualPerMenit - 667;
+        if (diffRate > 0) {
+          breakEvenMinutes = (validHari * 20000) / diffRate;
+        }
+      } else if (mode === 'tertulis') {
+        const diffRate = tarifCasualPerMenit - 667;
+        if (diffRate > 0) {
+          // (validHari * 20000) + ((480*validHari + m) * 667) = ((480*validHari + m) * tarifCasualPerMenit)
+          breakEvenMinutes = ((validHari * 20000) / diffRate) - (validHari * 480);
+        }
+      } else {
+        const diffRate = tarifCasualPerMenit - 667;
+        if (diffRate > 0) {
+          breakEvenMinutes = ((validHari * 20000) + (validHari * 480 * 667)) / diffRate;
+        }
+      }
+
+      return {
+        meta: {
+          gaji,
+          hariKerja: validHariKerja,
+          telatHari: validHari,
+          telatMenit: validMenit,
+          gajiPerHari: Math.round(gajiPerHari),
+          tarifCasualPerMenit: Number(tarifCasualPerMenit.toFixed(2)),
+          totalMenitTelatAktual,
+          totalMenitCasualAktual,
+          breakEvenMinutes
+        },
+        aktual: {
+          potonganTelat: Math.round(potonganTelatAktual),
+          potonganCasual: Math.round(potonganCasualAktual),
+          rekomendasi,
+          selisih: Math.round(selisih)
+        },
+        chartData: {
+          labels: chartLabels,
+          series: [
+            { name: "Potongan Telat", values: seriesTelat },
+            { name: "Potongan Casual Leave", values: seriesCasual }
+          ]
+        }
+      };
+    }
+
+    // --- DOM References ---
+    const gajiDisplay = document.getElementById('gajiDisplay');
+    const hariKerjaInput = document.getElementById('hariKerjaInput');
+    const telatHariInput = document.getElementById('telatHariInput');
+    const telatMenitSlider = document.getElementById('telatMenitSlider');
+    const telatMenitInput = document.getElementById('telatMenitInput');
+    const jamKonversiBadge = document.getElementById('jamKonversiBadge');
+    const chartMaxMinutesSelect = document.getElementById('chartMaxMinutes');
+    const resetBtn = document.getElementById('resetBtn');
+
+    const statGajiPerHari = document.getElementById('statGajiPerHari');
+    const statTarifPerMenit = document.getElementById('statTarifPerMenit');
+
+    const cardPotonganTelat = document.getElementById('cardPotonganTelat');
+    const cardPotonganCasual = document.getElementById('cardPotonganCasual');
+    const detailDendaHari = document.getElementById('detailDendaHari');
+    const detailDendaMenit = document.getElementById('detailDendaMenit');
+    const detailProporsiCasual = document.getElementById('detailProporsiCasual');
+    const detailBasisGajiHarian = document.getElementById('detailBasisGajiHarian');
+    const badgeWinnerTelat = document.getElementById('badgeWinnerTelat');
+    const badgeWinnerCasual = document.getElementById('badgeWinnerCasual');
+
+    const cardRekomendasiBox = document.getElementById('cardRekomendasiBox');
+    const cardRekomendasiTitle = document.getElementById('cardRekomendasiTitle');
+    const cardSelisih = document.getElementById('cardSelisih');
+    const cardBreakEvenInfo = document.getElementById('cardBreakEvenInfo');
+
+    const insightBannerText = document.getElementById('insightBannerText');
+    const formulaActiveBadge = document.getElementById('formulaActiveBadge');
+    const chartSubtitle = document.getElementById('chartSubtitle');
+
+    const simulationTableBody = document.getElementById('simulationTableBody');
+    const jsonOutputPre = document.getElementById('jsonOutputPre');
+
+    const tabBtnTable = document.getElementById('tabBtnTable');
+    const tabBtnJson = document.getElementById('tabBtnJson');
+    const panelTable = document.getElementById('panelTable');
+    const panelJson = document.getElementById('panelJson');
+    const copyJsonBtn = document.getElementById('copyJsonBtn');
+
+    let comparisonChartInstance = null;
+    let latestJsonData = {};
+
+    // --- State Management ---
+    function getRawGaji() {
+      const digits = gajiDisplay.value.replace(/[^\d]/g, '');
+      return Number(digits) || 0;
+    }
+
+    function getSelectedMode() {
+      const checked = document.querySelector('input[name="calcMode"]:checked');
+      return checked ? checked.value : 'frekuensi';
+    }
+
+    function formatMinutesToHours(min) {
+      const h = Math.floor(min / 60);
+      const m = min % 60;
+      return `${h} jam ${m} mnt`;
+    }
+
+    // --- Chart Initialization & Update ---
+    function renderOrUpdateChart(result) {
+      const ctx = document.getElementById('comparisonChart').getContext('2d');
+      const labels = result.chartData.labels;
+      const dataTelat = result.chartData.series[0].values;
+      const dataCasual = result.chartData.series[1].values;
+
+      if (comparisonChartInstance) {
+        comparisonChartInstance.data.labels = labels;
+        comparisonChartInstance.data.datasets[0].data = dataTelat;
+        comparisonChartInstance.data.datasets[1].data = dataCasual;
+        comparisonChartInstance.update();
+        return;
+      }
+
+      comparisonChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Potongan Telat (Late Penalty)',
+              data: dataTelat,
+              borderColor: '#e11d48', // rose-600
+              backgroundColor: 'rgba(225, 29, 72, 0.08)',
+              borderWidth: 3,
+              pointBackgroundColor: '#e11d48',
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 2,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+              tension: 0.25,
+              fill: true
+            },
+            {
+              label: 'Potongan Casual Leave',
+              data: dataCasual,
+              borderColor: '#0284c7', // sky-600
+              backgroundColor: 'rgba(2, 132, 199, 0.08)',
+              borderWidth: 3,
+              pointBackgroundColor: '#0284c7',
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 2,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+              tension: 0.25,
+              fill: true
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false
+          },
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: {
+                usePointStyle: true,
+                boxWidth: 8,
+                font: {
+                  family: "'Inter', sans-serif",
+                  size: 12,
+                  weight: '600'
+                }
+              }
+            },
+            tooltip: {
+              backgroundColor: '#0f172a',
+              titleFont: { family: "'Inter', sans-serif", size: 13, weight: 'bold' },
+              bodyFont: { family: "'JetBrains Mono', monospace", size: 12 },
+              padding: 12,
+              cornerRadius: 10,
+              callbacks: {
+                label: function(context) {
+                  const val = context.parsed.y;
+                  return `${context.dataset.label}: ${formatRupiah(val)}`;
+                },
+                afterBody: function(context) {
+                  if (context.length === 2) {
+                    const t = context[0].parsed.y;
+                    const c = context[1].parsed.y;
+                    const diff = Math.abs(t - c);
+                    const winner = t < c ? 'Telat lebih hemat' : 'Casual Leave lebih hemat';
+                    return `\nSelisih: ${formatRupiah(diff)} (${winner})`;
+                  }
+                  return '';
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: {
+                display: false
+              },
+              ticks: {
+                font: {
+                  family: "'Inter', sans-serif",
+                  size: 11
+                }
+              }
+            },
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: '#f1f5f9'
+              },
+              ticks: {
+                font: {
+                  family: "'JetBrains Mono', monospace",
+                  size: 11
+                },
+                callback: function(value) {
+                  if (value >= 1000000) {
+                    return 'Rp' + (value / 1000000).toFixed(1) + 'Jt';
+                  }
+                  if (value >= 1000) {
+                    return 'Rp' + (value / 1000).toFixed(0) + 'rb';
+                  }
+                  return 'Rp' + value;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // --- Main UI Update Function ---
+    function updateAllCalculations() {
+      const gaji = getRawGaji();
+      const hariKerja = Math.max(1, Number(hariKerjaInput.value) || 22);
+      // Enforce telat_hari >= 1
+      let inputHari = Number(telatHariInput.value);
+      if (isNaN(inputHari) || inputHari < 1) {
+        inputHari = 1;
+      }
+
+      const inputMenit = Math.max(1, Math.min(480, Number(telatMenitInput.value) || 30));
+      const mode = getSelectedMode();
+      const maxChartMinutes = Number(chartMaxMinutesSelect.value) || 120;
+
+      jamKonversiBadge.textContent = formatMinutesToHours(inputMenit);
+
+      const result = generatePerbandinganData({
+        gaji,
+        hariKerja,
+        inputHari,
+        inputMenit,
+        mode,
+        maxChartMinutes
+      });
+
+      // Simpan JSON murni sesuai kontrak fungsi
+      latestJsonData = {
+        aktual: result.aktual,
+        chartData: result.chartData
+      };
+
+      // Update Indeks Tarif Gaji
+      statGajiPerHari.textContent = formatRupiah(result.meta.gajiPerHari);
+      statTarifPerMenit.textContent = `${formatRupiah(result.meta.tarifCasualPerMenit)} / mnt`;
+
+      // Update Card 1 & Card 2
+      cardPotonganTelat.textContent = formatRupiah(result.aktual.potonganTelat);
+      cardPotonganCasual.textContent = formatRupiah(result.aktual.potonganCasual);
+
+      detailDendaHari.textContent = `${result.meta.telatHari} hr x Rp20.000`;
+      detailDendaMenit.textContent = `${result.meta.totalMenitTelatAktual} mnt x Rp667`;
+      detailProporsiCasual.textContent = `${result.meta.totalMenitCasualAktual} / 480 mnt`;
+      detailBasisGajiHarian.textContent = formatRupiah(result.meta.gajiPerHari);
+
+      // Update Winner Badges & Card 3 Styling
+      const isTelatCheaper = result.aktual.potonganTelat < result.aktual.potonganCasual;
+      badgeWinnerTelat.classList.toggle('hidden', !isTelatCheaper);
+      badgeWinnerCasual.classList.toggle('hidden', isTelatCheaper);
+
+      cardRekomendasiTitle.textContent = result.aktual.rekomendasi;
+      cardSelisih.textContent = formatRupiah(result.aktual.selisih);
+
+      if (isTelatCheaper) {
+        cardRekomendasiBox.className = "rounded-2xl p-5 border shadow-sm flex flex-col justify-between bg-gradient-to-br from-indigo-600 to-violet-700 text-white border-indigo-500";
+      } else {
+        cardRekomendasiBox.className = "rounded-2xl p-5 border shadow-sm flex flex-col justify-between bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-emerald-500";
+      }
+
+      // Break-Even Point Text
+      const bep = result.meta.breakEvenMinutes;
+      if (bep !== null && bep > 0) {
+        cardBreakEvenInfo.innerHTML = `Titik impas (<em>break-even</em>): <strong>${bep.toFixed(1)} menit</strong>. Di bawah ${Math.floor(bep)} mnt pilih <strong>Casual Leave</strong>, di atasnya pilih <strong>Telat</strong>.`;
+      } else if (bep !== null && bep <= 0) {
+        cardBreakEvenInfo.innerHTML = `Pada mode &amp; gaji ini, <strong>Potongan Telat</strong> selalu lebih hemat sejak menit pertama.`;
+      } else {
+        cardBreakEvenInfo.innerHTML = `Karena tarif Casual Leave (${formatRupiah(result.meta.tarifCasualPerMenit)}/mnt) &le; Rp667/mnt, <strong>Casual Leave</strong> selalu lebih hemat.`;
+      }
+
+      // Update Banner & Mode Badge
+      const modeNames = {
+        frekuensi: 'Mode 1: Frekuensi Hari Telat',
+        tertulis: 'Mode 2: Akumulasi (telat_hari * 480)',
+        kode_asli: 'Mode 3: Kode Fungsi Asli'
+      };
+      formulaActiveBadge.textContent = modeNames[mode];
+      chartSubtitle.textContent = `Simulasi kurva potongan dari 10 menit s.d ${maxChartMinutes} menit (telat_hari = ${result.meta.telatHari})`;
+
+      insightBannerText.innerHTML = `Pada input aktual <strong>${result.meta.telatHari} hari</strong> &amp; <strong>${result.meta.telatMenit} menit</strong>, opsi <strong>${result.aktual.rekomendasi.replace('Lebih baik ', '')}</strong> menghemat <strong>${formatRupiah(result.aktual.selisih)}</strong>.`;
+
+      // Update Chart
+      renderOrUpdateChart(result);
+
+      // Update Table
+      simulationTableBody.innerHTML = '';
+      result.chartData.labels.forEach((label, idx) => {
+        const valTelat = result.chartData.series[0].values[idx];
+        const valCasual = result.chartData.series[1].values[idx];
+        const diff = Math.abs(valTelat - valCasual);
+        const telatWins = valTelat < valCasual;
+
+        const rowMinuteNum = parseInt(label.replace(/[^\d]/g, ''), 10);
+        const isCurrentUserRow = Math.abs(rowMinuteNum - result.meta.telatMenit) < 5;
+
+        const tr = document.createElement('tr');
+        tr.className = isCurrentUserRow
+          ? 'bg-indigo-50/80 font-semibold transition'
+          : 'hover:bg-slate-50 transition';
+
+        tr.innerHTML = `
+          <td class="py-2.5 px-3 text-slate-900 flex items-center gap-2">
+            <span>${label}</span>
+            ${isCurrentUserRow ? '<span class="text-[10px] font-sans font-bold uppercase px-1.5 py-0.5 rounded bg-indigo-600 text-white">Input Anda</span>' : ''}
+          </td>
+          <td class="py-2.5 px-3 ${telatWins ? 'text-emerald-700 font-bold' : 'text-rose-600'}">${formatRupiah(valTelat)}</td>
+          <td class="py-2.5 px-3 ${!telatWins ? 'text-emerald-700 font-bold' : 'text-sky-700'}">${formatRupiah(valCasual)}</td>
+          <td class="py-2.5 px-3 text-slate-600">${formatRupiah(diff)}</td>
+          <td class="py-2.5 px-3 font-sans">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+              telatWins
+                ? 'bg-indigo-100 text-indigo-800'
+                : 'bg-emerald-100 text-emerald-800'
+            }">
+              ${telatWins ? 'Pilih Telat' : 'Pilih Casual Leave'}
+            </span>
+          </td>
+        `;
+        simulationTableBody.appendChild(tr);
+      });
+
+      // Update JSON Output
+      jsonOutputPre.textContent = JSON.stringify(latestJsonData, null, 2);
+    }
+
+    // --- Event Listeners ---
+    gajiDisplay.addEventListener('input', (e) => {
+      const raw = getRawGaji();
+      e.target.value = raw > 0 ? formatThousand(raw) : '';
+      updateAllCalculations();
+    });
+
+    document.querySelectorAll('.preset-gaji').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const presetVal = Number(btn.getAttribute('data-gaji'));
+        gajiDisplay.value = formatThousand(presetVal);
+        updateAllCalculations();
+      });
+    });
+
+    hariKerjaInput.addEventListener('input', updateAllCalculations);
+
+    telatHariInput.addEventListener('input', () => {
+      if (telatHariInput.value !== '' && Number(telatHariInput.value) < 1) {
+        telatHariInput.value = 1;
+      }
+      updateAllCalculations();
+    });
+
+    telatHariInput.addEventListener('blur', () => {
+      if (!telatHariInput.value || Number(telatHariInput.value) < 1) {
+        telatHariInput.value = 1;
+        updateAllCalculations();
+      }
+    });
+
+    telatMenitSlider.addEventListener('input', (e) => {
+      telatMenitInput.value = e.target.value;
+      updateAllCalculations();
+    });
+
+    telatMenitInput.addEventListener('input', (e) => {
+      const val = Math.max(1, Math.min(480, Number(e.target.value) || 1));
+      telatMenitSlider.value = val;
+      updateAllCalculations();
+    });
+
+    document.querySelectorAll('input[name="calcMode"]').forEach((radio) => {
+      radio.addEventListener('change', updateAllCalculations);
+    });
+
+    chartMaxMinutesSelect.addEventListener('change', updateAllCalculations);
+
+    // Tabs Switching
+    tabBtnTable.addEventListener('click', () => {
+      panelTable.classList.remove('hidden');
+      panelJson.classList.add('hidden');
+      tabBtnTable.className = 'px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 border-indigo-600 text-indigo-600 transition';
+      tabBtnJson.className = 'px-4 py-2.5 text-xs sm:text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition';
+    });
+
+    tabBtnJson.addEventListener('click', () => {
+      panelJson.classList.remove('hidden');
+      panelTable.classList.add('hidden');
+      tabBtnJson.className = 'px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 border-indigo-600 text-indigo-600 transition';
+      tabBtnTable.className = 'px-4 py-2.5 text-xs sm:text-sm font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition';
+    });
+
+    // Copy JSON using execCommand fallback for iframe compatibility
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      const toastMessage = document.getElementById('toastMessage');
+      toastMessage.textContent = message;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 2600);
+    }
+
+    copyJsonBtn.addEventListener('click', () => {
+      const jsonText = JSON.stringify(latestJsonData, null, 2);
+      const textArea = document.createElement('textarea');
+      textArea.value = jsonText;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        showToast('Output JSON berhasil disalin ke clipboard!');
+      } catch (err) {
+        showToast('Gagal menyalin JSON.');
+      }
+      document.body.removeChild(textArea);
+    });
+
+    // Reset Default Button
+    resetBtn.addEventListener('click', () => {
+      gajiDisplay.value = formatThousand(10000000);
+      hariKerjaInput.value = 22;
+      telatHariInput.value = 1;
+      telatMenitSlider.value = 30;
+      telatMenitInput.value = 30;
+      chartMaxMinutesSelect.value = '120';
+      document.querySelector('input[name="calcMode"][value="frekuensi"]').checked = true;
+      updateAllCalculations();
+      showToast('Parameter dikembalikan ke nilai default.');
+    });
+
+    // Init on window load
+    window.onload = function () {
+      updateAllCalculations();
+    };
+  </script>
+</body>
+</html>

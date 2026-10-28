@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-background: #ffffff;
+    --color-card: #fafafa;
+    --color-border: #e4e4e7;
+    --color-foreground: #09090b;
+    --color-primary: #15803d;
+    --color-primary-foreground: #ffffff;
+    --color-muted: #f4f4f5;
+    --color-muted-foreground: #52525b;
+  }
+
+  .dark {
+    --color-background: #09090b;
+    --color-card: #121215;
+    --color-border: #27272a;
+    --color-foreground: #f4f4f5;
+    --color-primary: #10b981;
+    --color-primary-foreground: #022c22;
+    --color-muted: #232325;
+    --color-muted-foreground: #d4d4d5;
+  }
+
+  /* Global Zero-Shadow & Zero-Ring Guard (Section 8.1) */
+  *,
+  ::before,
+  ::after {
+    --tw-shadow: 0 0 #0000 !important;
+    --tw-shadow-colored: 0 0 #0000 !important;
+    --tw-ring-shadow: 0 0 #0000 !important;
+    --tw-ring-offset-shadow: 0 0 #0000 !important;
+    box-shadow: none !important;
+    border-color: var(--color-border);
+  }
+
+  html {
+    font-family: "Geist", "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+}
+
+@theme {
+  --color-background: var(--color-background);
+  --color-card: var(--color-card);
+  --color-border: var(--color-border);
+  --color-foreground: var(--color-foreground);
+  --color-primary: var(--color-primary);
+  --color-primary-foreground: var(--color-primary-foreground);
+  --color-muted: var(--color-muted);
+  --color-muted-foreground: var(--color-muted-foreground);
+  --font-sans: "Geist", "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+/* Reusable Enterprise Emerald Tabular Grid Helper (Section 8.2) */
+.tabular-grid-container {
+  background-color: var(--color-border);
+  gap: 1px;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.tabular-grid-cell {
+  background-color: var(--color-card);
+}
+
+.money-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.025em;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
