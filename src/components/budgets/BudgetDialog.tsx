@@ -176,8 +176,8 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
               </h2>
               <p className="text-xs text-muted-foreground">
                 {matchedExistingBudget
-                  ? "Mode Edit Otomatis: Anggaran untuk kategori ini sudah ada (ID UUIDv5 deterministik)."
-                  : "Periode: Bulanan (MONTHLY) tanpa rollover."}
+                  ? "Perbarui batas anggaran untuk kategori ini."
+                  : "Tentukan batas pengeluaran untuk satu bulan."}
               </p>
             </div>
             <button
@@ -240,7 +240,7 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
               htmlFor="budget-threshold-input"
               className="block text-xs font-medium text-foreground"
             >
-              Ambang Peringatan (%) — 1 s/d 100
+              Ingatkan Saya Saat Mencapai (%) — misal 80%
             </label>
             <Input
               id="budget-threshold-input"

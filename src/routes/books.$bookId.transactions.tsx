@@ -52,7 +52,7 @@ const TransactionsRouteComponent: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="w-full">
       <TransactionTable
         items={transactionsQuery.data?.items ?? []}
         total={transactionsQuery.data?.total ?? 0}

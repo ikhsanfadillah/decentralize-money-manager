@@ -9,12 +9,17 @@ import {
 import { bookQueryKeys } from "../../hooks/useBookFinance";
 import { Input } from "../ui/input";
 import { pushToast } from "../../lib/toast";
-import { applyTheme, getStoredTheme, type ThemeMode } from "../../lib/utils";
+import {
+  applyTheme,
+  formatBookKindLabel,
+  getStoredTheme,
+  type ThemeMode,
+} from "../../lib/utils";
 
 const BOOK_KINDS: { value: BookKind; label: string }[] = [
-  { value: "PERSONAL", label: "Pribadi (Personal)" },
+  { value: "PERSONAL", label: "Pribadi / Keluarga" },
   { value: "BUSINESS", label: "Usaha / Bisnis" },
-  { value: "OFFICE", label: "Kantor / Operasional" },
+  { value: "OFFICE", label: "Kantor / Kegiatan" },
   { value: "OTHER", label: "Lainnya" },
 ];
 
@@ -155,7 +160,7 @@ export const BookSwitcherPage: React.FC = () => {
     e.preventDefault();
     const trimmed = invitePayload.trim();
     if (!trimmed) {
-      pushToast("Payload undangan QR tidak boleh kosong", {
+      pushToast("Kode undangan tidak boleh kosong", {
         variant: "warning",
       });
       return;
@@ -166,8 +171,8 @@ export const BookSwitcherPage: React.FC = () => {
       const msg =
         err instanceof Error
           ? err.message
-          : "Payload undangan tidak valid atau kedaluwarsa";
-      pushToast("Gagal bergabung ke buku P2P", {
+          : "Kode undangan tidak sesuai atau masa berlakunya sudah habis";
+      pushToast("Belum berhasil bergabung ke buku", {
         description: msg,
         variant: "error",
       });
@@ -178,57 +183,55 @@ export const BookSwitcherPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Top Bar */}
-      <header className="border-b border-border bg-card">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3.5">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="inline-block h-2.5 w-2.5 rounded-full bg-primary" />
-              <h1 className="text-base font-semibold tracking-tight text-foreground">
-                Decentralize Money Manager
-              </h1>
-            </div>
+      {/* Compact Top Bar */}
+      <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+          <div className="flex items-center gap-1.5">
+            <span className="inline-block h-2 w-2 rounded-full bg-primary" />
+            <h1 className="text-sm font-semibold tracking-tight text-foreground">
+              Buku Keuangan Saya
+            </h1>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => setIsJoinModalOpen(true)}
-              className="rounded border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground shadow-none hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+              className="nav-touch-item rounded border border-border bg-background px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
             >
-              Gabung Buku P2P (QR / Kode)
+              Gabung Buku Bersama
             </button>
             <button
               type="button"
               onClick={handleToggleTheme}
-              className="rounded border border-border bg-background px-2.5 py-1.5 font-mono text-xs text-foreground shadow-none hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+              className="nav-touch-item rounded border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
             >
-              {theme === "dark" ? "TEMA: GELAP" : "TEMA: TERANG"}
+              {theme === "dark" ? "Mode Gelap" : "Mode Terang"}
             </button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
+      <main className="page-transition-wrapper animate-page-in w-full p-0">
         {/* Create New Book Form */}
         <form
           onSubmit={(e) => void handleCreateBook(e)}
           className="tabular-grid-container grid grid-cols-1 md:grid-cols-12"
         >
-          <div className="tabular-grid-cell flex flex-col justify-center p-4 md:col-span-4">
-            <h2 className="text-sm font-semibold text-foreground">
+          <div className="tabular-grid-cell flex flex-col justify-center px-3 py-2.5 md:col-span-4">
+            <h2 className="text-xs font-semibold text-foreground sm:text-sm">
               Buat Buku Keuangan Baru
             </h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Data awal kategori standar akan diinisialisasi otomatis.
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Pisahkan catatan uang harian, tabungan keluarga, atau usaha Anda.
             </p>
           </div>
 
-          <div className="tabular-grid-cell flex items-center p-4 md:col-span-4">
+          <div className="tabular-grid-cell flex items-center px-3 py-2.5 md:col-span-4">
             <div className="w-full">
               <label
                 htmlFor="new-book-name"
-                className="mb-1 block text-[11px] font-medium text-muted-foreground"
+                className="mb-1 block text-[10px] font-medium text-muted-foreground"
               >
                 Nama Buku
               </label>
@@ -236,24 +239,25 @@ export const BookSwitcherPage: React.FC = () => {
                 id="new-book-name"
                 value={newBookName}
                 onChange={(e) => setNewBookName(e.target.value)}
-                placeholder="Contoh: Dompet Keluarga, Toko Kopi..."
+                placeholder="Contoh: Uang Rumah Tangga, Tabungan, Usaha..."
+                className="h-8 text-xs"
               />
             </div>
           </div>
 
-          <div className="tabular-grid-cell flex items-center p-4 md:col-span-2">
+          <div className="tabular-grid-cell flex items-center px-3 py-2.5 md:col-span-2">
             <div className="w-full">
               <label
                 htmlFor="new-book-kind"
-                className="mb-1 block text-[11px] font-medium text-muted-foreground"
+                className="mb-1 block text-[10px] font-medium text-muted-foreground"
               >
-                Jenis Buku
+                Kategori Buku
               </label>
               <select
                 id="new-book-kind"
                 value={newBookKind}
                 onChange={(e) => setNewBookKind(e.target.value as BookKind)}
-                className="flex h-9 w-full rounded-md border border-input bg-background px-2.5 py-1 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                className="flex h-8 w-full rounded border border-input bg-background px-2 py-1 text-xs text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
               >
                 {BOOK_KINDS.map((k) => (
                   <option key={k.value} value={k.value}>
@@ -264,40 +268,39 @@ export const BookSwitcherPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="tabular-grid-cell flex items-end justify-end p-4 md:col-span-2">
+          <div className="tabular-grid-cell flex items-end justify-end px-3 py-2.5 md:col-span-2">
             <button
               type="submit"
               disabled={createBookMutation.isPending}
-              className="h-9 w-full rounded-md border border-border bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-none hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
+              className="nav-touch-item h-8 w-full rounded border border-border bg-primary px-3 text-xs font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
             >
-              {createBookMutation.isPending ? "Membuat..." : "+ Buat Buku"}
+              {createBookMutation.isPending ? "Menyiapkan..." : "+ Buat Buku"}
             </button>
           </div>
         </form>
 
-        {/* Books Tabular Registry */}
+        {/* Books List */}
         <div className="tabular-grid-container grid grid-cols-1">
-          <div className="tabular-grid-cell flex flex-col md:flex-row md:items-center justify-between px-4 py-3">
-            <h2 className="text-sm font-semibold text-foreground">
-              Daftar Buku Lokal ({books.length})
+          <div className="tabular-grid-cell flex items-center justify-between px-3 py-2">
+            <h2 className="text-xs font-semibold text-foreground sm:text-sm">
+              Daftar Buku Keuangan ({books.length})
             </h2>
-            <span className="font-mono text-xs text-muted-foreground">
-              REGISTRY: registry.sqlite
+            <span className="text-[11px] text-muted-foreground">
+              Pilih buku untuk mulai mencatat
             </span>
           </div>
 
           {books.length === 0 ? (
-            <div className="tabular-grid-cell p-8 text-center">
-              <p className="text-sm font-medium text-foreground">
-                Belum ada buku keuangan di perangkat ini
+            <div className="tabular-grid-cell p-6 text-center">
+              <p className="text-xs font-medium text-foreground">
+                Belum ada buku keuangan
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Buat buku baru pada formulir di atas atau gabung dari perangkat
-                lain menggunakan undangan QR P2P.
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Silakan buat buku baru di atas atau gabung ke buku bersama pasangan/keluarga.
               </p>
             </div>
           ) : (
-            books.map((book) => {
+            books.map((book, idx) => {
               const isRenaming = renamingBookId === book.id;
               const isConfirmingDelete = confirmDeleteBookId === book.id;
 
@@ -305,95 +308,83 @@ export const BookSwitcherPage: React.FC = () => {
                 <div
                   key={book.id}
                   data-testid={`book-item-${book.id}`}
-                  className="tabular-grid-cell flex flex-col justify-between gap-3 p-4 md:flex-row md:items-center"
+                  style={{ animationDelay: `${idx * 35}ms` }}
+                  className="tabular-grid-cell animate-card-up flex items-center justify-between gap-3 px-3 py-3"
                 >
-                  <div className="space-y-1">
+                  <div className="min-w-0 flex-1 space-y-0.5">
                     {isRenaming ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         <Input
                           aria-label="Nama Buku Baru"
                           value={renameDraft}
                           onChange={(e) => setRenameDraft(e.target.value)}
-                          className="h-8 max-w-xs text-xs"
+                          className="h-7 max-w-xs text-xs"
                         />
                         <button
                           type="button"
                           onClick={() => void handleSaveRename(book.id)}
                           disabled={renameBookMutation.isPending}
-                          className="rounded border border-border bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                          className="rounded border border-border bg-primary px-2 py-1 text-[11px] font-semibold text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                         >
                           Simpan
                         </button>
                         <button
                           type="button"
                           onClick={() => setRenamingBookId(null)}
-                          className="rounded border border-border bg-background px-2.5 py-1 text-xs text-foreground shadow-none hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                          className="rounded border border-border bg-background px-2 py-1 text-[11px] text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                         >
                           Batal
                         </button>
                       </div>
                     ) : (
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-semibold text-foreground">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="truncate text-xs font-semibold text-foreground sm:text-sm">
                           {book.name}
                         </span>
-                        <span className="rounded border border-border bg-background px-1.5 py-0.5 font-mono text-[10px] font-semibold text-muted-foreground">
-                          {book.kind}
-                        </span>
-                        <span
-                          className={`rounded border px-1.5 py-0.5 font-mono text-[10px] font-semibold ${
-                            book.file_exists
-                              ? "border-primary/40 text-primary"
-                              : "border-rose-500/40 text-rose-500"
-                          }`}
-                        >
-                          {book.file_exists
-                            ? "FILE SQLITE TERSEDIA"
-                            : "FILE SQLITE HILANG (AKAN DIREKREASI SAAT DIBUKA)"}
+                        <span className="rounded border border-primary/40 bg-primary/10 px-1.5 py-0.2 text-[10px] font-medium text-primary">
+                          {formatBookKindLabel(book.kind)}
                         </span>
                       </div>
                     )}
 
-                    <div className="flex flex-wrap items-center gap-3 font-mono text-[11px] text-muted-foreground">
-                      <span>ID: {book.id}</span>
-                      <span>·</span>
-                      <span>Terakhir dibuka: {book.last_opened_at}</span>
-                    </div>
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      Terakhir dibuka: {book.last_opened_at}
+                    </p>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-1.5">
                     <Link
                       to="/books/$bookId/dashboard"
                       params={{ bookId: book.id }}
-                      className="whitespace-nowrap rounded-md border border-border bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-none hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                      className="nav-touch-item whitespace-nowrap rounded border border-border bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                     >
-                      Buka Buku →
+                      Buka →
                     </Link>
 
                     {!isRenaming && (
                       <button
                         type="button"
                         onClick={() => handleStartRename(book)}
-                        className="whitespace-nowrap rounded border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-foreground shadow-none hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                        className="nav-touch-item whitespace-nowrap rounded border border-border bg-background px-2 py-1.5 text-[11px] font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                       >
                         Ubah Nama
                       </button>
                     )}
 
                     {isConfirmingDelete ? (
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1">
                         <button
                           type="button"
                           onClick={() => void handleDeleteBook(book.id)}
                           disabled={deleteBookMutation.isPending}
-                          className="rounded border border-rose-500/50 bg-rose-500 px-2.5 py-1.5 text-xs font-semibold text-white shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                          className="rounded border border-rose-500/50 bg-rose-500 px-2 py-1.5 text-[11px] font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                         >
-                          Konfirmasi Hapus
+                          Ya, Hapus
                         </button>
                         <button
                           type="button"
                           onClick={() => setConfirmDeleteBookId(null)}
-                          className="rounded border border-border bg-background px-2 py-1.5 text-xs text-muted-foreground shadow-none hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                          className="rounded border border-border bg-background px-2 py-1.5 text-[11px] text-muted-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                         >
                           Batal
                         </button>
@@ -402,7 +393,7 @@ export const BookSwitcherPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setConfirmDeleteBookId(book.id)}
-                        className="rounded border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-rose-500 shadow-none hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                        className="nav-touch-item rounded border border-border bg-background px-2 py-1.5 text-[11px] font-medium text-rose-500 hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                       >
                         Hapus
                       </button>
@@ -415,7 +406,7 @@ export const BookSwitcherPage: React.FC = () => {
         </div>
       </main>
 
-      {/* Join P2P Book Modal */}
+      {/* Join Shared Book Modal */}
       {isJoinModalOpen && (
         <div
           role="dialog"
@@ -423,23 +414,23 @@ export const BookSwitcherPage: React.FC = () => {
           aria-labelledby="join-book-dialog-title"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
         >
-          <div className="w-full max-w-lg rounded-md border border-border bg-card p-5 text-card-foreground shadow-none">
-            <div className="flex items-center justify-between border-b border-border pb-3">
+          <div className="w-full max-w-lg rounded border border-border bg-card p-4 text-card-foreground">
+            <div className="flex items-center justify-between border-b border-border pb-2.5">
               <div>
                 <h2
                   id="join-book-dialog-title"
-                  className="text-base font-semibold text-foreground"
+                  className="text-sm font-semibold text-foreground"
                 >
-                  Gabung Buku dari Undangan QR P2P
+                  Gabung ke Buku Keuangan Bersama
                 </h2>
                 <p className="text-xs text-muted-foreground">
-                  Tempel payload JSON dari QR undangan perangkat sumber (v1)
+                  Masukkan kode undangan dari perangkat pasangan, keluarga, atau rekan Anda.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsJoinModalOpen(false)}
-                className="rounded border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground shadow-none hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                className="rounded border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
               >
                 Tutup
               </button>
@@ -447,37 +438,37 @@ export const BookSwitcherPage: React.FC = () => {
 
             <form
               onSubmit={(e) => void handleJoinBook(e)}
-              className="mt-4 space-y-4"
+              className="mt-3 space-y-3"
             >
               <div>
                 <label
                   htmlFor="invite-qr-payload"
-                  className="mb-1.5 block text-xs font-medium text-foreground"
+                  className="mb-1 block text-xs font-medium text-foreground"
                 >
-                  Payload Undangan QR (JSON)
+                  Kode Undangan Buku
                 </label>
                 <textarea
                   id="invite-qr-payload"
-                  rows={5}
+                  rows={4}
                   value={invitePayload}
                   onChange={(e) => setInvitePayload(e.target.value)}
-                  placeholder='{"v":1,"book_id":"...","book_name":"...","secret_b64":"...","node_id":"...","expires_at":"..."}'
-                  className="w-full rounded-md border border-input bg-background p-2.5 font-mono text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                  placeholder="Tempel kode undangan yang disalin dari menu Bagikan Buku..."
+                  className="w-full rounded border border-input bg-background p-2.5 font-mono text-xs text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                 />
               </div>
 
               <div>
                 <label
                   htmlFor="invite-book-kind"
-                  className="mb-1.5 block text-xs font-medium text-foreground"
+                  className="mb-1 block text-xs font-medium text-foreground"
                 >
-                  Klasifikasi Buku di Perangkat Ini
+                  Simpan Sebagai Kategori
                 </label>
                 <select
                   id="invite-book-kind"
                   value={inviteKind}
                   onChange={(e) => setInviteKind(e.target.value as BookKind)}
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                  className="flex h-9 w-full rounded border border-input bg-background px-3 py-1 text-xs text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                 >
                   {BOOK_KINDS.map((k) => (
                     <option key={k.value} value={k.value}>
@@ -491,18 +482,18 @@ export const BookSwitcherPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsJoinModalOpen(false)}
-                  className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-none hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                  className="rounded border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={joinBookMutation.isPending}
-                  className="rounded-md border border-border bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground shadow-none hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
+                  className="rounded border border-border bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
                 >
                   {joinBookMutation.isPending
-                    ? "Memverifikasi & Menyimpan Kunci..."
-                    : "Gabung & Sinkronkan"}
+                    ? "Menghubungkan..."
+                    : "Gabung Sekarang"}
                 </button>
               </div>
             </form>

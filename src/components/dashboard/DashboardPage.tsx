@@ -4,6 +4,7 @@ import { useBookFinance } from "../../hooks/useBookFinance";
 import { useUiStore } from "../../stores/ui-store";
 import {
   currentYearMonth,
+  formatAccountTypeLabel,
   formatMonthLabel,
   formatRupiah,
   formatSignedRupiah,
@@ -64,54 +65,54 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
   }, [allBudgets]);
 
   return (
-    <div className="space-y-6">
-      {/* Top 4 KPI Tabular Strip */}
-      <div className="tabular-grid-container grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="tabular-grid-cell p-4">
-          <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-            Total Saldo Akun
+    <div className="w-full space-y-4 sm:space-y-6">
+      {/* Top 4 KPI Tabular Strip (2x2 Grid on Mobile, 4 Cols on Desktop) */}
+      <div className="tabular-grid-container grid grid-cols-2 lg:grid-cols-4">
+        <div className="tabular-grid-cell px-3 py-2.5">
+          <p className="truncate text-[11px] font-medium text-muted-foreground">
+            Total Uang Saat Ini
           </p>
           <p
             data-testid="dashboard-total-balance"
-            className="mt-1.5 truncate font-mono text-xl font-semibold tabular-nums tracking-tight text-foreground"
+            className="mt-0.5 truncate font-mono text-sm font-semibold tabular-nums tracking-tight text-foreground sm:text-base"
           >
             {formatRupiah(totalBalance)}
           </p>
-          <p className="mt-1 font-mono text-[11px] text-muted-foreground">
-            {balances.length} akun kanonik aktif
+          <p className="truncate text-[10px] text-muted-foreground">
+            Dari {balances.length} rekening & dompet
           </p>
         </div>
 
-        <div className="tabular-grid-cell p-4">
-          <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-            Pemasukan ({formatMonthLabel(currentMonth)})
+        <div className="tabular-grid-cell px-3 py-2.5">
+          <p className="truncate text-[11px] font-medium text-muted-foreground">
+            Pemasukan Bulan Ini
           </p>
-          <p className="mt-1.5 truncate font-mono text-xl font-semibold tabular-nums tracking-tight text-emerald-500">
+          <p className="mt-0.5 truncate font-mono text-sm font-semibold tabular-nums tracking-tight text-emerald-500 sm:text-base">
             + {formatRupiah(currentMonthSummary.income)}
           </p>
-          <p className="mt-1 font-mono text-[11px] text-muted-foreground">
-            Periode berjalan ({currentMonth})
+          <p className="truncate text-[10px] text-muted-foreground">
+            {formatMonthLabel(currentMonth)}
           </p>
         </div>
 
-        <div className="tabular-grid-cell p-4">
-          <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-            Pengeluaran ({formatMonthLabel(currentMonth)})
+        <div className="tabular-grid-cell px-3 py-2.5">
+          <p className="truncate text-[11px] font-medium text-muted-foreground">
+            Pengeluaran Bulan Ini
           </p>
-          <p className="mt-1.5 truncate font-mono text-xl font-semibold tabular-nums tracking-tight text-rose-500">
+          <p className="mt-0.5 truncate font-mono text-sm font-semibold tabular-nums tracking-tight text-rose-500 sm:text-base">
             - {formatRupiah(currentMonthSummary.expense)}
           </p>
-          <p className="mt-1 font-mono text-[11px] text-muted-foreground">
-            Periode berjalan ({currentMonth})
+          <p className="truncate text-[10px] text-muted-foreground">
+            {formatMonthLabel(currentMonth)}
           </p>
         </div>
 
-        <div className="tabular-grid-cell p-4">
-          <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-            Arus Kas Bersih ({currentMonth})
+        <div className="tabular-grid-cell px-3 py-2.5">
+          <p className="truncate text-[11px] font-medium text-muted-foreground">
+            Selisih Bulan Ini
           </p>
           <p
-            className={`mt-1.5 truncate font-mono text-xl font-semibold tabular-nums tracking-tight ${
+            className={`mt-0.5 truncate font-mono text-sm font-semibold tabular-nums tracking-tight sm:text-base ${
               currentMonthSummary.net >= 0
                 ? "text-emerald-500"
                 : "text-rose-500"
@@ -121,66 +122,61 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
               ? `+ ${formatRupiah(currentMonthSummary.net)}`
               : `- ${formatRupiah(Math.abs(currentMonthSummary.net))}`}
           </p>
-          <p className="mt-1 font-mono text-[11px] text-muted-foreground">
-            Selisih pemasukan & pengeluaran
+          <p className="truncate text-[10px] text-muted-foreground">
+            {currentMonthSummary.net >= 0 ? "Surplus tabungan" : "Pengeluaran lebih besar"}
           </p>
         </div>
       </div>
 
       {/* Middle Row: Account Balances & Top 3 Budgets This Month */}
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
+      <div className="grid grid-cols-1 border-t border-border lg:grid-cols-12 lg:gap-px lg:bg-border">
         {/* Account Balances Allocation (7 cols) */}
-        <div className="tabular-grid-container flex flex-col lg:col-span-7">
-          <div className="tabular-grid-cell flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-sm font-semibold text-foreground">
-                Posisi Saldo per Akun
+        <div
+          style={{ animationDelay: "45ms" }}
+          className="tabular-grid-container flex flex-col lg:col-span-7"
+        >
+          <div className="tabular-grid-cell flex items-center justify-between gap-2 px-3 py-2">
+            <div className="min-w-0">
+              <h2 className="truncate text-xs font-semibold text-foreground sm:text-sm">
+                Saldo Rekening & Dompet
               </h2>
-              <p className="text-xs text-muted-foreground">
-                Dihitung melalui resolusi rekursif 16-level (`account_roots`)
+              <p className="truncate text-[11px] text-muted-foreground">
+                Rincian uang Anda di bank, tunai, dan e-wallet
               </p>
             </div>
             <Link
               to="/books/$bookId/accounts"
               params={{ bookId }}
-              className="self-start rounded border whitespace-nowrap border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground shadow-none hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary sm:self-auto"
+              className="nav-touch-item shrink-0 rounded border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
             >
-              Kelola Akun →
+              Atur Rekening →
             </Link>
           </div>
 
           {balances.length === 0 ? (
-            <div className="tabular-grid-cell p-6 text-center">
+            <div className="tabular-grid-cell p-4 text-center">
               <p className="text-xs text-muted-foreground">
-                Belum ada akun keuangan. Tambahkan akun di menu Akun.
+                Belum ada rekening atau dompet. Tambahkan di menu Pengaturan → Rekening.
               </p>
             </div>
           ) : (
             balances.map((acc) => (
               <div
                 key={acc.account_id}
-                className="tabular-grid-cell flex items-center justify-between gap-3 px-4 py-3 text-xs"
+                className="tabular-grid-cell flex items-center justify-between gap-2 px-3 py-2.5 text-xs"
               >
-                <div className="min-w-0 flex-1 space-y-0.5">
-                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     <span className="truncate font-semibold text-foreground">
                       {acc.name}
                     </span>
-                    <span className="shrink-0 rounded border border-border bg-background px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                      {acc.account_type}
+                    <span className="shrink-0 rounded border border-border bg-background px-1.5 py-0.2 text-[10px] text-muted-foreground">
+                      {formatAccountTypeLabel(acc.account_type)}
                     </span>
-                    {acc.merged_member_ids.length > 1 && (
-                      <span className="shrink-0 rounded border border-primary/40 px-1.5 py-0.5 font-mono text-[10px] text-primary">
-                        GABUNGAN {acc.merged_member_ids.length} AKUN
-                      </span>
-                    )}
                   </div>
-                  <p className="truncate font-mono text-[11px] tabular-nums tracking-tight text-muted-foreground">
-                    Saldo awal: {formatRupiah(acc.initial_balance)}
-                  </p>
                 </div>
 
-                <span className="shrink-0 font-mono text-sm font-semibold tabular-nums tracking-tight text-foreground">
+                <span className="shrink-0 font-mono text-xs font-semibold tabular-nums tracking-tight text-foreground sm:text-sm">
                   {formatRupiah(acc.current_balance)}
                 </span>
               </div>
@@ -191,38 +187,39 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
         {/* Budget Bulan Ini Card - Top 3 Highest pct (Section 8.2) (5 cols) */}
         <div
           data-testid="dashboard-budget-card"
+          style={{ animationDelay: "90ms" }}
           className="tabular-grid-container flex flex-col lg:col-span-5"
         >
-          <div className="tabular-grid-cell flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-sm font-semibold text-foreground">
-                Budget Bulan Ini ({currentMonth})
+          <div className="tabular-grid-cell flex items-center justify-between gap-2 px-3 py-2">
+            <div className="min-w-0">
+              <h2 className="truncate text-xs font-semibold text-foreground sm:text-sm">
+                Pantauan Anggaran ({formatMonthLabel(currentMonth)})
               </h2>
-              <p className="text-xs text-muted-foreground">
-                3 anggaran dengan persentase pemakaian tertinggi
+              <p className="truncate text-[11px] text-muted-foreground">
+                Pos anggaran yang paling banyak terpakai bulan ini
               </p>
             </div>
             <Link
               to="/books/$bookId/budgets"
               params={{ bookId }}
-              className="self-start rounded border whitespace-nowrap border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground shadow-none hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary sm:self-auto"
+              className="nav-touch-item shrink-0 rounded border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
             >
-              Semua Anggaran →
+              Lihat Semua →
             </Link>
           </div>
 
           {top3Budgets.length === 0 ? (
-            <div className="tabular-grid-cell flex flex-col items-center justify-center p-6 text-center">
+            <div className="tabular-grid-cell flex flex-col items-center justify-center p-4 text-center">
               <p className="text-xs font-medium text-foreground">
                 Belum ada anggaran bulanan yang ditetapkan
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
                 Tetapkan batas pengeluaran bulanan untuk memantau realisasi.
               </p>
               <Link
                 to="/books/$bookId/budgets"
                 params={{ bookId }}
-                className="mt-3 rounded whitespace-nowrap border border-border bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-none hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                className="nav-touch-item mt-2 rounded border border-border bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
               >
                 Atur Anggaran Sekarang
               </Link>
@@ -231,15 +228,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
             top3Budgets.map((b) => (
               <div
                 key={b.id}
-                className="tabular-grid-cell space-y-2 px-4 py-3 text-xs"
+                className="tabular-grid-cell space-y-1.5 px-3 py-2 text-xs"
               >
-                <div className="flex flex-wrap items-center justify-between gap-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-1">
                   <span className="min-w-0 truncate font-semibold text-foreground">
                     {b.category_id === null
                       ? "Total Pengeluaran"
                       : b.category_name}
                   </span>
-                  <span className="shrink-0 font-mono text-xs tabular-nums tracking-tight text-foreground">
+                  <span className="shrink-0 font-mono text-[11px] tabular-nums tracking-tight text-foreground">
                     {formatRupiah(b.spent)}{" "}
                     <span className="text-muted-foreground">
                       / {formatRupiah(b.amount_limit)}
@@ -258,103 +255,93 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
       </div>
 
       {/* Bottom Row: 6-Month Cash Flow Summary & Recent Transactions */}
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
+      <div className="grid grid-cols-1 border-t border-border lg:grid-cols-12 lg:gap-px lg:bg-border">
         {/* 6-Month Cash Flow Summary (6 cols) */}
-        <div className="tabular-grid-container flex flex-col lg:col-span-6">
-          <div className="tabular-grid-cell flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-sm font-semibold text-foreground">
-                Ringkasan Arus Kas Bulanan
+        <div
+          style={{ animationDelay: "135ms" }}
+          className="tabular-grid-container flex flex-col lg:col-span-6"
+        >
+          <div className="tabular-grid-cell flex items-center justify-between gap-2 px-3 py-2">
+            <div className="min-w-0">
+              <h2 className="truncate text-xs font-semibold text-foreground sm:text-sm">
+                Riwayat Bulanan
               </h2>
-              <p className="text-xs text-muted-foreground">
-                Rekapitulasi pemasukan & pengeluaran 6 bulan terakhir
+              <p className="truncate text-[11px] text-muted-foreground">
+                Ringkasan uang masuk & keluar 6 bulan terakhir
               </p>
             </div>
             <Link
               to="/books/$bookId/reports"
               params={{ bookId }}
-              className="self-start rounded border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground shadow-none hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary sm:self-auto"
+              className="nav-touch-item shrink-0 rounded border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
             >
-              Laporan Analitik →
+              Lihat Laporan →
             </Link>
           </div>
 
-          {/* Mobile Card-Based List (< sm): Eliminates horizontal squeezing and text collisions */}
-          <div className="divide-y divide-border sm:hidden">
+          {/* Mobile Compact List (< sm): Zero Double Border */}
+          <div className="grid grid-cols-1 gap-px bg-border sm:hidden">
             {cashFlowSummary.length === 0 ? (
-              <div className="tabular-grid-cell p-6 text-center text-xs text-muted-foreground">
-                Belum ada histori transaksi bulanan.
+              <div className="tabular-grid-cell p-4 text-center text-xs text-muted-foreground">
+                Belum ada riwayat transaksi bulanan.
               </div>
             ) : (
               cashFlowSummary.map((row) => (
                 <div
                   key={row.month}
-                  className="tabular-grid-cell space-y-2 p-3.5 font-mono text-xs"
+                  className="tabular-grid-cell space-y-1 px-3 py-2 text-xs"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold tracking-tight text-foreground">
-                      {row.month}
+                    <span className="text-xs font-semibold text-foreground">
+                      {formatMonthLabel(row.month)}
                     </span>
-                    <div className="text-right">
-                      <span className="block font-sans text-[10px] uppercase tracking-wider text-muted-foreground">
-                        Selisih Bersih
-                      </span>
-                      <span
-                        className={`text-xs font-semibold tabular-nums ${
-                          row.net >= 0 ? "text-emerald-500" : "text-rose-500"
-                        }`}
-                      >
-                        {row.net >= 0
-                          ? `+ ${formatRupiah(row.net)}`
-                          : `- ${formatRupiah(Math.abs(row.net))}`}
-                      </span>
-                    </div>
+                    <span
+                      className={`font-mono text-xs font-semibold tabular-nums ${
+                        row.net >= 0 ? "text-emerald-500" : "text-rose-500"
+                      }`}
+                    >
+                      {row.net >= 0
+                        ? `+ ${formatRupiah(row.net)}`
+                        : `- ${formatRupiah(Math.abs(row.net))}`}
+                    </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 border-t border-border/50 pt-2 tabular-nums">
-                    <div>
-                      <span className="block font-sans text-[10px] uppercase tracking-wider text-muted-foreground">
-                        Pemasukan
-                      </span>
-                      <span className="font-medium text-emerald-500">
-                        + {formatRupiah(row.income)}
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <span className="block font-sans text-[10px] uppercase tracking-wider text-muted-foreground">
-                        Pengeluaran
-                      </span>
-                      <span className="font-medium text-rose-500">
-                        - {formatRupiah(row.expense)}
-                      </span>
-                    </div>
+                  <div className="flex items-center justify-between font-mono text-[11px] tabular-nums">
+                    <span className="text-emerald-500">
+                      Masuk: + {formatRupiah(row.income)}
+                    </span>
+                    <span className="text-rose-500">
+                      Keluar: - {formatRupiah(row.expense)}
+                    </span>
                   </div>
                 </div>
               ))
             )}
           </div>
 
-          {/* Desktop/Tablet Tabular View (sm+): Horizontal Scroll Guard with min-width */}
-          <div className="hidden sm:block overflow-x-auto">
-            <div className="min-w-[480px]">
-              <div className="tabular-grid-cell grid grid-cols-4 px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border">
+          {/* Desktop/Tablet Tabular View (sm+): Zero Double Border */}
+          <div className="hidden overflow-x-auto sm:block">
+            <div className="grid min-w-[440px] grid-cols-1 gap-px bg-border">
+              <div className="tabular-grid-cell grid grid-cols-4 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                 <div>Bulan</div>
                 <div className="text-right">Pemasukan</div>
                 <div className="text-right">Pengeluaran</div>
-                <div className="text-right">Selisih Bersih</div>
+                <div className="text-right">Sisa / Selisih</div>
               </div>
 
               {cashFlowSummary.length === 0 ? (
-                <div className="tabular-grid-cell p-6 text-center text-xs text-muted-foreground">
-                  Belum ada histori transaksi bulanan.
+                <div className="tabular-grid-cell p-4 text-center text-xs text-muted-foreground">
+                  Belum ada riwayat transaksi bulanan.
                 </div>
               ) : (
                 cashFlowSummary.map((row) => (
                   <div
                     key={row.month}
-                    className="tabular-grid-cell grid grid-cols-4 items-center px-4 py-2.5 font-mono text-xs tabular-nums tracking-tight border-b border-border last:border-b-0"
+                    className="tabular-grid-cell grid grid-cols-4 items-center px-3 py-2 font-mono text-xs tabular-nums tracking-tight"
                   >
-                    <div className="font-semibold text-foreground">{row.month}</div>
+                    <div className="font-sans font-semibold text-foreground">
+                      {formatMonthLabel(row.month)}
+                    </div>
                     <div className="text-right text-emerald-500">
                       + {formatRupiah(row.income)}
                     </div>
@@ -378,28 +365,31 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
         </div>
 
         {/* Recent Transactions (6 cols) */}
-        <div className="tabular-grid-container flex flex-col lg:col-span-6">
-          <div className="tabular-grid-cell flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-sm font-semibold text-foreground">
-                Transaksi Terbaru
+        <div
+          style={{ animationDelay: "180ms" }}
+          className="tabular-grid-container mt-4 md:mt-6 border-t! border-border! flex flex-col lg:col-span-6"
+        >
+          <div className="tabular-grid-cell flex items-center justify-between gap-2 px-3 py-2">
+            <div className="min-w-0">
+              <h2 className="truncate text-xs font-semibold text-foreground sm:text-sm">
+                Catatan Transaksi Terbaru
               </h2>
-              <p className="text-xs text-muted-foreground">
-                6 transaksi terakhir di buku ini
+              <p className="truncate text-[11px] text-muted-foreground">
+                6 aktivitas terakhir di buku ini
               </p>
             </div>
-            <div className="flex items-center gap-2 self-start sm:self-auto">
+            <div className="flex shrink-0 items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setNewTransactionModalOpen(true)}
-                className="rounded border border-border bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground shadow-none hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                className="nav-touch-item rounded border border-border bg-primary px-2 py-1 text-[11px] font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
               >
                 + Catat
               </button>
               <Link
                 to="/books/$bookId/transactions"
                 params={{ bookId }}
-                className="rounded border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground shadow-none hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                className="nav-touch-item rounded border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
               >
                 Semua →
               </Link>
@@ -407,29 +397,29 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
           </div>
 
           {recentTransactions.length === 0 ? (
-            <div className="tabular-grid-cell p-6 text-center text-xs text-muted-foreground">
+            <div className="tabular-grid-cell p-4 text-center text-xs text-muted-foreground">
               Belum ada transaksi tercatat.
             </div>
           ) : (
             recentTransactions.map((tx) => (
               <div
                 key={tx.id}
-                className="tabular-grid-cell flex items-center justify-between gap-3 px-4 py-2.5 text-xs"
+                className="tabular-grid-cell flex items-center justify-between gap-2 px-3 py-2 text-xs"
               >
-                <div className="min-w-0 flex-1 space-y-0.5">
-                  <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
                     <span className="truncate font-medium text-foreground">
                       {tx.tx_type === "TRANSFER"
                         ? `${tx.account_name} → ${tx.to_account_name ?? "-"}`
                         : tx.category_name ?? "Tanpa Kategori"}
                     </span>
                     {tx.link_id && (
-                      <span className="shrink-0 rounded border border-primary/40 px-1 py-0.2 font-mono text-[10px] text-primary">
-                        ANTAR-BUKU
+                      <span className="shrink-0 rounded border border-primary/40 px-1 py-0.2 text-[9px] font-medium text-primary">
+                        Pindah Buku
                       </span>
                     )}
                   </div>
-                  <p className="truncate font-mono text-[11px] text-muted-foreground">
+                  <p className="truncate text-[11px] text-muted-foreground">
                     {tx.tx_date} · {tx.account_name}
                     {tx.note ? ` · ${tx.note}` : ""}
                   </p>

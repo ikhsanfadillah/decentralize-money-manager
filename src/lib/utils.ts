@@ -101,3 +101,44 @@ export function applyTheme(theme: ThemeMode): void {
   }
 }
 
+export function formatAccountTypeLabel(accountType: string): string {
+  switch (accountType) {
+    case "BANK":
+      return "Bank";
+    case "CASH":
+      return "Tunai";
+    case "EWALLET":
+      return "E-Wallet";
+    default:
+      return accountType;
+  }
+}
+
+export function formatBookKindLabel(kind: string): string {
+  switch (kind) {
+    case "PERSONAL":
+      return "Pribadi";
+    case "BUSINESS":
+      return "Usaha";
+    case "OFFICE":
+      return "Kantor";
+    case "OTHER":
+      return "Lainnya";
+    default:
+      return kind;
+  }
+}
+
+export function formatTxTypeLabel(txType: string): string {
+  switch (txType) {
+    case "EXPENSE":
+      return "Pengeluaran";
+    case "INCOME":
+      return "Pemasukan";
+    case "TRANSFER":
+      return "Pindah Saldo";
+    default:
+      return txType;
+  }
+}
+

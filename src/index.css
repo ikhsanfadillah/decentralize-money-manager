@@ -62,17 +62,135 @@
   --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
-/* Reusable Enterprise Emerald Tabular Grid Helper (Section 8.2) */
+/* Reusable Enterprise Emerald Tabular Grid Helper (Section 8.2) — Mobile-First Compact & Zero Double-Border */
 .tabular-grid-container {
   background-color: var(--color-border);
   gap: 1px;
-  border: 1px solid var(--color-border);
-  border-radius: 0.5rem;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
   overflow: hidden;
+  animation: card-fade-up 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Staggered bottom-to-top fade-in for cards inside a page */
+.page-transition-wrapper > *:nth-child(1),
+.page-transition-wrapper > div > .tabular-grid-container:nth-child(1) {
+  animation-delay: 0ms;
+}
+.page-transition-wrapper > *:nth-child(2),
+.page-transition-wrapper > div > .tabular-grid-container:nth-child(2) {
+  animation-delay: 45ms;
+}
+.page-transition-wrapper > *:nth-child(3),
+.page-transition-wrapper > div > .tabular-grid-container:nth-child(3) {
+  animation-delay: 90ms;
+}
+.page-transition-wrapper > *:nth-child(4),
+.page-transition-wrapper > div > .tabular-grid-container:nth-child(4) {
+  animation-delay: 135ms;
+}
+.page-transition-wrapper > *:nth-child(5),
+.page-transition-wrapper > div > .tabular-grid-container:nth-child(5) {
+  animation-delay: 180ms;
 }
 
 .tabular-grid-cell {
   background-color: var(--color-card);
+  border: 0 !important;
+}
+
+/* Page & Card Animations (Bottom-to-Top Fade In) */
+@keyframes page-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes card-fade-up {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes nav-pop {
+  0% {
+    transform: scale(0.86);
+  }
+  55% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-page-in {
+  animation: page-fade-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-card-up {
+  animation: card-fade-up 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.nav-touch-item {
+  transition:
+    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.2s ease,
+    color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nav-touch-item:active {
+  transform: scale(0.9);
+}
+
+.nav-touch-item.active {
+  animation: nav-pop 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.fab-touch {
+  transition:
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fab-touch:active {
+  transform: scale(0.88) rotate(45deg);
+}
+
+/* Floating Pill Navbar Soft Shadows & Interactions */
+.floating-navbar-pill {
+  box-shadow: 0 10px 28px -4px rgba(0, 0, 0, 0.08),
+              0 4px 12px -2px rgba(0, 0, 0, 0.04),
+              0 0 0 1px rgba(0, 0, 0, 0.03) !important;
+}
+
+.dark .floating-navbar-pill {
+  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.5),
+              0 4px 12px -2px rgba(0, 0, 0, 0.3),
+              0 0 0 1px rgba(255, 255, 255, 0.06) !important;
+}
+
+.floating-navbar-fab {
+  box-shadow: 0 6px 18px -2px rgba(16, 185, 129, 0.42),
+              0 2px 6px -1px rgba(5, 150, 105, 0.28) !important;
+}
+
+.floating-navbar-fab:hover {
+  box-shadow: 0 8px 24px -2px rgba(16, 185, 129, 0.52),
+              0 3px 8px -1px rgba(5, 150, 105, 0.35) !important;
 }
 
 .money-mono {
@@ -88,5 +206,24 @@
 
 .no-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  height: 4px;
+  width: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: 9999px;
 }
 

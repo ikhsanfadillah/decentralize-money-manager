@@ -71,9 +71,14 @@ describe("TransactionTable (Mobile Friendly & Responsive)", () => {
     fireEvent.click(editBtns[0]);
     expect(defaultProps.onEditTx).toHaveBeenCalledWith(mockTransactions[0]);
 
-    // Click Hapus on mobile card
+    // Click Hapus on mobile card to open confirm bottom drawer
     const hapusBtns = screen.getAllByRole("button", { name: "Hapus" });
     fireEvent.click(hapusBtns[0]);
+
+    // Confirm in the bottom drawer popup
+    const confirmBtn = screen.getByRole("button", { name: "Hapus Transaksi" });
+    expect(screen.getByText("Hapus Transaksi Ini?")).toBeInTheDocument();
+    fireEvent.click(confirmBtn);
     expect(defaultProps.onDeleteTx).toHaveBeenCalledWith("tx-1");
   });
 
@@ -104,5 +109,31 @@ describe("TransactionTable (Mobile Friendly & Responsive)", () => {
     const applyBtn = screen.getByRole("button", { name: "Terapkan & Selesai" });
     fireEvent.click(applyBtn);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("snaps sticky open to -140px on light left swipe and does not bounce back to 0px on post-drag click", () => {
+    render(<TransactionTable {...defaultProps} />);
+
+    const surface1 = screen.getByTestId("tx-swipe-surface-tx-1");
+    expect(surface1).toHaveStyle({ transform: "translateX(0px)" });
+
+    // 1) Simulate light mouse left swipe (25px) followed by mouseUp + synthetic browser click
+    fireEvent.mouseDown(surface1, { clientX: 200, clientY: 20, button: 0 });
+    fireEvent.mouseMove(window, { clientX: 175, clientY: 20 });
+    fireEvent.mouseUp(window, { clientX: 175, clientY: 20 });
+    fireEvent.click(surface1);
+
+    // Must remain sticky open at -140px and NOT close from the post-drag click
+    expect(surface1).toHaveStyle({ transform: "translateX(-140px)" });
+
+    // 2) Simulate light touch swipe on tx-2 (automatically closes tx-1 and opens tx-2)
+    const surface2 = screen.getByTestId("tx-swipe-surface-tx-2");
+    fireEvent.touchStart(surface2, { touches: [{ clientX: 220, clientY: 20 }] });
+    fireEvent.touchMove(surface2, { touches: [{ clientX: 195, clientY: 20 }] });
+    fireEvent.touchEnd(surface2);
+    fireEvent.click(surface2);
+
+    expect(surface2).toHaveStyle({ transform: "translateX(-140px)" });
+    expect(surface1).toHaveStyle({ transform: "translateX(0px)" });
   });
 });

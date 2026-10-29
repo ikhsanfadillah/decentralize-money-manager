@@ -52,12 +52,12 @@ const RootLayout: React.FC = () => {
           {toasts.map((t) => {
             const badgeText =
               t.variant === "error"
-                ? "[GALAT]"
+                ? "Gagal"
                 : t.variant === "warning"
-                  ? "[PERINGATAN]"
+                  ? "Perhatian"
                   : t.variant === "success"
-                    ? "[BERHASIL]"
-                    : "[INFO]";
+                    ? "Berhasil"
+                    : "Info";
             const badgeColor =
               t.variant === "error"
                 ? "text-rose-500"

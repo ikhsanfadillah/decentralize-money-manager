@@ -158,7 +158,7 @@ describe("MonthlyReportPage & Interactive Charts", () => {
     });
 
     expect(screen.getByTestId("report-savings-rate-badge")).toHaveTextContent(
-      "SAVINGS RATE: 75.0%"
+      "Tabungan 75.0%"
     );
     expect(
       screen.getByTestId("interactive-cashflow-chart")

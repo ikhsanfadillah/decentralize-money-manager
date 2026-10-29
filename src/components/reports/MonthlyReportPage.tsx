@@ -8,6 +8,7 @@ import {
 import { tauriApi } from "../../lib/tauri-api";
 import {
   currentYearMonth,
+  formatAccountTypeLabel,
   formatMonthLabel,
   formatRupiah,
   formatSignedRupiah,
@@ -163,34 +164,24 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
     : report.top_expenses;
 
   return (
-    <div className="space-y-6">
-      {/* Top Header, Month Selector & CSV Export */}
-      <div className="tabular-grid-container grid grid-cols-1 md:grid-cols-12">
-        <div className="tabular-grid-cell flex flex-col justify-center p-4 md:col-span-7">
-          <h1 className="text-base font-semibold tracking-tight text-foreground">
-            Laporan Analitik & Rekonsiliasi Bulanan
-          </h1>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Memisahkan arus kas operasional vs mutasi modal antar-buku, lengkap
-            dengan kurva laju pengeluaran dan rekonsiliasi saldo akhir akun.
-          </p>
-        </div>
-
-        <div className="tabular-grid-cell flex flex-col gap-2.5 p-4 sm:flex-row sm:items-center sm:justify-between md:col-span-5">
-          <div className="flex w-full items-center justify-between gap-1 sm:w-auto sm:justify-start">
+    <div className="w-full space-y-4 sm:space-y-6">
+      {/* Top Toolbar: Month Selector & Compact CSV Export */}
+      <div className="tabular-grid-container grid grid-cols-1">
+        <div className="tabular-grid-cell flex items-center justify-between gap-3 px-3.5 py-2.5 sm:px-4 sm:py-3">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               type="button"
               aria-label="Bulan Laporan Sebelumnya"
               onClick={() =>
                 handleMonthChange(shiftYearMonth(selectedMonth, -1))
               }
-              className="inline-flex h-8 items-center justify-center rounded border border-border bg-background px-3 font-mono text-xs text-foreground shadow-none hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+              className="nav-touch-item inline-flex h-8 w-8 items-center justify-center rounded border border-border bg-background font-mono text-xs text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
             >
               ←
             </button>
             <span
               data-testid="report-selected-month"
-              className="min-w-[130px] flex-1 text-center font-mono text-xs font-semibold text-foreground sm:flex-initial"
+              className="min-w-[116px] text-center text-xs font-semibold tracking-tight text-foreground sm:min-w-[136px] sm:text-sm"
             >
               {formatMonthLabel(selectedMonth)}
             </span>
@@ -200,7 +191,7 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
               onClick={() =>
                 handleMonthChange(shiftYearMonth(selectedMonth, 1))
               }
-              className="inline-flex h-8 items-center justify-center rounded border border-border bg-background px-3 font-mono text-xs text-foreground shadow-none hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+              className="nav-touch-item inline-flex h-8 w-8 items-center justify-center rounded border border-border bg-background font-mono text-xs text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
             >
               →
             </button>
@@ -209,100 +200,102 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
           <button
             type="button"
             onClick={handleExportCsv}
-            className="inline-flex h-8 w-full items-center justify-center rounded-md border border-border bg-primary px-3 text-xs font-semibold text-primary-foreground shadow-none hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary sm:w-auto"
+            className="nav-touch-item inline-flex h-8 shrink-0 items-center justify-center rounded border border-primary bg-primary px-3 text-xs font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
           >
-            Ekspor CSV ({selectedMonth})
+            Ekspor CSV
           </button>
         </div>
       </div>
 
-      {/* 6-Card Executive KPI Strip */}
-      <div className="tabular-grid-container grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+      {/* 6-Card Executive KPI Strip (2x3 on Mobile, 3x2 on Desktop) */}
+      <div className="tabular-grid-container grid grid-cols-2 border-t border-border lg:grid-cols-3">
         {/* 1. Operational Income */}
-        <div className="tabular-grid-cell p-4">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-              Pemasukan Operasional
+        <div className="tabular-grid-cell flex flex-col justify-between gap-1.5 p-3.5 sm:p-4">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="truncate text-xs font-medium text-muted-foreground">
+              Pemasukan
             </span>
             {incomeMoMPct !== null && (
               <span
-                className={`rounded border px-1.5 py-0.5 font-mono text-[10px] font-semibold ${
+                className={`shrink-0 rounded border px-1.5 py-0.5 font-mono text-[10px] font-medium leading-none ${
                   incomeMoMPct >= 0
-                    ? "border-emerald-500/40 text-emerald-500"
-                    : "border-rose-500/40 text-rose-500"
+                    ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-500"
+                    : "border-rose-500/30 bg-rose-500/5 text-rose-500"
                 }`}
               >
-                {incomeMoMPct >= 0 ? `+${incomeMoMPct}%` : `${incomeMoMPct}%`}{" "}
-                vs {report.prev_month}
+                {incomeMoMPct >= 0 ? `+${incomeMoMPct}%` : `${incomeMoMPct}%`}
               </span>
             )}
           </div>
           <p
             data-testid="report-operational-income"
-            className="mt-1.5 font-mono text-lg font-semibold tabular-nums tracking-tight text-emerald-500"
+            className="truncate font-mono text-base font-semibold tabular-nums tracking-tight text-emerald-500 sm:text-lg"
           >
             + {formatRupiah(report.operational_income)}
           </p>
-          <p className="mt-1 font-mono text-[11px] tabular-nums tracking-tight text-muted-foreground">
-            Bulan lalu ({report.prev_month}):{" "}
-            {formatRupiah(report.prev_operational_income)}
+          <p className="truncate text-[11px] leading-normal text-muted-foreground">
+            Bulan lalu:{" "}
+            <span className="font-mono tabular-nums">
+              {formatRupiah(report.prev_operational_income)}
+            </span>
           </p>
         </div>
 
         {/* 2. Operational Expense */}
-        <div className="tabular-grid-cell p-4">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-              Pengeluaran Konsumsi/Operasional
+        <div className="tabular-grid-cell flex flex-col justify-between gap-1.5 p-3.5 sm:p-4">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="truncate text-xs font-medium text-muted-foreground">
+              Pengeluaran
             </span>
             {expenseMoMPct !== null && (
               <span
-                className={`rounded border px-1.5 py-0.5 font-mono text-[10px] font-semibold ${
+                className={`shrink-0 rounded border px-1.5 py-0.5 font-mono text-[10px] font-medium leading-none ${
                   expenseMoMPct <= 0
-                    ? "border-emerald-500/40 text-emerald-500"
-                    : "border-rose-500/40 text-rose-500"
+                    ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-500"
+                    : "border-rose-500/30 bg-rose-500/5 text-rose-500"
                 }`}
               >
                 {expenseMoMPct >= 0
                   ? `+${expenseMoMPct}%`
-                  : `${expenseMoMPct}%`}{" "}
-                vs {report.prev_month}
+                  : `${expenseMoMPct}%`}
               </span>
             )}
           </div>
           <p
             data-testid="report-operational-expense"
-            className="mt-1.5 font-mono text-lg font-semibold tabular-nums tracking-tight text-rose-500"
+            className="truncate font-mono text-base font-semibold tabular-nums tracking-tight text-rose-500 sm:text-lg"
           >
             - {formatRupiah(report.operational_expense)}
           </p>
-          <p className="mt-1 font-mono text-[11px] tabular-nums tracking-tight text-muted-foreground">
-            Bulan lalu ({report.prev_month}):{" "}
-            {formatRupiah(report.prev_operational_expense)}
+          <p className="truncate text-[11px] leading-normal text-muted-foreground">
+            Bulan lalu:{" "}
+            <span className="font-mono tabular-nums">
+              {formatRupiah(report.prev_operational_expense)}
+            </span>
           </p>
         </div>
 
         {/* 3. Savings Rate & Operational Net */}
-        <div className="tabular-grid-cell p-4">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-              Surplus Bersih & Savings Rate
+        <div className="tabular-grid-cell flex flex-col justify-between gap-1.5 p-3.5 sm:p-4">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="truncate text-xs font-medium text-muted-foreground">
+              Surplus Bersih
             </span>
             <span
               data-testid="report-savings-rate-badge"
-              className={`rounded border px-1.5 py-0.5 font-mono text-[10px] font-semibold ${
+              className={`shrink-0 rounded border px-1.5 py-0.5 font-mono text-[10px] font-medium leading-none ${
                 report.savings_rate_bps >= 2000
-                  ? "border-primary/40 text-primary"
+                  ? "border-primary/30 bg-primary/5 text-primary"
                   : report.savings_rate_bps >= 0
-                    ? "border-amber-500/40 text-amber-500"
-                    : "border-rose-500/40 text-rose-500"
+                    ? "border-amber-500/30 bg-amber-500/5 text-amber-500"
+                    : "border-rose-500/30 bg-rose-500/5 text-rose-500"
               }`}
             >
-              SAVINGS RATE: {savingsRatePct}%
+              Tabungan {savingsRatePct}%
             </span>
           </div>
           <p
-            className={`mt-1.5 font-mono text-lg font-semibold tabular-nums tracking-tight ${
+            className={`truncate font-mono text-base font-semibold tabular-nums tracking-tight sm:text-lg ${
               report.operational_net >= 0 ? "text-emerald-500" : "text-rose-500"
             }`}
           >
@@ -310,82 +303,89 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
               ? `+ ${formatRupiah(report.operational_net)}`
               : `- ${formatRupiah(Math.abs(report.operational_net))}`}
           </p>
-          <p className="mt-1 font-mono text-[11px] text-muted-foreground">
-            Selisih pemasukan & pengeluaran non-modal
+          <p className="truncate text-[11px] leading-normal text-muted-foreground">
+            Rasio simpan dari pemasukan
           </p>
         </div>
 
         {/* 4. Daily Burn Rate & End-of-Month Projection */}
-        <div className="tabular-grid-cell p-4">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-              Daily Burn Rate & Proyeksi
+        <div className="tabular-grid-cell flex flex-col justify-between gap-1.5 p-3.5 sm:p-4">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="truncate text-xs font-medium text-muted-foreground">
+              Rata-rata Harian
             </span>
             <span
-              className={`rounded border px-1.5 py-0.5 font-mono text-[10px] font-semibold ${
+              className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium leading-none ${
                 isProjectedOverBudget
-                  ? "border-rose-500/40 text-rose-500"
-                  : "border-primary/40 text-primary"
+                  ? "border-rose-500/30 bg-rose-500/5 text-rose-500"
+                  : "border-primary/30 bg-primary/5 text-primary"
               }`}
             >
-              {isProjectedOverBudget
-                ? "PROYEKSI MELEBIHI ANGGARAN"
-                : "LAJU TERKENDALI"}
+              {isProjectedOverBudget ? "Melebihi Anggaran" : "Aman"}
             </span>
           </div>
-          <p className="mt-1.5 font-mono text-lg font-semibold tabular-nums tracking-tight text-foreground">
+          <p className="truncate font-mono text-base font-semibold tabular-nums tracking-tight text-foreground sm:text-lg">
             {formatRupiah(report.daily_burn_rate)}{" "}
-            <span className="text-xs font-normal text-muted-foreground">
-              / hari
+            <span className="font-sans text-xs font-normal text-muted-foreground">
+              /hari
             </span>
           </p>
-          <p className="mt-1 font-mono text-[11px] tabular-nums tracking-tight text-muted-foreground">
-            Proyeksi {report.days_in_month} hari:{" "}
-            {formatRupiah(report.projected_month_expense)}
+          <p className="truncate text-[11px] leading-normal text-muted-foreground">
+            Estimasi {report.days_in_month} hr:{" "}
+            <span className="font-mono tabular-nums">
+              {formatRupiah(report.projected_month_expense)}
+            </span>
           </p>
         </div>
 
         {/* 5. No-Spend Days & Activity */}
-        <div className="tabular-grid-cell p-4">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-              Hari Tanpa Pengeluaran
-            </span>
-            <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px] text-foreground">
-              {report.tx_count} Total Transaksi
+        <div className="tabular-grid-cell flex flex-col justify-between gap-1.5 p-3.5 sm:p-4">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="truncate text-xs font-medium text-muted-foreground">
+              Hari Tanpa Belanja
             </span>
           </div>
-          <p className="mt-1.5 font-mono text-lg font-semibold tabular-nums tracking-tight text-foreground">
+          <p className="truncate font-mono text-base font-semibold tabular-nums tracking-tight text-foreground sm:text-lg">
             {report.no_spend_days} Hari{" "}
-            <span className="text-xs font-normal text-muted-foreground">
-              dari {report.elapsed_days} hari berjalan
+            <span className="font-sans text-xs font-normal text-muted-foreground">
+              / {report.elapsed_days} hr
             </span>
           </p>
-          <p className="mt-1 font-mono text-[11px] text-muted-foreground">
-            Disiplin hari bebas belanja konsumsi
+          <p className="truncate text-[11px] leading-normal text-muted-foreground">
+            Total {report.tx_count} transaksi bulan ini
           </p>
         </div>
 
         {/* 6. Cross-Book Capital & Prive Flow */}
-        <div className="tabular-grid-cell p-4">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-              Arus Modal & Prive Antar-Buku
+        <div className="tabular-grid-cell flex flex-col justify-between gap-1.5 p-3.5 sm:p-4">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="truncate text-xs font-medium text-muted-foreground">
+              Modal & Prive
             </span>
-            <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-              DIKECUALIKAN DARI KONSUMSI
-            </span>
-          </div>
-          <div className="mt-1.5 flex items-baseline justify-between font-mono text-xs tabular-nums tracking-tight">
-            <span className="text-emerald-500">
-              Modal Masuk: +{formatRupiah(report.capital_injection)}
-            </span>
-            <span className="text-amber-500">
-              Prive Keluar: −{formatRupiah(report.capital_withdrawal)}
+            <span className="shrink-0 rounded border border-border px-1.5 py-0.5 text-[10px] font-medium leading-none text-muted-foreground">
+              Non-Konsumsi
             </span>
           </div>
-          <p className="mt-1.5 font-mono text-[11px] text-muted-foreground">
-            Mutasi ekuitas via `transfer_between_books`
+          <div className="space-y-0.5 font-mono text-xs tabular-nums tracking-tight">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-sans text-[11px] text-muted-foreground">
+                Masuk
+              </span>
+              <span className="font-semibold text-emerald-500">
+                +{formatRupiah(report.capital_injection)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-sans text-[11px] text-muted-foreground">
+                Keluar
+              </span>
+              <span className="font-semibold text-amber-500">
+                −{formatRupiah(report.capital_withdrawal)}
+              </span>
+            </div>
+          </div>
+          <p className="truncate text-[11px] leading-normal text-muted-foreground">
+            Mutasi ekuitas antar-buku
           </p>
         </div>
       </div>
@@ -410,18 +410,21 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
       />
 
       {/* Drill-Down Transactions / Top 5 Largest Expenses */}
-      <div className="tabular-grid-container grid grid-cols-1">
+      <div
+        id="drilldown-transactions-section"
+        className="tabular-grid-container grid grid-cols-1 border-t border-border"
+      >
         <div className="tabular-grid-cell flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-          <div>
-            <h2 className="text-sm font-semibold text-foreground">
+          <div className="space-y-0.5">
+            <h2 className="text-xs font-semibold text-foreground sm:text-sm">
               {hasDrilldownFilter
                 ? "Hasil Filter Interaktif Grafik (Drill-Down Transaksi)"
-                : `5 Pengeluaran Terbesar (${report.month})`}
+                : "Pengeluaran Terbesar"}
             </h2>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs leading-relaxed text-muted-foreground">
               {hasDrilldownFilter
-                ? `Menampilkan transaksi untuk filter aktif: ${selectedDate ? `Tanggal ${selectedDate}` : "Semua Tanggal"} · ${selectedCategoryId ? `Kategori ID ${selectedCategoryId.slice(0, 8)}` : "Semua Kategori"}`
-                : "Daftar transaksi pengeluaran dengan nominal terbesar pada bulan ini"}
+                ? `Filter aktif: ${selectedDate ? `Tanggal ${selectedDate}` : "Semua Tanggal"} · ${selectedCategoryId ? "Kategori terpilih" : "Semua Kategori"}`
+                : `5 transaksi pengeluaran tertinggi pada ${formatMonthLabel(report.month)}`}
             </p>
           </div>
 
@@ -432,9 +435,9 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
                 setSelectedDate(null);
                 setSelectedCategoryId(null);
               }}
-              className="rounded border border-primary/50 bg-background px-2.5 py-1 font-mono text-xs font-semibold text-primary shadow-none hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+              className="nav-touch-item rounded border border-primary/50 bg-background px-2.5 py-1 text-xs font-medium text-primary hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
             >
-              Reset Semua Filter Grafik ×
+              Reset Filter ×
             </button>
           )}
         </div>
@@ -447,25 +450,25 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
           displayedTransactions.map((tx) => (
             <div
               key={tx.id}
-              className="tabular-grid-cell flex items-center justify-between px-4 py-2.5 text-xs"
+              className="tabular-grid-cell flex items-center justify-between gap-3 px-4 py-3 text-xs"
             >
-              <div className="space-y-0.5">
+              <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-foreground">
+                  <span className="truncate font-semibold text-foreground">
                     {tx.tx_type === "TRANSFER"
                       ? `${tx.account_name} → ${tx.to_account_name ?? "-"}`
                       : (tx.category_name ?? "Tanpa Kategori")}
                   </span>
-                  <span className="rounded border border-border bg-background px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                  <span className="shrink-0 rounded border border-border bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground">
                     {tx.account_name}
                   </span>
                 </div>
-                <p className="font-mono text-[11px] text-muted-foreground">
-                  {tx.tx_date} · Perangkat: {tx.created_by_device}
+                <p className="truncate text-[11px] leading-normal text-muted-foreground">
+                  {tx.tx_date}
                   {tx.note ? ` · ${tx.note}` : ""}
                 </p>
               </div>
-              <span className="font-mono text-xs font-semibold tabular-nums tracking-tight text-rose-500">
+              <span className="shrink-0 font-mono text-xs font-semibold tabular-nums tracking-tight text-rose-500 sm:text-sm">
                 {formatSignedRupiah(tx.amount, tx.tx_type)}
               </span>
             </div>
@@ -474,28 +477,27 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
       </div>
 
       {/* Bottom Grid: Account Reconciliation & P2P Device Contribution */}
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
+      <div className="grid grid-cols-1 border-t border-border lg:grid-cols-12 lg:gap-px lg:bg-border">
         {/* Account Reconciliation Statement (8 cols) */}
         <div
           data-testid="account-reconciliation-table"
           className="tabular-grid-container flex flex-col lg:col-span-8"
         >
-          <div className="tabular-grid-cell px-4 py-3">
-            <h2 className="text-sm font-semibold text-foreground">
-              Rekonsiliasi & Mutasi Saldo per Akun ({report.month})
+          <div className="tabular-grid-cell space-y-0.5 px-4 py-3">
+            <h2 className="text-xs font-semibold text-foreground sm:text-sm">
+              Mutasi Saldo Rekening
             </h2>
-            <p className="text-xs text-muted-foreground">
-              Posisi Saldo Awal Bulan (&lt; {report.month}-01), Mutasi Masuk &
-              Keluar (termasuk transfer), hingga Saldo Akhir Bulan.
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Posisi saldo awal, arus masuk & keluar, hingga saldo akhir bulan
             </p>
           </div>
 
-          <div className="tabular-grid-cell hidden grid-cols-12 items-center bg-muted/40 px-4 py-2 font-mono text-[10px] font-semibold uppercase tracking-wider text-muted-foreground md:grid">
-            <div className="col-span-3">Akun Kanonik</div>
+          <div className="tabular-grid-cell hidden grid-cols-12 items-center bg-muted/40 px-4 py-2 text-[11px] font-medium text-muted-foreground md:grid">
+            <div className="col-span-3">Nama Rekening</div>
             <div className="col-span-2 text-right">Saldo Awal</div>
             <div className="col-span-2 text-right">Total Masuk</div>
             <div className="col-span-2 text-right">Total Keluar</div>
-            <div className="col-span-3 text-right">Saldo Akhir Bulan</div>
+            <div className="col-span-3 text-right">Saldo Akhir</div>
           </div>
 
           {report.account_reconciliation.length === 0 ? (
@@ -506,43 +508,43 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
             report.account_reconciliation.map((acc) => (
               <div
                 key={acc.account_id}
-                className="tabular-grid-cell grid grid-cols-1 items-center gap-2 px-4 py-3 text-xs md:grid-cols-12"
+                className="tabular-grid-cell grid grid-cols-1 items-center gap-1.5 px-4 py-3 text-xs md:grid-cols-12 md:gap-2"
               >
-                <div className="md:col-span-3">
+                <div className="flex items-center justify-between md:col-span-3 md:block">
                   <p className="font-semibold text-foreground">
                     {acc.account_name}
                   </p>
-                  <p className="font-mono text-[10px] text-muted-foreground">
-                    {acc.account_type} · {acc.tx_count} mutasi
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    {formatAccountTypeLabel(acc.account_type)} · {acc.tx_count} transaksi
                   </p>
                 </div>
 
-                <div className="font-mono tabular-nums tracking-tight text-muted-foreground md:col-span-2 md:text-right">
-                  <span className="mr-1.5 font-sans text-[10px] uppercase text-muted-foreground md:hidden">
-                    Saldo Awal:
+                <div className="flex items-center justify-between font-mono text-xs tabular-nums tracking-tight text-muted-foreground md:col-span-2 md:block md:text-right">
+                  <span className="font-sans text-[11px] text-muted-foreground md:hidden">
+                    Saldo Awal
                   </span>
-                  {formatRupiah(acc.opening_balance)}
+                  <span>{formatRupiah(acc.opening_balance)}</span>
                 </div>
 
-                <div className="font-mono tabular-nums tracking-tight text-emerald-500 md:col-span-2 md:text-right">
-                  <span className="mr-1.5 font-sans text-[10px] uppercase text-muted-foreground md:hidden">
-                    Masuk:
+                <div className="flex items-center justify-between font-mono text-xs tabular-nums tracking-tight text-emerald-500 md:col-span-2 md:block md:text-right">
+                  <span className="font-sans text-[11px] text-muted-foreground md:hidden">
+                    Total Masuk
                   </span>
-                  +{formatRupiah(acc.month_inflow)}
+                  <span>+{formatRupiah(acc.month_inflow)}</span>
                 </div>
 
-                <div className="font-mono tabular-nums tracking-tight text-rose-500 md:col-span-2 md:text-right">
-                  <span className="mr-1.5 font-sans text-[10px] uppercase text-muted-foreground md:hidden">
-                    Keluar:
+                <div className="flex items-center justify-between font-mono text-xs tabular-nums tracking-tight text-rose-500 md:col-span-2 md:block md:text-right">
+                  <span className="font-sans text-[11px] text-muted-foreground md:hidden">
+                    Total Keluar
                   </span>
-                  −{formatRupiah(acc.month_outflow)}
+                  <span>−{formatRupiah(acc.month_outflow)}</span>
                 </div>
 
-                <div className="font-mono font-semibold tabular-nums tracking-tight text-foreground md:col-span-3 md:text-right">
-                  <span className="mr-1.5 font-sans text-[10px] uppercase text-muted-foreground md:hidden">
-                    Saldo Akhir:
+                <div className="flex items-center justify-between border-t border-border/60 pt-1.5 font-mono text-xs font-semibold tabular-nums tracking-tight text-foreground md:col-span-3 md:block md:border-t-0 md:pt-0 md:text-right">
+                  <span className="font-sans text-[11px] font-medium text-foreground md:hidden">
+                    Saldo Akhir
                   </span>
-                  {formatRupiah(acc.closing_balance)}
+                  <span>{formatRupiah(acc.closing_balance)}</span>
                 </div>
               </div>
             ))
@@ -550,14 +552,13 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
         </div>
 
         {/* Multi-Device P2P Audit Breakdown (4 cols) */}
-        <div className="tabular-grid-container flex flex-col lg:col-span-4">
-          <div className="tabular-grid-cell px-4 py-3">
-            <h2 className="text-sm font-semibold text-foreground">
-              Audit Kontribusi Perangkat P2P
+        <div className="tabular-grid-container flex flex-col border-t border-border lg:col-span-4 lg:border-t-0">
+          <div className="tabular-grid-cell space-y-0.5 px-4 py-3">
+            <h2 className="text-xs font-semibold text-foreground sm:text-sm">
+              Kontribusi Perangkat
             </h2>
-            <p className="text-xs text-muted-foreground">
-              Aktivitas pencatatan berdasarkan `created_by_device` pada bulan{" "}
-              {report.month}
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Ringkasan pencatatan dari perangkat yang terhubung
             </p>
           </div>
 
@@ -571,15 +572,15 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
                 key={dev.device_id}
                 className="tabular-grid-cell space-y-1.5 px-4 py-3 text-xs"
               >
-                <div className="flex items-center justify-between font-mono">
-                  <span className="font-semibold text-foreground">
-                    Perangkat: {dev.device_id}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate font-semibold text-foreground">
+                    Perangkat {dev.device_id}
                   </span>
-                  <span className="text-primary">
-                    {dev.tx_count} tx ({(dev.share_bps / 100).toFixed(0)}%)
+                  <span className="shrink-0 font-mono text-[11px] font-medium text-primary">
+                    {dev.tx_count} transaksi ({(dev.share_bps / 100).toFixed(0)}%)
                   </span>
                 </div>
-                <div className="flex items-center justify-between font-mono text-[11px] tabular-nums tracking-tight">
+                <div className="flex items-center justify-between font-mono text-xs tabular-nums tracking-tight">
                   <span className="text-emerald-500">
                     +{formatRupiah(dev.total_income)}
                   </span>

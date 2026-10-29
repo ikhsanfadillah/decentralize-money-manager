@@ -1,16 +1,16 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import process from "node:process";
 
 const host = process.env.TAURI_DEV_HOST;
 
 export default defineConfig(() => ({
   plugins: [
-    TanStackRouterVite({
+    tanstackRouter({
       target: "react",
-      autoCodeSplitting: false,
+      autoCodeSplitting: true,
       routesDirectory: "./src/routes",
       generatedRouteTree: "./src/routeTree.gen.ts",
     }),
