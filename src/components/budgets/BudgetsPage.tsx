@@ -11,6 +11,7 @@ import {
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { BudgetProgressBar } from "./BudgetProgressBar";
 import { BudgetDialog } from "./BudgetDialog";
+import { EmptyStateIllustration } from "../ui/EmptyStateIllustration";
 import { pushToast } from "../../lib/toast";
 
 export interface BudgetsPageProps {
@@ -148,7 +149,8 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ bookId }) => {
         </div>
 
         {budgets.length === 0 ? (
-          <div className="tabular-grid-cell p-6 text-center">
+          <div className="tabular-grid-cell flex flex-col items-center justify-center p-6 text-center">
+            <EmptyStateIllustration variant="active-budget-period" />
             <p className="text-xs font-medium text-foreground">
               Belum ada anggaran aktif untuk periode ini
             </p>

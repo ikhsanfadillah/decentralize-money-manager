@@ -9,7 +9,7 @@ import {
   ShieldCheck,
   Users,
 } from "lucide-react";
-import { tauriApi, type BookKind } from "../../lib/tauri-api";
+import { tauriApi } from "../../lib/tauri-api";
 import { decodeInviteToken, type InviteTokenPayload } from "../../lib/web-core";
 import { pushToast } from "../../lib/toast";
 import { formatExpiryTime } from "../../lib/date";
@@ -39,7 +39,6 @@ export const InviteAcceptPage: React.FC = () => {
     return "";
   });
 
-  const [selectedKind, setSelectedKind] = React.useState<BookKind>("PERSONAL");
   const [parsedPayload, setParsedPayload] = React.useState<InviteTokenPayload | null>(null);
 
   // Parse and validate token on mount
@@ -87,7 +86,7 @@ export const InviteAcceptPage: React.FC = () => {
   const joinMutation = useMutation({
     mutationFn: async () => {
       if (!parsedPayload) throw new Error("Undangan belum siap");
-      return await tauriApi.joinBookFromInvite(rawToken, selectedKind);
+      return await tauriApi.joinBookFromInvite(rawToken, "PERSONAL");
     },
     onSuccess: (meta) => {
       void queryClient.invalidateQueries({ queryKey: ["books"] });
@@ -212,27 +211,6 @@ export const InviteAcceptPage: React.FC = () => {
                 <Clock className="h-3.5 w-3.5" />
                 <span>Berlaku hingga {formatExpiryTime(parsedPayload.expires_at)}</span>
               </div>
-            </div>
-
-            {/* Pilihan kategori buku */}
-            <div className="mt-5 space-y-2">
-              <label
-                htmlFor="book-kind-select"
-                className="text-xs font-medium text-slate-700 dark:text-slate-300"
-              >
-                Kategori Buku di Perangkat Anda:
-              </label>
-              <select
-                id="book-kind-select"
-                value={selectedKind}
-                onChange={(e) => setSelectedKind(e.target.value as BookKind)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 shadow-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-              >
-                <option value="PERSONAL">Pribadi (Personal)</option>
-                <option value="BUSINESS">Bisnis / Usaha</option>
-                <option value="OFFICE">Kantor / Organisasi</option>
-                <option value="OTHER">Lainnya</option>
-              </select>
             </div>
 
             {/* Zero-Knowledge Security Notice */}

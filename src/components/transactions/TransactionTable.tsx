@@ -6,6 +6,7 @@ import {
   useLegacyTable as useReactTable,
 } from "@tanstack/react-table/legacy";
 import { CurrencyInput } from "../ui/currency-input";
+import { EmptyStateIllustration } from "../ui/EmptyStateIllustration";
 import { Input } from "../ui/input";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { Pencil, Trash2, TrendingDown, TrendingUp } from "lucide-react";
@@ -1351,8 +1352,9 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
               Memuat daftar transaksi...
             </div>
           ) : items.length === 0 ? (
-            <div className="tabular-grid-cell p-6 text-center text-xs text-muted-foreground">
-              Tidak ada transaksi yang cocok dengan filter saat ini.
+            <div className="tabular-grid-cell flex flex-col items-center justify-center p-6 text-center text-xs text-muted-foreground">
+              <EmptyStateIllustration variant="transaction-filter" />
+              <span>Tidak ada transaksi yang cocok dengan filter saat ini.</span>
             </div>
           ) : (
             items.map((tx) => (
@@ -1410,7 +1412,10 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                     colSpan={columns.length}
                     className="px-3 py-6 text-center text-xs text-muted-foreground"
                   >
-                    Tidak ada transaksi yang cocok dengan filter saat ini.
+                    <div className="flex flex-col items-center justify-center">
+                      <EmptyStateIllustration variant="transaction-filter" />
+                      <span>Tidak ada transaksi yang cocok dengan filter saat ini.</span>
+                    </div>
                   </td>
                 </tr>
               ) : (

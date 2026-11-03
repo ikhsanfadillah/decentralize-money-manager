@@ -27,7 +27,6 @@ import {
 import { bookQueryKeys } from "../../hooks/useBookFinance";
 import {
   formatAccountTypeLabel,
-  formatBookKindLabel,
   formatRupiah,
   todayIsoDate,
 } from "../../lib/utils";
@@ -622,7 +621,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                     <option value="">-- Pilih Buku Tujuan --</option>
                     {otherBooks.map((b) => (
                       <option key={b.id} value={b.id}>
-                        {b.name} ({formatBookKindLabel(b.kind)})
+                        {b.name}
                       </option>
                     ))}
                   </select>

@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { TrendingDown, TrendingUp, X } from "lucide-react";
 import { useBookFinance } from "../../hooks/useBookFinance";
 import type { CategoryKind, CategoryView } from "../../lib/tauri-api";
+import { EmptyStateIllustration } from "../ui/EmptyStateIllustration";
 import { Input } from "../ui/input";
 import {
   ButtonSlideToConfirm,
@@ -187,7 +188,8 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({ bookId }) => {
         </div>
 
         {filteredCategories.length === 0 ? (
-          <div className="tabular-grid-cell p-6 text-center text-xs text-muted-foreground">
+          <div className="tabular-grid-cell flex flex-col items-center justify-center p-6 text-center text-xs text-muted-foreground">
+            <EmptyStateIllustration variant="category-filter" />
             <p>Tidak ada kategori yang sesuai dengan filter.</p>
             <button
               type="button"

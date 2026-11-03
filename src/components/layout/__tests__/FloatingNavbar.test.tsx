@@ -68,5 +68,24 @@ describe("FloatingNavbar", () => {
     const homeLink = screen.getByText("Home").closest("a");
     expect(homeLink?.className).not.toContain("bg-emerald-50/80");
   });
+
+  it("contains dark mode styling classes on navigation container and links", () => {
+    mockUseLocation.mockReturnValue({
+      pathname: "/books/book-123/transactions",
+    });
+
+    render(<FloatingNavbar bookId="book-123" onAddTransaction={vi.fn()} />);
+
+    const nav = screen.getByRole("navigation", { name: "Navigasi Buku" });
+    expect(nav.className).toContain("dark:border-zinc-800");
+    expect(nav.className).toContain("dark:bg-zinc-900/95");
+
+    const txLink = screen.getByText("Transactions").closest("a");
+    expect(txLink?.className).toContain("dark:bg-emerald-950/40");
+    expect(txLink?.className).toContain("dark:text-emerald-300");
+
+    const homeLink = screen.getByText("Home").closest("a");
+    expect(homeLink?.className).toContain("dark:text-zinc-400");
+  });
 });
 

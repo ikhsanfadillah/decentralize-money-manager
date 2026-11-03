@@ -10,6 +10,7 @@ import {
 } from "../../lib/utils";
 import { formatDateReadable } from "../../lib/date";
 import { BudgetProgressBar } from "../budgets/BudgetProgressBar";
+import { EmptyStateIllustration } from "../ui/EmptyStateIllustration";
 import { TrendingDown, TrendingUp } from "lucide-react";
 
 export interface DashboardPageProps {
@@ -221,6 +222,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
 
           {top3Budgets.length === 0 ? (
             <div className="tabular-grid-cell flex flex-col items-center justify-center p-4 text-center">
+              <EmptyStateIllustration variant="monthly-budget" />
               <p className="text-xs font-medium text-foreground">
                 Belum ada anggaran bulanan yang ditetapkan
               </p>
@@ -293,8 +295,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
           {/* Mobile Compact List (< sm): Zero Double Border */}
           <div className="grid grid-cols-1 gap-px bg-border sm:hidden">
             {cashFlowSummary.length === 0 ? (
-              <div className="tabular-grid-cell p-4 text-center text-xs text-muted-foreground">
-                Belum ada riwayat transaksi bulanan.
+              <div className="tabular-grid-cell flex flex-col items-center justify-center p-4 text-center text-xs text-muted-foreground">
+                <EmptyStateIllustration variant="monthly-history" />
+                <span>Belum ada riwayat transaksi bulanan.</span>
               </div>
             ) : (
               cashFlowSummary.map((row) => (
@@ -349,8 +352,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
               </div>
 
               {cashFlowSummary.length === 0 ? (
-                <div className="tabular-grid-cell p-4 text-center text-xs text-muted-foreground">
-                  Belum ada riwayat transaksi bulanan.
+                <div className="tabular-grid-cell flex flex-col items-center justify-center p-4 text-center text-xs text-muted-foreground">
+                  <EmptyStateIllustration variant="monthly-history" />
+                  <span>Belum ada riwayat transaksi bulanan.</span>
                 </div>
               ) : (
                 cashFlowSummary.map((row) => (
@@ -411,8 +415,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
           </div>
 
           {recentTransactions.length === 0 ? (
-            <div className="tabular-grid-cell p-4 text-center text-xs text-muted-foreground">
-              Belum ada transaksi tercatat.
+            <div className="tabular-grid-cell flex flex-col items-center justify-center p-4 text-center text-xs text-muted-foreground">
+              <EmptyStateIllustration variant="recent-transactions" />
+              <span>Belum ada transaksi tercatat.</span>
             </div>
           ) : (
             recentTransactions.map((tx) => (

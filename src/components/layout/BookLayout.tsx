@@ -11,7 +11,6 @@ import {
 import { useUiStore } from "../../stores/ui-store";
 import {
   applyTheme,
-  formatBookKindLabel,
   getStoredTheme,
   type ThemeMode,
 } from "../../lib/utils";
@@ -155,7 +154,7 @@ export const BookLayout: React.FC<BookLayoutProps> = ({ bookId, bookMeta }) => {
             >
               {allBooks.map((b) => (
                 <option key={b.id} value={b.id}>
-                  {b.name} ({formatBookKindLabel(b.kind)})
+                  {b.name}
                 </option>
               ))}
               <option value="__HOME__">── Lihat Semua Buku ──</option>

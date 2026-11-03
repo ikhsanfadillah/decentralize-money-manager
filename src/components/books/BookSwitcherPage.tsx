@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, X } from "lucide-react";
+import { X } from "lucide-react";
 import {
   tauriApi,
   type BookKind,
@@ -20,33 +20,17 @@ import {
   DrawerTitle,
 } from "../ui/drawer";
 import { pushToast } from "../../lib/toast";
-import {
-  applyTheme,
-  formatBookKindLabel,
-  getStoredTheme,
-  type ThemeMode,
-} from "../../lib/utils";
 import { formatDateTime, formatRelativeTime } from "../../lib/date";
-
-const BOOK_KINDS: { value: BookKind; label: string }[] = [
-  { value: "PERSONAL", label: "Pribadi / Keluarga" },
-  { value: "BUSINESS", label: "Usaha / Bisnis" },
-  { value: "OFFICE", label: "Kantor / Kegiatan" },
-  { value: "OTHER", label: "Lainnya" },
-];
 
 export const BookSwitcherPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [theme, setTheme] = React.useState<ThemeMode>(() => getStoredTheme());
   const [isCreateBookDrawerOpen, setIsCreateBookDrawerOpen] =
     React.useState(false);
   const [newBookName, setNewBookName] = React.useState("");
-  const [newBookKind, setNewBookKind] = React.useState<BookKind>("PERSONAL");
 
   const [invitePayload, setInvitePayload] = React.useState("");
-  const [inviteKind, setInviteKind] = React.useState<BookKind>("PERSONAL");
   const [isJoinModalOpen, setIsJoinModalOpen] = React.useState(false);
 
   const [renamingBookId, setRenamingBookId] = React.useState<string | null>(
@@ -115,12 +99,6 @@ export const BookSwitcherPage: React.FC = () => {
     },
   });
 
-  const handleToggleTheme = () => {
-    const next: ThemeMode = theme === "dark" ? "light" : "dark";
-    setTheme(next);
-    applyTheme(next);
-  };
-
   const handleSlideConfirmCreateBook = async (): Promise<SlideConfirmResult> => {
     const trimmed = newBookName.trim();
     if (!trimmed) {
@@ -130,7 +108,7 @@ export const BookSwitcherPage: React.FC = () => {
     try {
       await createBookMutation.mutateAsync({
         name: trimmed,
-        kind: newBookKind,
+        kind: "PERSONAL",
       });
       return { ok: true };
     } catch (err: unknown) {
@@ -180,7 +158,7 @@ export const BookSwitcherPage: React.FC = () => {
       return { ok: false, message: "Kode undangan tidak boleh kosong" };
     }
     try {
-      await joinBookMutation.mutateAsync({ qr: trimmed, kind: inviteKind });
+      await joinBookMutation.mutateAsync({ qr: trimmed, kind: "PERSONAL" });
       return { ok: true };
     } catch (err: unknown) {
       const msg =
@@ -199,43 +177,6 @@ export const BookSwitcherPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Compact Top Bar */}
-      <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-sm">
-        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
-          <div className="flex items-center gap-1.5">
-            <span className="inline-block h-2 w-2 rounded-full bg-primary" />
-            <h1 className="text-sm font-semibold tracking-tight text-foreground">
-              Buku Keuangan Saya
-            </h1>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setIsCreateBookDrawerOpen(true)}
-              className="nav-touch-item inline-flex items-center gap-1 rounded border border-border bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-            >
-              <Plus className="h-3 w-3" />
-              <span>Buat Buku Baru</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsJoinModalOpen(true)}
-              className="nav-touch-item rounded border border-border bg-background px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-            >
-              Gabung Buku Bersama
-            </button>
-            <button
-              type="button"
-              onClick={handleToggleTheme}
-              className="nav-touch-item rounded border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-            >
-              {theme === "dark" ? "Mode Gelap" : "Mode Terang"}
-            </button>
-          </div>
-        </div>
-      </header>
-
       <main className="page-transition-wrapper animate-page-in w-full p-0">
         {/* Books List */}
         <div className="tabular-grid-container grid grid-cols-1">
@@ -324,9 +265,6 @@ export const BookSwitcherPage: React.FC = () => {
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="truncate text-xs font-semibold text-foreground sm:text-sm">
                           {book.name}
-                        </span>
-                        <span className="rounded border border-primary/40 bg-primary/10 px-1.5 py-0.2 text-[10px] font-medium text-primary">
-                          {formatBookKindLabel(book.kind)}
                         </span>
                       </div>
                     )}
@@ -450,27 +388,6 @@ export const BookSwitcherPage: React.FC = () => {
                   autoFocus
                 />
               </div>
-
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="new-book-kind"
-                  className="block text-xs font-medium text-foreground"
-                >
-                  Kategori Buku
-                </label>
-                <select
-                  id="new-book-kind"
-                  value={newBookKind}
-                  onChange={(e) => setNewBookKind(e.target.value as BookKind)}
-                  className="flex h-9 w-full rounded border border-input bg-background px-3 py-1 text-xs text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-                >
-                  {BOOK_KINDS.map((k) => (
-                    <option key={k.value} value={k.value}>
-                      {k.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
             </div>
 
             {/* Footer with ButtonSlideToConfirm */}
@@ -549,27 +466,6 @@ export const BookSwitcherPage: React.FC = () => {
                   placeholder="Tempel link undangan (https://.../#/invite?d=...) atau kode undangan..."
                   className="w-full rounded border border-input bg-background p-2.5 font-mono text-xs text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                 />
-              </div>
-
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="invite-book-kind"
-                  className="block text-xs font-medium text-foreground"
-                >
-                  Simpan Sebagai Kategori
-                </label>
-                <select
-                  id="invite-book-kind"
-                  value={inviteKind}
-                  onChange={(e) => setInviteKind(e.target.value as BookKind)}
-                  className="flex h-9 w-full rounded border border-input bg-background px-3 py-1 text-xs text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-                >
-                  {BOOK_KINDS.map((k) => (
-                    <option key={k.value} value={k.value}>
-                      {k.label}
-                    </option>
-                  ))}
-                </select>
               </div>
             </div>
 
