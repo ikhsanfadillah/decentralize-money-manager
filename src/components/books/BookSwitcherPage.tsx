@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Plus, X } from "lucide-react";
 import {
   tauriApi,
   type BookKind,
@@ -8,6 +9,16 @@ import {
 } from "../../lib/tauri-api";
 import { bookQueryKeys } from "../../hooks/useBookFinance";
 import { Input } from "../ui/input";
+import {
+  ButtonSlideToConfirm,
+  type SlideConfirmResult,
+} from "../ui/ButtonSlideToConfirm";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerTitle,
+} from "../ui/drawer";
 import { pushToast } from "../../lib/toast";
 import {
   applyTheme,
@@ -15,6 +26,7 @@ import {
   getStoredTheme,
   type ThemeMode,
 } from "../../lib/utils";
+import { formatDateTime, formatRelativeTime } from "../../lib/date";
 
 const BOOK_KINDS: { value: BookKind; label: string }[] = [
   { value: "PERSONAL", label: "Pribadi / Keluarga" },
@@ -28,6 +40,8 @@ export const BookSwitcherPage: React.FC = () => {
   const queryClient = useQueryClient();
 
   const [theme, setTheme] = React.useState<ThemeMode>(() => getStoredTheme());
+  const [isCreateBookDrawerOpen, setIsCreateBookDrawerOpen] =
+    React.useState(false);
   const [newBookName, setNewBookName] = React.useState("");
   const [newBookKind, setNewBookKind] = React.useState<BookKind>("PERSONAL");
 
@@ -107,21 +121,22 @@ export const BookSwitcherPage: React.FC = () => {
     applyTheme(next);
   };
 
-  const handleCreateBook = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSlideConfirmCreateBook = async (): Promise<SlideConfirmResult> => {
     const trimmed = newBookName.trim();
     if (!trimmed) {
       pushToast("Nama buku tidak boleh kosong", { variant: "warning" });
-      return;
+      return { ok: false, message: "Nama buku tidak boleh kosong" };
     }
     try {
       await createBookMutation.mutateAsync({
         name: trimmed,
         kind: newBookKind,
       });
+      return { ok: true };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Gagal membuat buku";
       pushToast("Gagal membuat buku", { description: msg, variant: "error" });
+      return { ok: false, message: "Gagal Membuat Buku" };
     }
   };
 
@@ -156,17 +171,17 @@ export const BookSwitcherPage: React.FC = () => {
     }
   };
 
-  const handleJoinBook = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSlideConfirmJoinBook = async (): Promise<SlideConfirmResult> => {
     const trimmed = invitePayload.trim();
     if (!trimmed) {
       pushToast("Kode undangan tidak boleh kosong", {
         variant: "warning",
       });
-      return;
+      return { ok: false, message: "Kode undangan tidak boleh kosong" };
     }
     try {
       await joinBookMutation.mutateAsync({ qr: trimmed, kind: inviteKind });
+      return { ok: true };
     } catch (err: unknown) {
       const msg =
         err instanceof Error
@@ -176,6 +191,7 @@ export const BookSwitcherPage: React.FC = () => {
         description: msg,
         variant: "error",
       });
+      return { ok: false, message: "Gagal Bergabung ke Buku" };
     }
   };
 
@@ -196,6 +212,14 @@ export const BookSwitcherPage: React.FC = () => {
           <div className="flex items-center gap-1.5">
             <button
               type="button"
+              onClick={() => setIsCreateBookDrawerOpen(true)}
+              className="nav-touch-item inline-flex items-center gap-1 rounded border border-border bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+            >
+              <Plus className="h-3 w-3" />
+              <span>Buat Buku Baru</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setIsJoinModalOpen(true)}
               className="nav-touch-item rounded border border-border bg-background px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
             >
@@ -213,91 +237,51 @@ export const BookSwitcherPage: React.FC = () => {
       </header>
 
       <main className="page-transition-wrapper animate-page-in w-full p-0">
-        {/* Create New Book Form */}
-        <form
-          onSubmit={(e) => void handleCreateBook(e)}
-          className="tabular-grid-container grid grid-cols-1 md:grid-cols-12"
-        >
-          <div className="tabular-grid-cell flex flex-col justify-center px-3 py-2.5 md:col-span-4">
-            <h2 className="text-xs font-semibold text-foreground sm:text-sm">
-              Buat Buku Keuangan Baru
-            </h2>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">
-              Pisahkan catatan uang harian, tabungan keluarga, atau usaha Anda.
-            </p>
-          </div>
-
-          <div className="tabular-grid-cell flex items-center px-3 py-2.5 md:col-span-4">
-            <div className="w-full">
-              <label
-                htmlFor="new-book-name"
-                className="mb-1 block text-[10px] font-medium text-muted-foreground"
-              >
-                Nama Buku
-              </label>
-              <Input
-                id="new-book-name"
-                value={newBookName}
-                onChange={(e) => setNewBookName(e.target.value)}
-                placeholder="Contoh: Uang Rumah Tangga, Tabungan, Usaha..."
-                className="h-8 text-xs"
-              />
-            </div>
-          </div>
-
-          <div className="tabular-grid-cell flex items-center px-3 py-2.5 md:col-span-2">
-            <div className="w-full">
-              <label
-                htmlFor="new-book-kind"
-                className="mb-1 block text-[10px] font-medium text-muted-foreground"
-              >
-                Kategori Buku
-              </label>
-              <select
-                id="new-book-kind"
-                value={newBookKind}
-                onChange={(e) => setNewBookKind(e.target.value as BookKind)}
-                className="flex h-8 w-full rounded border border-input bg-background px-2 py-1 text-xs text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-              >
-                {BOOK_KINDS.map((k) => (
-                  <option key={k.value} value={k.value}>
-                    {k.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="tabular-grid-cell flex items-end justify-end px-3 py-2.5 md:col-span-2">
-            <button
-              type="submit"
-              disabled={createBookMutation.isPending}
-              className="nav-touch-item h-8 w-full rounded border border-border bg-primary px-3 text-xs font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
-            >
-              {createBookMutation.isPending ? "Menyiapkan..." : "+ Buat Buku"}
-            </button>
-          </div>
-        </form>
-
         {/* Books List */}
         <div className="tabular-grid-container grid grid-cols-1">
-          <div className="tabular-grid-cell flex items-center justify-between px-3 py-2">
-            <h2 className="text-xs font-semibold text-foreground sm:text-sm">
-              Daftar Buku Keuangan ({books.length})
-            </h2>
-            <span className="text-[11px] text-muted-foreground">
-              Pilih buku untuk mulai mencatat
-            </span>
+          <div className="tabular-grid-cell flex items-center justify-between px-3 py-2.5">
+            <div>
+              <h2 className="text-xs font-semibold text-foreground sm:text-sm">
+                Daftar Buku Keuangan ({books.length})
+              </h2>
+              <p className="text-[11px] text-muted-foreground">
+                Pilih buku untuk mulai mencatat keuangan
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsCreateBookDrawerOpen(true)}
+              className="nav-touch-item rounded border border-border bg-background px-2.5 py-1 text-[11px] font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+            >
+              + Buat Buku
+            </button>
           </div>
 
           {books.length === 0 ? (
-            <div className="tabular-grid-cell p-6 text-center">
+            <div className="tabular-grid-cell p-8 text-center">
               <p className="text-xs font-medium text-foreground">
                 Belum ada buku keuangan
               </p>
               <p className="mt-1 text-[11px] text-muted-foreground">
-                Silakan buat buku baru di atas atau gabung ke buku bersama pasangan/keluarga.
+                Silakan buat buku baru atau gabung ke buku bersama pasangan /
+                keluarga.
               </p>
+              <div className="mt-3 flex items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateBookDrawerOpen(true)}
+                  className="nav-touch-item rounded border border-border bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90"
+                >
+                  + Buat Buku Baru
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsJoinModalOpen(true)}
+                  className="nav-touch-item rounded border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
+                >
+                  Gabung Buku Bersama
+                </button>
+              </div>
             </div>
           ) : (
             books.map((book, idx) => {
@@ -347,8 +331,11 @@ export const BookSwitcherPage: React.FC = () => {
                       </div>
                     )}
 
-                    <p className="truncate text-[11px] text-muted-foreground">
-                      Terakhir dibuka: {book.last_opened_at}
+                    <p
+                      className="truncate text-[11px] text-muted-foreground"
+                      title={`Terakhir dibuka: ${formatDateTime(book.last_opened_at)}`}
+                    >
+                      Terakhir dibuka: {formatRelativeTime(book.last_opened_at)}
                     </p>
                   </div>
 
@@ -365,7 +352,7 @@ export const BookSwitcherPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleStartRename(book)}
-                        className="nav-touch-item whitespace-nowrap rounded border border-border bg-background px-2 py-1.5 text-[11px] font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                        className="nav-touch-item rounded border border-border bg-background px-2 py-1.5 text-[11px] font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                       >
                         Ubah Nama
                       </button>
@@ -377,14 +364,14 @@ export const BookSwitcherPage: React.FC = () => {
                           type="button"
                           onClick={() => void handleDeleteBook(book.id)}
                           disabled={deleteBookMutation.isPending}
-                          className="rounded border border-rose-500/50 bg-rose-500 px-2 py-1.5 text-[11px] font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                          className="nav-touch-item rounded border border-rose-500 bg-rose-500 px-2 py-1.5 text-[11px] font-semibold text-white hover:bg-rose-600 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                         >
-                          Ya, Hapus
+                          Yakin Hapus
                         </button>
                         <button
                           type="button"
                           onClick={() => setConfirmDeleteBookId(null)}
-                          className="rounded border border-border bg-background px-2 py-1.5 text-[11px] text-muted-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                          className="nav-touch-item rounded border border-border bg-background px-2 py-1.5 text-[11px] text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                         >
                           Batal
                         </button>
@@ -406,61 +393,168 @@ export const BookSwitcherPage: React.FC = () => {
         </div>
       </main>
 
-      {/* Join Shared Book Modal */}
-      {isJoinModalOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="join-book-dialog-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-        >
-          <div className="w-full max-w-lg rounded border border-border bg-card p-4 text-card-foreground">
-            <div className="flex items-center justify-between border-b border-border pb-2.5">
+      {/* Create New Book Drawer with ButtonSlideToConfirm */}
+      <Drawer
+        open={isCreateBookDrawerOpen}
+        onOpenChange={setIsCreateBookDrawerOpen}
+        shouldScaleBackground={false}
+      >
+        <DrawerContent className="fixed inset-x-0 bottom-0 z-50 flex h-[100dvh] max-h-[100dvh] w-full flex-col rounded-none border-t border-border bg-card p-0 shadow-2xl focus:outline-none sm:mx-auto sm:h-auto sm:max-h-[90vh] sm:max-w-xl sm:rounded-t-2xl">
+          <form
+            onSubmit={(e) => e.preventDefault()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+              }
+            }}
+            className="flex h-full sm:h-auto flex-1 flex-col overflow-hidden"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6 shrink-0 bg-card">
               <div>
-                <h2
+                <DrawerTitle
+                  id="create-book-drawer-title"
+                  className="text-sm font-semibold text-foreground"
+                >
+                  Buat Buku Keuangan Baru
+                </DrawerTitle>
+                <DrawerDescription className="mt-0.5 text-xs text-muted-foreground">
+                  Pisahkan catatan uang harian, tabungan keluarga, atau usaha
+                  Anda.
+                </DrawerDescription>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCreateBookDrawerOpen(false)}
+                aria-label="Tutup"
+                className="nav-touch-item inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 space-y-4">
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="new-book-name"
+                  className="block text-xs font-medium text-foreground"
+                >
+                  Nama Buku Keuangan
+                </label>
+                <Input
+                  id="new-book-name"
+                  value={newBookName}
+                  onChange={(e) => setNewBookName(e.target.value)}
+                  placeholder="Contoh: Uang Rumah Tangga, Tabungan, Usaha..."
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="new-book-kind"
+                  className="block text-xs font-medium text-foreground"
+                >
+                  Kategori Buku
+                </label>
+                <select
+                  id="new-book-kind"
+                  value={newBookKind}
+                  onChange={(e) => setNewBookKind(e.target.value as BookKind)}
+                  className="flex h-9 w-full rounded border border-input bg-background px-3 py-1 text-xs text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                >
+                  {BOOK_KINDS.map((k) => (
+                    <option key={k.value} value={k.value}>
+                      {k.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Footer with ButtonSlideToConfirm */}
+            <div className="flex items-center justify-end gap-2 border-t border-border p-2.5 sm:px-6 bg-card/60 backdrop-blur-xs shrink-0">
+              <ButtonSlideToConfirm
+                key={isCreateBookDrawerOpen ? "book-open" : "book-closed"}
+                disabled={createBookMutation.isPending}
+                label="Geser untuk Buat Buku"
+                readyLabel="Lepas untuk Buat Buku"
+                loadingLabel="Menyiapkan Buku..."
+                successLabel="Buku Berhasil Dibuat!"
+                onConfirm={handleSlideConfirmCreateBook}
+                onSuccessComplete={() => {
+                  setIsCreateBookDrawerOpen(false);
+                }}
+              />
+            </div>
+          </form>
+        </DrawerContent>
+      </Drawer>
+
+      {/* Join Shared Book Drawer with ButtonSlideToConfirm */}
+      <Drawer
+        open={isJoinModalOpen}
+        onOpenChange={setIsJoinModalOpen}
+        shouldScaleBackground={false}
+      >
+        <DrawerContent className="fixed inset-x-0 bottom-0 z-50 flex h-[100dvh] max-h-[100dvh] w-full flex-col rounded-none border-t border-border bg-card p-0 shadow-2xl focus:outline-none sm:mx-auto sm:h-auto sm:max-h-[90vh] sm:max-w-xl sm:rounded-t-2xl">
+          <form
+            onSubmit={(e) => e.preventDefault()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+              }
+            }}
+            className="flex h-full sm:h-auto flex-1 flex-col overflow-hidden"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6 shrink-0 bg-card">
+              <div>
+                <DrawerTitle
                   id="join-book-dialog-title"
                   className="text-sm font-semibold text-foreground"
                 >
                   Gabung ke Buku Keuangan Bersama
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  Masukkan kode undangan dari perangkat pasangan, keluarga, atau rekan Anda.
-                </p>
+                </DrawerTitle>
+                <DrawerDescription className="mt-0.5 text-xs text-muted-foreground">
+                  Masukkan kode undangan dari perangkat pasangan, keluarga, atau
+                  rekan Anda.
+                </DrawerDescription>
               </div>
               <button
                 type="button"
                 onClick={() => setIsJoinModalOpen(false)}
-                className="rounded border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                aria-label="Tutup"
+                className="nav-touch-item inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
               >
-                Tutup
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            <form
-              onSubmit={(e) => void handleJoinBook(e)}
-              className="mt-3 space-y-3"
-            >
-              <div>
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 space-y-4">
+              <div className="space-y-1.5">
                 <label
                   htmlFor="invite-qr-payload"
-                  className="mb-1 block text-xs font-medium text-foreground"
+                  className="block text-xs font-medium text-foreground"
                 >
-                  Kode Undangan Buku
+                  Link atau Kode Undangan Buku
                 </label>
                 <textarea
                   id="invite-qr-payload"
-                  rows={4}
+                  rows={3}
                   value={invitePayload}
                   onChange={(e) => setInvitePayload(e.target.value)}
-                  placeholder="Tempel kode undangan yang disalin dari menu Bagikan Buku..."
+                  placeholder="Tempel link undangan (https://.../#/invite?d=...) atau kode undangan..."
                   className="w-full rounded border border-input bg-background p-2.5 font-mono text-xs text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                 />
               </div>
 
-              <div>
+              <div className="space-y-1.5">
                 <label
                   htmlFor="invite-book-kind"
-                  className="mb-1 block text-xs font-medium text-foreground"
+                  className="block text-xs font-medium text-foreground"
                 >
                   Simpan Sebagai Kategori
                 </label>
@@ -477,29 +571,24 @@ export const BookSwitcherPage: React.FC = () => {
                   ))}
                 </select>
               </div>
+            </div>
 
-              <div className="flex items-center justify-end gap-2 border-t border-border pt-3">
-                <button
-                  type="button"
-                  onClick={() => setIsJoinModalOpen(false)}
-                  className="rounded border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={joinBookMutation.isPending}
-                  className="rounded border border-border bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
-                >
-                  {joinBookMutation.isPending
-                    ? "Menghubungkan..."
-                    : "Gabung Sekarang"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            {/* Footer with ButtonSlideToConfirm */}
+            <div className="flex items-center justify-end gap-2 border-t border-border p-2.5 sm:px-6 bg-card/60 backdrop-blur-xs shrink-0">
+              <ButtonSlideToConfirm
+                key={isJoinModalOpen ? "join-open" : "join-closed"}
+                disabled={joinBookMutation.isPending}
+                label="Geser untuk Gabung Buku"
+                readyLabel="Lepas untuk Gabung"
+                loadingLabel="Menghubungkan..."
+                successLabel="Berhasil Bergabung!"
+                onConfirm={handleSlideConfirmJoinBook}
+                onSuccessComplete={() => setIsJoinModalOpen(false)}
+              />
+            </div>
+          </form>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 };

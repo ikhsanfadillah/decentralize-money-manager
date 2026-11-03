@@ -10,19 +10,27 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as InviteRouteImport } from './routes/invite'
 import { Route as BooksBookIdRouteImport } from './routes/books.$bookId'
 import { Route as BooksBookIdIndexRouteImport } from './routes/books.$bookId.index'
 import { Route as BooksBookIdAccountsRouteImport } from './routes/books.$bookId.accounts'
+import { Route as BooksBookIdBackupRouteImport } from './routes/books.$bookId.backup'
 import { Route as BooksBookIdBudgetsRouteImport } from './routes/books.$bookId.budgets'
 import { Route as BooksBookIdCategoriesRouteImport } from './routes/books.$bookId.categories'
 import { Route as BooksBookIdDashboardRouteImport } from './routes/books.$bookId.dashboard'
 import { Route as BooksBookIdReportsRouteImport } from './routes/books.$bookId.reports'
 import { Route as BooksBookIdSettingsRouteImport } from './routes/books.$bookId.settings'
+import { Route as BooksBookIdSyncRouteImport } from './routes/books.$bookId.sync'
 import { Route as BooksBookIdTransactionsRouteImport } from './routes/books.$bookId.transactions'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InviteRoute = InviteRouteImport.update({
+  id: '/invite',
+  path: '/invite',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BooksBookIdRoute = BooksBookIdRouteImport.update({
@@ -38,6 +46,11 @@ const BooksBookIdIndexRoute = BooksBookIdIndexRouteImport.update({
 const BooksBookIdAccountsRoute = BooksBookIdAccountsRouteImport.update({
   id: '/accounts',
   path: '/accounts',
+  getParentRoute: () => BooksBookIdRoute,
+} as any)
+const BooksBookIdBackupRoute = BooksBookIdBackupRouteImport.update({
+  id: '/backup',
+  path: '/backup',
   getParentRoute: () => BooksBookIdRoute,
 } as any)
 const BooksBookIdBudgetsRoute = BooksBookIdBudgetsRouteImport.update({
@@ -65,6 +78,11 @@ const BooksBookIdSettingsRoute = BooksBookIdSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => BooksBookIdRoute,
 } as any)
+const BooksBookIdSyncRoute = BooksBookIdSyncRouteImport.update({
+  id: '/sync',
+  path: '/sync',
+  getParentRoute: () => BooksBookIdRoute,
+} as any)
 const BooksBookIdTransactionsRoute = BooksBookIdTransactionsRouteImport.update({
   id: '/transactions',
   path: '/transactions',
@@ -73,37 +91,46 @@ const BooksBookIdTransactionsRoute = BooksBookIdTransactionsRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/invite': typeof InviteRoute
   '/books/$bookId': typeof BooksBookIdRouteWithChildren
   '/books/$bookId/accounts': typeof BooksBookIdAccountsRoute
+  '/books/$bookId/backup': typeof BooksBookIdBackupRoute
   '/books/$bookId/budgets': typeof BooksBookIdBudgetsRoute
   '/books/$bookId/categories': typeof BooksBookIdCategoriesRoute
   '/books/$bookId/dashboard': typeof BooksBookIdDashboardRoute
   '/books/$bookId/reports': typeof BooksBookIdReportsRoute
   '/books/$bookId/settings': typeof BooksBookIdSettingsRoute
+  '/books/$bookId/sync': typeof BooksBookIdSyncRoute
   '/books/$bookId/transactions': typeof BooksBookIdTransactionsRoute
   '/books/$bookId/': typeof BooksBookIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/invite': typeof InviteRoute
   '/books/$bookId/accounts': typeof BooksBookIdAccountsRoute
+  '/books/$bookId/backup': typeof BooksBookIdBackupRoute
   '/books/$bookId/budgets': typeof BooksBookIdBudgetsRoute
   '/books/$bookId/categories': typeof BooksBookIdCategoriesRoute
   '/books/$bookId/dashboard': typeof BooksBookIdDashboardRoute
   '/books/$bookId/reports': typeof BooksBookIdReportsRoute
   '/books/$bookId/settings': typeof BooksBookIdSettingsRoute
+  '/books/$bookId/sync': typeof BooksBookIdSyncRoute
   '/books/$bookId/transactions': typeof BooksBookIdTransactionsRoute
   '/books/$bookId': typeof BooksBookIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/invite': typeof InviteRoute
   '/books/$bookId': typeof BooksBookIdRouteWithChildren
   '/books/$bookId/accounts': typeof BooksBookIdAccountsRoute
+  '/books/$bookId/backup': typeof BooksBookIdBackupRoute
   '/books/$bookId/budgets': typeof BooksBookIdBudgetsRoute
   '/books/$bookId/categories': typeof BooksBookIdCategoriesRoute
   '/books/$bookId/dashboard': typeof BooksBookIdDashboardRoute
   '/books/$bookId/reports': typeof BooksBookIdReportsRoute
   '/books/$bookId/settings': typeof BooksBookIdSettingsRoute
+  '/books/$bookId/sync': typeof BooksBookIdSyncRoute
   '/books/$bookId/transactions': typeof BooksBookIdTransactionsRoute
   '/books/$bookId/': typeof BooksBookIdIndexRoute
 }
@@ -111,42 +138,52 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/invite'
     | '/books/$bookId'
     | '/books/$bookId/accounts'
+    | '/books/$bookId/backup'
     | '/books/$bookId/budgets'
     | '/books/$bookId/categories'
     | '/books/$bookId/dashboard'
     | '/books/$bookId/reports'
     | '/books/$bookId/settings'
+    | '/books/$bookId/sync'
     | '/books/$bookId/transactions'
     | '/books/$bookId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/invite'
     | '/books/$bookId/accounts'
+    | '/books/$bookId/backup'
     | '/books/$bookId/budgets'
     | '/books/$bookId/categories'
     | '/books/$bookId/dashboard'
     | '/books/$bookId/reports'
     | '/books/$bookId/settings'
+    | '/books/$bookId/sync'
     | '/books/$bookId/transactions'
     | '/books/$bookId'
   id:
     | '__root__'
     | '/'
+    | '/invite'
     | '/books/$bookId'
     | '/books/$bookId/accounts'
+    | '/books/$bookId/backup'
     | '/books/$bookId/budgets'
     | '/books/$bookId/categories'
     | '/books/$bookId/dashboard'
     | '/books/$bookId/reports'
     | '/books/$bookId/settings'
+    | '/books/$bookId/sync'
     | '/books/$bookId/transactions'
     | '/books/$bookId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  InviteRoute: typeof InviteRoute
   BooksBookIdRoute: typeof BooksBookIdRouteWithChildren
 }
 
@@ -157,6 +194,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invite': {
+      id: '/invite'
+      path: '/invite'
+      fullPath: '/invite'
+      preLoaderRoute: typeof InviteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/books/$bookId': {
@@ -178,6 +222,13 @@ declare module '@tanstack/react-router' {
       path: '/accounts'
       fullPath: '/books/$bookId/accounts'
       preLoaderRoute: typeof BooksBookIdAccountsRouteImport
+      parentRoute: typeof BooksBookIdRoute
+    }
+    '/books/$bookId/backup': {
+      id: '/books/$bookId/backup'
+      path: '/backup'
+      fullPath: '/books/$bookId/backup'
+      preLoaderRoute: typeof BooksBookIdBackupRouteImport
       parentRoute: typeof BooksBookIdRoute
     }
     '/books/$bookId/budgets': {
@@ -215,6 +266,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BooksBookIdSettingsRouteImport
       parentRoute: typeof BooksBookIdRoute
     }
+    '/books/$bookId/sync': {
+      id: '/books/$bookId/sync'
+      path: '/sync'
+      fullPath: '/books/$bookId/sync'
+      preLoaderRoute: typeof BooksBookIdSyncRouteImport
+      parentRoute: typeof BooksBookIdRoute
+    }
     '/books/$bookId/transactions': {
       id: '/books/$bookId/transactions'
       path: '/transactions'
@@ -227,22 +285,26 @@ declare module '@tanstack/react-router' {
 
 interface BooksBookIdRouteChildren {
   BooksBookIdAccountsRoute: typeof BooksBookIdAccountsRoute
+  BooksBookIdBackupRoute: typeof BooksBookIdBackupRoute
   BooksBookIdBudgetsRoute: typeof BooksBookIdBudgetsRoute
   BooksBookIdCategoriesRoute: typeof BooksBookIdCategoriesRoute
   BooksBookIdDashboardRoute: typeof BooksBookIdDashboardRoute
   BooksBookIdReportsRoute: typeof BooksBookIdReportsRoute
   BooksBookIdSettingsRoute: typeof BooksBookIdSettingsRoute
+  BooksBookIdSyncRoute: typeof BooksBookIdSyncRoute
   BooksBookIdTransactionsRoute: typeof BooksBookIdTransactionsRoute
   BooksBookIdIndexRoute: typeof BooksBookIdIndexRoute
 }
 
 const BooksBookIdRouteChildren: BooksBookIdRouteChildren = {
   BooksBookIdAccountsRoute: BooksBookIdAccountsRoute,
+  BooksBookIdBackupRoute: BooksBookIdBackupRoute,
   BooksBookIdBudgetsRoute: BooksBookIdBudgetsRoute,
   BooksBookIdCategoriesRoute: BooksBookIdCategoriesRoute,
   BooksBookIdDashboardRoute: BooksBookIdDashboardRoute,
   BooksBookIdReportsRoute: BooksBookIdReportsRoute,
   BooksBookIdSettingsRoute: BooksBookIdSettingsRoute,
+  BooksBookIdSyncRoute: BooksBookIdSyncRoute,
   BooksBookIdTransactionsRoute: BooksBookIdTransactionsRoute,
   BooksBookIdIndexRoute: BooksBookIdIndexRoute,
 }
@@ -253,6 +315,7 @@ const BooksBookIdRouteWithChildren = BooksBookIdRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  InviteRoute: InviteRoute,
   BooksBookIdRoute: BooksBookIdRouteWithChildren,
 }
 export const routeTree = rootRouteImport

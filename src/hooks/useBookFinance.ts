@@ -5,7 +5,8 @@ import {
   useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import type { UnlistenFn } from "@tauri-apps/api/event";
+import { listenAppEvent } from "../lib/event-bus";
 import {
   tauriApi,
   type AddTransactionInput,
@@ -40,6 +41,7 @@ export const bookQueryKeys = {
     ["books", bookId, "monthlyReport", month] as const,
   peers: (bookId: string) => ["books", bookId, "peers"] as const,
   syncStatus: (bookId: string) => ["books", bookId, "syncStatus"] as const,
+  syncTopology: (bookId: string) => ["books", bookId, "syncTopology"] as const,
 };
 
 /**
@@ -146,7 +148,7 @@ export function useBookSyncEvents(bookId: string): SyncStatusPayload {
     let unlistenSynced: UnlistenFn | null = null;
     let unlistenStatus: UnlistenFn | null = null;
 
-    listen<CrdtSyncedPayload>("crdt:synced", (event) => {
+    listenAppEvent<CrdtSyncedPayload>("crdt:synced", (event) => {
       if (!disposed) {
         applyCrdtSyncedInvalidation(queryClient, bookId, event.payload);
       }
@@ -162,7 +164,7 @@ export function useBookSyncEvents(bookId: string): SyncStatusPayload {
         // Ignore in non-Tauri test environments unless mocked
       });
 
-    listen<SyncStatusPayload>("sync:status", (event) => {
+    listenAppEvent<SyncStatusPayload>("sync:status", (event) => {
       if (!disposed && event.payload.book_id === bookId) {
         setLiveStatus(event.payload);
         queryClient.setQueryData(
@@ -171,6 +173,9 @@ export function useBookSyncEvents(bookId: string): SyncStatusPayload {
         );
         void queryClient.invalidateQueries({
           queryKey: bookQueryKeys.peers(bookId),
+        });
+        void queryClient.invalidateQueries({
+          queryKey: bookQueryKeys.syncTopology(bookId),
         });
       }
     })

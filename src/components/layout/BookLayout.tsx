@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { Moon, Sun } from "lucide-react";
 import { tauriApi, type BookMetadata } from "../../lib/tauri-api";
 import {
   bookQueryKeys,
@@ -80,6 +81,8 @@ export const BookLayout: React.FC<BookLayoutProps> = ({ bookId, bookMeta }) => {
     if (p.endsWith("/budgets")) return "Anggaran Bulanan";
     if (p.endsWith("/reports")) return "Laporan Keuangan";
     if (p.endsWith("/settings")) return "Pengaturan";
+    if (p.endsWith("/sync")) return "Sinkronisasi";
+    if (p.endsWith("/backup")) return "Cadangan Data";
     return "Ringkasan";
   }, [location.pathname]);
 
@@ -182,18 +185,32 @@ export const BookLayout: React.FC<BookLayoutProps> = ({ bookId, bookMeta }) => {
             <button
               type="button"
               onClick={handleToggleTheme}
-              aria-label="Ganti Tema Warna"
-              title="Ganti Tema Gelap / Terang"
-              className="nav-touch-item inline-flex h-7 items-center justify-center rounded border border-border bg-background px-2 font-mono text-[10px] font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+              aria-label={
+                theme === "dark"
+                  ? "Ganti ke mode terang"
+                  : "Ganti ke mode gelap"
+              }
+              title={theme === "dark" ? "Mode Terang" : "Mode Gelap"}
+              className="nav-touch-item inline-flex h-7 w-7 items-center justify-center rounded border border-border bg-background text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
             >
-              {theme === "dark" ? "GELAP" : "TERANG"}
+              {theme === "dark" ? (
+                <Sun className="h-3.5 w-3.5 text-amber-500" aria-hidden="true" />
+              ) : (
+                <Moon className="h-3.5 w-3.5 text-slate-700" aria-hidden="true" />
+              )}
             </button>
           </div>
         </div>
       </header>
 
-      {/* Main Content Container: Zero Outer Padding, Compact, Animated Page & Card Transitions */}
-      <main className="w-full flex-1 p-0 pb-24">
+      {/* Main Content Container: Safe padding to avoid floating navbar overlap */}
+      <main
+        className="w-full flex-1 p-0 pb-36 sm:pb-40"
+        style={{
+          paddingBottom:
+            "calc(6.5rem + env(safe-area-inset-bottom, 24px))",
+        }}
+      >
         <div
           key={location.pathname}
           className="page-transition-wrapper animate-page-in"

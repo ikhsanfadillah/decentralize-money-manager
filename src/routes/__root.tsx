@@ -34,9 +34,16 @@ const RootLayout: React.FC = () => {
       const isForeground = document.visibilityState === "visible";
       void tauriApi.setAppForeground(isForeground).catch(() => {});
     };
+    const handleWindowFocus = () => {
+      if (document.visibilityState === "visible") {
+        void tauriApi.setAppForeground(true).catch(() => {});
+      }
+    };
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleWindowFocus);
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleWindowFocus);
     };
   }, []);
 

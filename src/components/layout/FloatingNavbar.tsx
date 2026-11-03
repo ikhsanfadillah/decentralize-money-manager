@@ -60,7 +60,9 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
           p.endsWith("/settings") ||
           p.endsWith("/accounts") ||
           p.endsWith("/categories") ||
-          p.endsWith("/budgets"),
+          p.endsWith("/budgets") ||
+          p.endsWith("/sync") ||
+          p.endsWith("/backup"),
       },
     ],
     []
@@ -73,7 +75,7 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
       {/* Unified Rounded Pill Navbar (Clean, Flat Surface, No Protrusions) */}
       <nav
         aria-label="Navigasi Buku"
-        className="floating-navbar-pill pointer-events-auto flex w-full items-center justify-between rounded-full border border-zinc-200/80 bg-white/95 p-1.5 pl-2 pr-1.5 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-900/95"
+        className="floating-navbar-pill pointer-events-auto flex w-full items-center justify-between rounded-3xl border border-zinc-200/80 bg-white/95 p-1.5 pl-2 pr-1.5 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-900/95"
       >
         {/* Navigation Items (Home, Transactions, Reports, Settings) */}
         <div className="grid flex-1 grid-cols-4 items-center gap-0.5 sm:gap-1">
@@ -86,7 +88,7 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
                 key={item.to}
                 to={item.to}
                 params={{ bookId }}
-                className={`group first:rounded-l-full relative flex flex-col items-center justify-center rounded-2xl px-1 py-1 transition-all duration-200 ${
+                className={`group relative flex flex-col items-center justify-center rounded-2xl px-1 py-1 transition-all duration-200 ${
                   active
                     ? "bg-emerald-50/80 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
                     : "text-zinc-600 hover:bg-zinc-100/70 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/60 dark:hover:text-zinc-200"
@@ -131,7 +133,7 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
             aria-label="Tambah Transaksi Baru"
             title="Tambah Transaksi Baru"
             onClick={onAddTransaction}
-            className="floating-navbar-fab group relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-600 via-emerald-500 to-green-400 text-white transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 sm:h-11 sm:w-11"
+            className="floating-navbar-fab group relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 via-emerald-500 to-green-400 text-white transition-all duration-200 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 sm:h-11 sm:w-16"
           >
             <Plus
               className="h-5 w-5 text-white transition-transform duration-200 group-hover:rotate-90 group-active:scale-90"

@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, X } from "lucide-react";
+import { ArrowLeftRight, Plus, TrendingDown, TrendingUp, X } from "lucide-react";
 import { CurrencyInput } from "../ui/currency-input";
 import { Input } from "../ui/input";
 import {
@@ -31,6 +31,7 @@ import {
   formatRupiah,
   todayIsoDate,
 } from "../../lib/utils";
+import { formatDateReadable } from "../../lib/date";
 import { pushToast } from "../../lib/toast";
 
 export type DialogTxMode = TransactionType | "CROSS_BOOK_TRANSFER";
@@ -115,6 +116,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
 
   const currentMode = watch("mode");
   const selectedToBookId = watch("toBookId");
+  const selectedTxDate = watch("txDate");
 
   const destBookAccountsQuery = useQuery({
     queryKey: bookQueryKeys.accounts(selectedToBookId),
@@ -418,33 +420,51 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
             <div className="tabular-grid-container grid grid-cols-2 sm:grid-cols-4 -m-4 mb-4">
               {(
                 [
-                  { key: "EXPENSE", label: "− Pengeluaran", color: "text-rose-500!" },
-                  { key: "INCOME", label: "+ Pemasukan", color: "text-emerald-500!" },
-                  { key: "TRANSFER", label: "⇄ Pindah Saldo", color: "text-sky-500!" },
+                  {
+                    key: "EXPENSE",
+                    label: "Pengeluaran",
+                    color: "text-rose-500!",
+                    icon: TrendingDown,
+                  },
+                  {
+                    key: "INCOME",
+                    label: "Pemasukan",
+                    color: "text-emerald-500!",
+                    icon: TrendingUp,
+                  },
+                  {
+                    key: "TRANSFER",
+                    label: "Pindah Saldo",
+                    color: "text-sky-500!",
+                    icon: ArrowLeftRight,
+                  },
                   ...(!editingTx
                     ? [
                         {
                           key: "CROSS_BOOK_TRANSFER" as const,
-                          label: "⇄ Pindah Buku",
+                          label: "Pindah Buku",
                           color: "text-amber-500!",
+                          icon: ArrowLeftRight,
                         },
                       ]
                     : []),
                 ] as const
               ).map((tab) => {
                 const active = currentMode === tab.key;
+                const IconComponent = tab.icon;
                 return (
                   <button
                     key={tab.key}
                     type="button"
                     onClick={() => setValue("mode", tab.key)}
-                    className={`tabular-grid-cell whitespace-nowrap px-2.5 py-2.5 text-xs ${tab.color} font-semibold focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
+                    className={`tabular-grid-cell inline-flex items-center justify-center gap-1.5 whitespace-nowrap px-2.5 py-2.5 text-xs ${tab.color} font-semibold focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
                       active
                         ? "bg-muted!"
                         : `text-muted-foreground hover:text-foreground`
                     }`}
                   >
-                    {tab.label}
+                    <IconComponent className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    <span>{tab.label}</span>
                   </button>
                 );
               })}
@@ -658,12 +678,19 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
               </div>
 
               <div className="space-y-1">
-                <label
-                  htmlFor="tx-date-input"
-                  className="block text-xs font-medium text-foreground"
-                >
-                  Tanggal Transaksi
-                </label>
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="tx-date-input"
+                    className="block text-xs font-medium text-foreground"
+                  >
+                    Tanggal Transaksi
+                  </label>
+                  {selectedTxDate && (
+                    <span className="text-[11px] font-medium text-primary">
+                      {formatDateReadable(selectedTxDate, { withDayName: true })}
+                    </span>
+                  )}
+                </div>
                 <Input
                   id="tx-date-input"
                   type="date"

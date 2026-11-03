@@ -1,8 +1,19 @@
 import * as React from "react";
 import { Link } from "@tanstack/react-router";
+import { TrendingDown, TrendingUp, X } from "lucide-react";
 import { useBookFinance } from "../../hooks/useBookFinance";
 import type { CategoryKind, CategoryView } from "../../lib/tauri-api";
 import { Input } from "../ui/input";
+import {
+  ButtonSlideToConfirm,
+  type SlideConfirmResult,
+} from "../ui/ButtonSlideToConfirm";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerTitle,
+} from "../ui/drawer";
 import { pushToast } from "../../lib/toast";
 
 export interface CategoriesPageProps {
@@ -16,6 +27,7 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({ bookId }) => {
     deleteCategoryMutation,
   } = useBookFinance({ bookId });
 
+  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
   const [editingCategory, setEditingCategory] =
     React.useState<CategoryView | null>(null);
   const [name, setName] = React.useState("");
@@ -37,6 +49,7 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({ bookId }) => {
     setEditingCategory(cat);
     setName(cat.name);
     setKind(cat.kind);
+    setIsDrawerOpen(true);
   };
 
   const handleResetForm = () => {
@@ -45,12 +58,16 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({ bookId }) => {
     setKind("EXPENSE");
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCloseDrawer = () => {
+    setIsDrawerOpen(false);
+    handleResetForm();
+  };
+
+  const handleSlideConfirm = async (): Promise<SlideConfirmResult> => {
     const trimmed = name.trim();
     if (!trimmed) {
       pushToast("Nama kategori tidak boleh kosong", { variant: "warning" });
-      return;
+      return { ok: false, message: "Nama kategori tidak boleh kosong" };
     }
 
     try {
@@ -65,7 +82,7 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({ bookId }) => {
           : `Kategori "${trimmed}" disimpan`,
         { variant: "success" }
       );
-      handleResetForm();
+      return { ok: true };
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : "Gagal menyimpan kategori";
@@ -73,6 +90,7 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({ bookId }) => {
         description: msg,
         variant: "error",
       });
+      return { ok: false, message: "Gagal Menyimpan Kategori" };
     }
   };
 
@@ -97,7 +115,7 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({ bookId }) => {
     <div className="w-full">
       {/* Header & Filter Strip */}
       <div className="tabular-grid-container grid grid-cols-1 md:grid-cols-12">
-        <div className="tabular-grid-cell flex flex-col justify-center px-3 py-2.5 md:col-span-8">
+        <div className="tabular-grid-cell flex flex-col justify-center px-3 py-2.5 md:col-span-7">
           <div className="flex items-center gap-2">
             <Link
               to="/books/$bookId/settings"
@@ -116,86 +134,48 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({ bookId }) => {
           </p>
         </div>
 
-        <div className="tabular-grid-cell flex items-center justify-end gap-1 px-3 py-2 md:col-span-4">
-          {(["ALL", "EXPENSE", "INCOME"] as const).map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setFilterKind(tab)}
-              className={`nav-touch-item flex-1 rounded border px-2 py-1 font-mono text-[11px] font-medium focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary md:flex-initial ${
-                filterKind === tab
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
-            >
-              {tab === "ALL"
-                ? "SEMUA"
-                : tab === "EXPENSE"
-                  ? "PENGELUARAN"
-                  : "PEMASUKAN"}
-            </button>
-          ))}
-        </div>
-      </div>
+        <div className="tabular-grid-cell flex flex-wrap items-center justify-end gap-1.5 px-3 py-2 md:col-span-5">
+          <div className="flex items-center gap-1">
+            {(["ALL", "EXPENSE", "INCOME"] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setFilterKind(tab)}
+                className={`nav-touch-item inline-flex items-center gap-1 rounded border px-2 py-1 font-mono text-[11px] font-medium focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
+                  filterKind === tab
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                {tab === "EXPENSE" && (
+                  <TrendingDown className="h-3 w-3 shrink-0" aria-hidden="true" />
+                )}
+                {tab === "INCOME" && (
+                  <TrendingUp className="h-3 w-3 shrink-0" aria-hidden="true" />
+                )}
+                <span>
+                  {tab === "ALL"
+                    ? "SEMUA"
+                    : tab === "EXPENSE"
+                      ? "PENGELUARAN"
+                      : "PEMASUKAN"}
+                </span>
+              </button>
+            ))}
+          </div>
 
-      {/* Add / Edit Category Form */}
-      <form
-        onSubmit={(e) => void handleSubmit(e)}
-        className="tabular-grid-container grid grid-cols-1 md:grid-cols-12"
-      >
-        <div className="tabular-grid-cell px-3 py-2.5 md:col-span-6">
-          <label
-            htmlFor="category-name-input"
-            className="mb-1 block text-[11px] font-medium text-foreground"
-          >
-            {editingCategory ? "Edit Nama Kategori" : "Nama Kategori Baru"}
-          </label>
-          <Input
-            id="category-name-input"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Contoh: Makan & Minum, Transportasi, Gaji..."
-            className="h-8 text-xs"
-          />
-        </div>
-
-        <div className="tabular-grid-cell px-3 py-2.5 md:col-span-4">
-          <label
-            htmlFor="category-kind-select"
-            className="mb-1 block text-[11px] font-medium text-foreground"
-          >
-            Jenis Kategori
-          </label>
-          <select
-            id="category-kind-select"
-            value={kind}
-            onChange={(e) => setKind(e.target.value as CategoryKind)}
-            className="flex h-8 w-full rounded border border-input bg-background px-2.5 py-1 text-xs text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-          >
-            <option value="EXPENSE">Pengeluaran</option>
-            <option value="INCOME">Pemasukan</option>
-          </select>
-        </div>
-
-        <div className="tabular-grid-cell flex items-end justify-end gap-1.5 px-3 py-2.5 md:col-span-2">
-          {editingCategory && (
-            <button
-              type="button"
-              onClick={handleResetForm}
-              className="nav-touch-item h-8 rounded border border-border bg-background px-2.5 text-xs font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-            >
-              Batal
-            </button>
-          )}
           <button
-            type="submit"
-            disabled={upsertCategoryMutation.isPending}
-            className="nav-touch-item h-8 w-full rounded border border-border bg-primary px-3 text-xs font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
+            type="button"
+            onClick={() => {
+              handleResetForm();
+              setIsDrawerOpen(true);
+            }}
+            className="nav-touch-item rounded border border-border bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
           >
-            {editingCategory ? "Perbarui" : "+ Simpan"}
+            + Kategori Baru
           </button>
         </div>
-      </form>
+      </div>
 
       {/* Categories Table */}
       <div className="tabular-grid-container grid grid-cols-1">
@@ -208,7 +188,17 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({ bookId }) => {
 
         {filteredCategories.length === 0 ? (
           <div className="tabular-grid-cell p-6 text-center text-xs text-muted-foreground">
-            Tidak ada kategori yang sesuai dengan filter.
+            <p>Tidak ada kategori yang sesuai dengan filter.</p>
+            <button
+              type="button"
+              onClick={() => {
+                handleResetForm();
+                setIsDrawerOpen(true);
+              }}
+              className="mt-2.5 nav-touch-item inline-flex items-center rounded border border-border bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90"
+            >
+              + Tambah Kategori Baru
+            </button>
           </div>
         ) : (
           filteredCategories.map((cat, idx) => {
@@ -236,13 +226,24 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({ bookId }) => {
                 <div className="flex flex-wrap items-center justify-between gap-1.5 md:col-span-5 md:grid md:grid-cols-5">
                   <div className="md:col-span-2">
                     <span
-                      className={`rounded border px-1.5 py-0.5 font-mono text-[10px] font-semibold ${
+                      title={cat.kind === "EXPENSE" ? "Pengeluaran" : "Pemasukan"}
+                      className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 font-mono text-[10px] font-semibold ${
                         cat.kind === "EXPENSE"
                           ? "border-rose-500/40 text-rose-500"
                           : "border-emerald-500/40 text-emerald-500"
                       }`}
                     >
-                      {cat.kind === "EXPENSE" ? "Pengeluaran" : "Pemasukan"}
+                      {cat.kind === "EXPENSE" ? (
+                        <>
+                          <TrendingDown className="h-3 w-3 shrink-0" aria-hidden="true" />
+                          <span>Pengeluaran</span>
+                        </>
+                      ) : (
+                        <>
+                          <TrendingUp className="h-3 w-3 shrink-0" aria-hidden="true" />
+                          <span>Pemasukan</span>
+                        </>
+                      )}
                     </span>
                   </div>
 
@@ -283,7 +284,118 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({ bookId }) => {
           })
         )}
       </div>
+
+      {/* Category Drawer with ButtonSlideToConfirm */}
+      <Drawer
+        open={isDrawerOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleCloseDrawer();
+          }
+        }}
+        shouldScaleBackground={false}
+      >
+        <DrawerContent className="fixed inset-x-0 bottom-0 z-50 flex h-[100dvh] max-h-[100dvh] w-full flex-col rounded-none border-t border-border bg-card p-0 shadow-2xl focus:outline-none sm:mx-auto sm:h-auto sm:max-h-[90vh] sm:max-w-xl sm:rounded-t-2xl">
+          <form
+            onSubmit={(e) => e.preventDefault()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+              }
+            }}
+            className="flex h-full sm:h-auto flex-1 flex-col overflow-hidden"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6 shrink-0 bg-card">
+              <div>
+                <DrawerTitle
+                  id="category-dialog-title"
+                  className="text-sm font-semibold text-foreground"
+                >
+                  {editingCategory
+                    ? "Edit Kategori Transaksi"
+                    : "Tambah Kategori Baru"}
+                </DrawerTitle>
+                <DrawerDescription className="mt-0.5 text-xs text-muted-foreground">
+                  Kategori membantu mengelompokkan pos pengeluaran dan pemasukan
+                  transaksi.
+                </DrawerDescription>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseDrawer}
+                aria-label="Tutup"
+                className="nav-touch-item inline-flex shrink-0 h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 space-y-4">
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="category-name-input"
+                  className="block text-xs font-medium text-foreground"
+                >
+                  Nama Kategori
+                </label>
+                <Input
+                  id="category-name-input"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Contoh: Makan & Minum, Transportasi, Gaji..."
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="category-kind-select"
+                  className="block text-xs font-medium text-foreground"
+                >
+                  Jenis Kategori
+                </label>
+                <select
+                  id="category-kind-select"
+                  value={kind}
+                  onChange={(e) => setKind(e.target.value as CategoryKind)}
+                  className="flex h-9 w-full rounded border border-input bg-background px-3 py-1 text-xs text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                >
+                  <option value="EXPENSE">Pengeluaran</option>
+                  <option value="INCOME">Pemasukan</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Footer with ButtonSlideToConfirm */}
+            <div className="flex items-center justify-end gap-2 border-t border-border p-2.5 sm:px-6 bg-card/60 backdrop-blur-xs shrink-0">
+              <ButtonSlideToConfirm
+                key={
+                  isDrawerOpen
+                    ? `cat-${editingCategory?.id ?? "new"}`
+                    : "closed"
+                }
+                disabled={upsertCategoryMutation.isPending}
+                label={
+                  editingCategory
+                    ? "Geser untuk Simpan Perubahan"
+                    : "Geser untuk Simpan Kategori"
+                }
+                readyLabel="Lepas untuk Simpan"
+                loadingLabel="Menyimpan Kategori..."
+                successLabel={
+                  editingCategory
+                    ? "Kategori Diperbarui!"
+                    : "Kategori Disimpan!"
+                }
+                onConfirm={handleSlideConfirm}
+                onSuccessComplete={handleCloseDrawer}
+              />
+            </div>
+          </form>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 };
-

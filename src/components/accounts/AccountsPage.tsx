@@ -1,9 +1,20 @@
 import * as React from "react";
 import { Link } from "@tanstack/react-router";
+import { TrendingDown, TrendingUp, X } from "lucide-react";
 import { useBookFinance } from "../../hooks/useBookFinance";
 import type { AccountType, AccountView } from "../../lib/tauri-api";
 import { CurrencyInput } from "../ui/currency-input";
 import { Input } from "../ui/input";
+import {
+  ButtonSlideToConfirm,
+  type SlideConfirmResult,
+} from "../ui/ButtonSlideToConfirm";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerTitle,
+} from "../ui/drawer";
 import { formatAccountTypeLabel, formatRupiah } from "../../lib/utils";
 import { pushToast } from "../../lib/toast";
 
@@ -26,6 +37,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
     mergeAccountsMutation,
   } = useBookFinance({ bookId });
 
+  const [isAccountDrawerOpen, setIsAccountDrawerOpen] = React.useState(false);
   const [editingAccount, setEditingAccount] =
     React.useState<AccountView | null>(null);
   const [name, setName] = React.useState("");
@@ -62,6 +74,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
     setName(acc.name);
     setAccountType(acc.account_type);
     setInitialBalance(acc.initial_balance);
+    setIsAccountDrawerOpen(true);
   };
 
   const handleResetForm = () => {
@@ -71,12 +84,21 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
     setInitialBalance(0);
   };
 
-  const handleSubmitAccount = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleOpenCreateAccount = () => {
+    handleResetForm();
+    setIsAccountDrawerOpen(true);
+  };
+
+  const handleCloseAccountDrawer = () => {
+    setIsAccountDrawerOpen(false);
+    handleResetForm();
+  };
+
+  const handleSlideConfirmAccount = async (): Promise<SlideConfirmResult> => {
     const trimmed = name.trim();
     if (!trimmed) {
       pushToast("Nama akun tidak boleh kosong", { variant: "warning" });
-      return;
+      return { ok: false, message: "Nama akun tidak boleh kosong" };
     }
 
     try {
@@ -92,10 +114,11 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
           : `Akun "${trimmed}" berhasil ditambahkan`,
         { variant: "success" }
       );
-      handleResetForm();
+      return { ok: true };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Gagal menyimpan akun";
       pushToast("Gagal menyimpan akun", { description: msg, variant: "error" });
+      return { ok: false, message: "Gagal Menyimpan Akun" };
     }
   };
 
@@ -121,17 +144,16 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
     setIsMergeModalOpen(true);
   };
 
-  const handleConfirmMerge = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSlideConfirmMerge = async (): Promise<SlideConfirmResult> => {
     if (!mergeSourceId || !mergeTargetId) {
       pushToast("Pilih akun sumber dan akun tujuan", { variant: "warning" });
-      return;
+      return { ok: false, message: "Pilih akun sumber dan tujuan" };
     }
     if (mergeSourceId === mergeTargetId) {
       pushToast("Akun sumber dan akun tujuan tidak boleh sama", {
         variant: "error",
       });
-      return;
+      return { ok: false, message: "Akun sumber dan tujuan tidak boleh sama" };
     }
 
     try {
@@ -142,7 +164,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
       pushToast("Akun berhasil digabungkan", {
         variant: "success",
       });
-      setIsMergeModalOpen(false);
+      return { ok: true };
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : "Gagal menggabungkan akun";
@@ -150,14 +172,15 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
         description: msg,
         variant: "error",
       });
+      return { ok: false, message: "Gagal Menggabungkan Akun" };
     }
   };
 
   return (
     <div className="w-full">
-      {/* Header & Merge Button */}
+      {/* Header & Actions */}
       <div className="tabular-grid-container grid grid-cols-1 md:grid-cols-12">
-        <div className="tabular-grid-cell flex flex-col justify-center px-3 py-2.5 md:col-span-8">
+        <div className="tabular-grid-cell flex flex-col justify-center px-3 py-2.5 md:col-span-7">
           <div className="flex items-center gap-2">
             <Link
               to="/books/$bookId/settings"
@@ -175,92 +198,23 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
           </p>
         </div>
 
-        <div className="tabular-grid-cell flex items-center justify-end px-3 py-2 md:col-span-4">
+        <div className="tabular-grid-cell flex flex-wrap items-center justify-end gap-1.5 px-3 py-2 md:col-span-5">
+          <button
+            type="button"
+            onClick={handleOpenCreateAccount}
+            className="nav-touch-item rounded border border-border bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+          >
+            + Tambah Akun
+          </button>
           <button
             type="button"
             onClick={handleOpenMergeModal}
-            className="nav-touch-item w-full rounded border border-border bg-background px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary md:w-auto"
+            className="nav-touch-item rounded border border-border bg-background px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
           >
             Gabungkan Rekening Ganda
           </button>
         </div>
       </div>
-
-      {/* Add / Edit Account Form */}
-      <form
-        onSubmit={(e) => void handleSubmitAccount(e)}
-        className="tabular-grid-container grid grid-cols-1 md:grid-cols-12"
-      >
-        <div className="tabular-grid-cell px-3 py-2.5 md:col-span-4">
-          <label
-            htmlFor="account-name-input"
-            className="mb-1 block text-[11px] font-medium text-foreground"
-          >
-            {editingAccount ? "Edit Nama Akun" : "Nama Akun Baru"}
-          </label>
-          <Input
-            id="account-name-input"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Contoh: BCA Utama, Kas Dompet, GoPay..."
-            className="h-8 text-xs"
-          />
-        </div>
-
-        <div className="tabular-grid-cell px-3 py-2.5 md:col-span-3">
-          <label
-            htmlFor="account-type-select"
-            className="mb-1 block text-[11px] font-medium text-foreground"
-          >
-            Jenis Akun
-          </label>
-          <select
-            id="account-type-select"
-            value={accountType}
-            onChange={(e) => setAccountType(e.target.value as AccountType)}
-            className="flex h-8 w-full rounded border border-input bg-background px-2.5 py-1 text-xs text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-          >
-            {ACCOUNT_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="tabular-grid-cell px-3 py-2.5 md:col-span-3">
-          <label
-            htmlFor="account-initial-balance"
-            className="mb-1 block text-[11px] font-medium text-foreground"
-          >
-            Saldo Awal (Rp)
-          </label>
-          <CurrencyInput
-            id="account-initial-balance"
-            value={initialBalance}
-            onValueChange={(val) => setInitialBalance(val ?? 0)}
-          />
-        </div>
-
-        <div className="tabular-grid-cell flex items-end justify-end gap-1.5 px-3 py-2.5 md:col-span-2">
-          {editingAccount && (
-            <button
-              type="button"
-              onClick={handleResetForm}
-              className="nav-touch-item h-8 rounded border border-border bg-background px-2.5 text-xs font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-            >
-              Batal
-            </button>
-          )}
-          <button
-            type="submit"
-            disabled={upsertAccountMutation.isPending}
-            className="nav-touch-item h-8 w-full rounded border border-border bg-primary px-3 text-xs font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
-          >
-            {editingAccount ? "Perbarui" : "+ Tambah Akun"}
-          </button>
-        </div>
-      </form>
 
       {/* Active Root Accounts Table */}
       <div className="tabular-grid-container grid grid-cols-1">
@@ -274,7 +228,14 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
 
         {activeRootAccounts.length === 0 ? (
           <div className="tabular-grid-cell p-6 text-center text-xs text-muted-foreground">
-            Belum ada akun aktif di buku ini.
+            <p>Belum ada akun aktif di buku ini.</p>
+            <button
+              type="button"
+              onClick={handleOpenCreateAccount}
+              className="mt-2.5 nav-touch-item inline-flex items-center rounded border border-border bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90"
+            >
+              + Tambah Akun Baru
+            </button>
           </div>
         ) : (
           activeRootAccounts.map((acc, idx) => {
@@ -313,7 +274,24 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
                   <span className="font-sans text-[10px] font-normal uppercase text-muted-foreground md:hidden">
                     Saldo Saat Ini:
                   </span>
-                  <span>{formatRupiah(currentBal)}</span>
+                  <span className="inline-flex items-center gap-1 md:justify-end">
+                    {currentBal > acc.initial_balance ? (
+                      <span title="Saldo bertambah dari saldo awal" className="inline-flex">
+                        <TrendingUp
+                          className="h-3.5 w-3.5 shrink-0 text-emerald-500"
+                          aria-hidden="true"
+                        />
+                      </span>
+                    ) : currentBal < acc.initial_balance ? (
+                      <span title="Saldo berkurang dari saldo awal" className="inline-flex">
+                        <TrendingDown
+                          className="h-3.5 w-3.5 shrink-0 text-rose-500"
+                          aria-hidden="true"
+                        />
+                      </span>
+                    ) : null}
+                    <span>{formatRupiah(currentBal)}</span>
+                  </span>
                 </div>
 
                 <div className="flex items-center justify-end gap-1.5 md:col-span-2">
@@ -367,36 +345,179 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
         </div>
       )}
 
-      {/* Manual Merge Modal */}
-      {isMergeModalOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="merge-account-dialog-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-        >
-          <div className="w-full max-w-md rounded-md border border-border bg-card p-5 text-card-foreground shadow-none">
-            <div className="border-b border-border pb-3">
-              <h2
-                id="merge-account-dialog-title"
-                className="text-base font-semibold text-foreground"
+      {/* Add / Edit Account Drawer with ButtonSlideToConfirm */}
+      <Drawer
+        open={isAccountDrawerOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleCloseAccountDrawer();
+          }
+        }}
+        shouldScaleBackground={false}
+      >
+        <DrawerContent className="fixed inset-x-0 bottom-0 z-50 flex h-[100dvh] max-h-[100dvh] w-full flex-col rounded-none border-t border-border bg-card p-0 shadow-2xl focus:outline-none sm:mx-auto sm:h-auto sm:max-h-[90vh] sm:max-w-xl sm:rounded-t-2xl">
+          <form
+            onSubmit={(e) => e.preventDefault()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+              }
+            }}
+            className="flex h-full sm:h-auto flex-1 flex-col overflow-hidden"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6 shrink-0 bg-card">
+              <div>
+                <DrawerTitle
+                  id="account-dialog-title"
+                  className="text-sm font-semibold text-foreground"
+                >
+                  {editingAccount
+                    ? "Edit Akun Keuangan"
+                    : "Tambah Akun Keuangan Baru"}
+                </DrawerTitle>
+                <DrawerDescription className="mt-0.5 text-xs text-muted-foreground">
+                  Kelola daftar rekening bank, dompet digital, atau kas tunai
+                  Anda.
+                </DrawerDescription>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseAccountDrawer}
+                aria-label="Tutup"
+                className="nav-touch-item inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
               >
-                Gabungkan Rekening
-              </h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Seluruh riwayat transaksi dan saldo dari akun sumber akan disatukan
-                ke akun tujuan. Akun lama akan dinonaktifkan.
-              </p>
+                <X className="h-4 w-4" />
+              </button>
             </div>
 
-            <form
-              onSubmit={(e) => void handleConfirmMerge(e)}
-              className="mt-4 space-y-4"
-            >
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 space-y-4">
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="account-name-input"
+                  className="block text-xs font-medium text-foreground"
+                >
+                  Nama Akun
+                </label>
+                <Input
+                  id="account-name-input"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Contoh: BCA Utama, Kas Dompet, GoPay..."
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="account-type-select"
+                  className="block text-xs font-medium text-foreground"
+                >
+                  Jenis Akun
+                </label>
+                <select
+                  id="account-type-select"
+                  value={accountType}
+                  onChange={(e) => setAccountType(e.target.value as AccountType)}
+                  className="flex h-9 w-full rounded border border-input bg-background px-3 py-1 text-xs text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                >
+                  {ACCOUNT_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="account-initial-balance"
+                  className="block text-xs font-medium text-foreground"
+                >
+                  Saldo Awal (Rp)
+                </label>
+                <CurrencyInput
+                  id="account-initial-balance"
+                  value={initialBalance}
+                  onValueChange={(val) => setInitialBalance(val ?? 0)}
+                />
+              </div>
+            </div>
+
+            {/* Footer with ButtonSlideToConfirm */}
+            <div className="flex items-center justify-end gap-2 border-t border-border p-2.5 sm:px-6 bg-card/60 backdrop-blur-xs shrink-0">
+              <ButtonSlideToConfirm
+                key={
+                  isAccountDrawerOpen
+                    ? `acc-${editingAccount?.id ?? "new"}`
+                    : "closed"
+                }
+                disabled={upsertAccountMutation.isPending}
+                label={
+                  editingAccount
+                    ? "Geser untuk Simpan Perubahan"
+                    : "Geser untuk Simpan Akun"
+                }
+                readyLabel="Lepas untuk Simpan"
+                loadingLabel="Menyimpan Akun..."
+                successLabel={
+                  editingAccount ? "Akun Diperbarui!" : "Akun Disimpan!"
+                }
+                onConfirm={handleSlideConfirmAccount}
+                onSuccessComplete={handleCloseAccountDrawer}
+              />
+            </div>
+          </form>
+        </DrawerContent>
+      </Drawer>
+
+      {/* Merge Account Drawer with ButtonSlideToConfirm */}
+      <Drawer
+        open={isMergeModalOpen}
+        onOpenChange={setIsMergeModalOpen}
+        shouldScaleBackground={false}
+      >
+        <DrawerContent className="fixed inset-x-0 bottom-0 z-50 flex h-[100dvh] max-h-[100dvh] w-full flex-col rounded-none border-t border-border bg-card p-0 shadow-2xl focus:outline-none sm:mx-auto sm:h-auto sm:max-h-[90vh] sm:max-w-xl sm:rounded-t-2xl">
+          <form
+            onSubmit={(e) => e.preventDefault()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+              }
+            }}
+            className="flex h-full sm:h-auto flex-1 flex-col overflow-hidden"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6 shrink-0 bg-card">
               <div>
+                <DrawerTitle
+                  id="merge-account-dialog-title"
+                  className="text-sm font-semibold text-foreground"
+                >
+                  Gabungkan Dua Rekening
+                </DrawerTitle>
+                <DrawerDescription className="mt-0.5 text-xs text-muted-foreground">
+                  Seluruh riwayat mutasi dari akun sumber akan disatukan ke akun
+                  tujuan secara permanen.
+                </DrawerDescription>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMergeModalOpen(false)}
+                aria-label="Tutup"
+                className="nav-touch-item inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 space-y-4">
+              <div className="space-y-1.5">
                 <label
                   htmlFor="merge-source-account"
-                  className="mb-1.5 block text-xs font-medium text-foreground"
+                  className="block text-xs font-medium text-foreground"
                 >
                   Akun Sumber (Yang Akan Ditutup)
                 </label>
@@ -404,7 +525,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
                   id="merge-source-account"
                   value={mergeSourceId}
                   onChange={(e) => setMergeSourceId(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                  className="flex h-9 w-full rounded border border-input bg-background px-3 py-1 text-xs text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                 >
                   {activeRootAccounts.map((acc) => (
                     <option key={acc.id} value={acc.id}>
@@ -414,10 +535,10 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
                 </select>
               </div>
 
-              <div>
+              <div className="space-y-1.5">
                 <label
                   htmlFor="merge-target-account"
-                  className="mb-1.5 block text-xs font-medium text-foreground"
+                  className="block text-xs font-medium text-foreground"
                 >
                   Akun Tujuan (Rekening Utama yang Dipakai)
                 </label>
@@ -425,7 +546,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
                   id="merge-target-account"
                   value={mergeTargetId}
                   onChange={(e) => setMergeTargetId(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                  className="flex h-9 w-full rounded border border-input bg-background px-3 py-1 text-xs text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                 >
                   {activeRootAccounts.map((acc) => (
                     <option key={acc.id} value={acc.id}>
@@ -435,28 +556,31 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
                 </select>
               </div>
 
-              <div className="flex items-center justify-end gap-2 border-t border-border pt-3">
-                <button
-                  type="button"
-                  onClick={() => setIsMergeModalOpen(false)}
-                  className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-none hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={mergeAccountsMutation.isPending}
-                  className="rounded-md border border-border bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground shadow-none hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
-                >
-                  {mergeAccountsMutation.isPending
-                    ? "Menggabungkan..."
-                    : "Konfirmasi Gabung"}
-                </button>
+              <div className="rounded border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-600 dark:text-amber-400">
+                <p className="font-semibold">Perhatian Penting:</p>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+                  Tindakan ini tidak dapat dibatalkan. Riwayat transaksi dari
+                  akun sumber akan digabungkan secara permanen ke akun tujuan.
+                </p>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+
+            {/* Footer with ButtonSlideToConfirm */}
+            <div className="flex items-center justify-end gap-2 border-t border-border p-2.5 sm:px-6 bg-card/60 backdrop-blur-xs shrink-0">
+              <ButtonSlideToConfirm
+                key={isMergeModalOpen ? "merge-open" : "merge-closed"}
+                disabled={mergeAccountsMutation.isPending}
+                label="Geser untuk Gabungkan Akun"
+                readyLabel="Lepas untuk Gabung"
+                loadingLabel="Menggabungkan..."
+                successLabel="Akun Berhasil Digabungkan!"
+                onConfirm={handleSlideConfirmMerge}
+                onSuccessComplete={() => setIsMergeModalOpen(false)}
+              />
+            </div>
+          </form>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 };

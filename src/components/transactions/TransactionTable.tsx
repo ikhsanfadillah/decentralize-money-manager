@@ -1,14 +1,14 @@
 import * as React from "react";
+import { flexRender } from "@tanstack/react-table";
 import {
-  createColumnHelper,
-  flexRender,
   getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+  legacyCreateColumnHelper as createColumnHelper,
+  useLegacyTable as useReactTable,
+} from "@tanstack/react-table/legacy";
 import { CurrencyInput } from "../ui/currency-input";
 import { Input } from "../ui/input";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, TrendingDown, TrendingUp } from "lucide-react";
 import {
   Drawer,
   DrawerClose,
@@ -37,6 +37,7 @@ import {
   formatSignedRupiah,
   formatTxTypeLabel,
 } from "../../lib/utils";
+import { formatDateReadable } from "../../lib/date";
 
 interface FilterFormProps {
   filter: TransactionFilter;
@@ -674,10 +675,22 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
         {/* Row 1: Category (+ inline note) & Nominal */}
         <div className="flex items-baseline justify-between gap-2">
           <div className="flex min-w-0 flex-1 items-baseline gap-1.5">
-            <span
-              className={`h-1.5 w-1.5 shrink-0 self-center rounded-full ${dotColor}`}
-              aria-hidden="true"
-            />
+            {isExpense ? (
+              <TrendingDown
+                className="h-3 w-3 shrink-0 self-center text-rose-500"
+                aria-hidden="true"
+              />
+            ) : isIncome ? (
+              <TrendingUp
+                className="h-3 w-3 shrink-0 self-center text-emerald-500"
+                aria-hidden="true"
+              />
+            ) : (
+              <span
+                className={`h-1.5 w-1.5 shrink-0 self-center rounded-full ${dotColor}`}
+                aria-hidden="true"
+              />
+            )}
             <span className="truncate text-xs font-semibold text-foreground">
               {title}
             </span>
@@ -706,7 +719,10 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
             title={`Tanggal: ${tx.tx_date} · Rekening: ${accountDisplay}`}
             className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground"
           >
-            <span className="font-mono">{tx.tx_date}</span>
+            <span className="font-mono">
+              {formatDateReadable(tx.tx_date)}
+              <span className="sr-only"> ({tx.tx_date})</span>
+            </span>
             <span className="mx-1.5 opacity-50">·</span>
             <span className="font-medium text-foreground/80">
               {accountDisplay}
@@ -762,12 +778,16 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   const [openTxId, setOpenTxId] = React.useState<string | null>(null);
 
   const columns = React.useMemo(
-    () => [
-      columnHelper.accessor("tx_date", {
+    () =>
+      columnHelper.columns([
+        columnHelper.accessor("tx_date", {
         header: "Tanggal",
         cell: (info) => (
-          <span className="font-mono text-xs tabular-nums tracking-tight text-foreground">
-            {info.getValue()}
+          <span
+            className="text-xs tracking-tight text-foreground"
+            title={info.getValue()}
+          >
+            {formatDateReadable(info.getValue())}
           </span>
         ),
       }),
@@ -777,15 +797,23 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
           const val = info.getValue();
           if (val === "EXPENSE") {
             return (
-              <span className="inline-flex items-center rounded border border-rose-500/40 px-1.5 py-0.5 text-[11px] font-semibold text-rose-500">
-                Pengeluaran
+              <span
+                title="Pengeluaran"
+                className="inline-flex items-center gap-1 rounded border border-rose-500/40 px-1.5 py-0.5 text-[11px] font-semibold text-rose-500"
+              >
+                <TrendingDown className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <span>Pengeluaran</span>
               </span>
             );
           }
           if (val === "INCOME") {
             return (
-              <span className="inline-flex items-center rounded border border-emerald-500/40 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-500">
-                Pemasukan
+              <span
+                title="Pemasukan"
+                className="inline-flex items-center gap-1 rounded border border-emerald-500/40 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-500"
+              >
+                <TrendingUp className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <span>Pemasukan</span>
               </span>
             );
           }
@@ -854,7 +882,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
       }),
       columnHelper.display({
         id: "actions",
-        header: () => <div className="text-right">Aksi</div>,
+        header: () => <div className="text-right"></div>,
         cell: (info) => {
           const row = info.row.original;
           return (
@@ -877,7 +905,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
           );
         },
       }),
-    ],
+    ]),
     [onEditTx]
   );
 
@@ -1096,6 +1124,12 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
 
             {filter.tx_type && (
               <span className="inline-flex items-center gap-1 rounded border border-primary/40 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] text-primary">
+                {filter.tx_type === "EXPENSE" && (
+                  <TrendingDown className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
+                )}
+                {filter.tx_type === "INCOME" && (
+                  <TrendingUp className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
+                )}
                 Jenis: {formatTxTypeLabel(filter.tx_type)}
                 <button
                   type="button"
@@ -1489,9 +1523,11 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                     )}
                   </span>
                 </div>
-                <div className="flex items-center justify-between font-mono text-[11px] text-muted-foreground">
-                  <span>{txPendingDelete.tx_date}</span>
-                  <span>{txPendingDelete.account_name}</span>
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span title={txPendingDelete.tx_date} className="font-medium text-foreground">
+                    {formatDateReadable(txPendingDelete.tx_date, { withDayName: true })}
+                  </span>
+                  <span className="font-mono">{txPendingDelete.account_name}</span>
                 </div>
                 {txPendingDelete.note && (
                   <p className="border-t border-border/60 pt-1 text-[11px] text-muted-foreground italic">

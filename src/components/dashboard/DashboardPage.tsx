@@ -1,7 +1,6 @@
 import * as React from "react";
 import { Link } from "@tanstack/react-router";
 import { useBookFinance } from "../../hooks/useBookFinance";
-import { useUiStore } from "../../stores/ui-store";
 import {
   currentYearMonth,
   formatAccountTypeLabel,
@@ -9,7 +8,9 @@ import {
   formatRupiah,
   formatSignedRupiah,
 } from "../../lib/utils";
+import { formatDateReadable } from "../../lib/date";
 import { BudgetProgressBar } from "../budgets/BudgetProgressBar";
+import { TrendingDown, TrendingUp } from "lucide-react";
 
 export interface DashboardPageProps {
   bookId: string;
@@ -17,9 +18,6 @@ export interface DashboardPageProps {
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
   const currentMonth = React.useMemo(() => currentYearMonth(), []);
-  const setNewTransactionModalOpen = useUiStore(
-    (s) => s.setNewTransactionModalOpen
-  );
 
   const {
     balancesQuery,
@@ -84,33 +82,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
         </div>
 
         <div className="tabular-grid-cell px-3 py-2.5">
-          <p className="truncate text-[11px] font-medium text-muted-foreground">
-            Pemasukan Bulan Ini
-          </p>
-          <p className="mt-0.5 truncate font-mono text-sm font-semibold tabular-nums tracking-tight text-emerald-500 sm:text-base">
-            + {formatRupiah(currentMonthSummary.income)}
-          </p>
-          <p className="truncate text-[10px] text-muted-foreground">
-            {formatMonthLabel(currentMonth)}
-          </p>
-        </div>
-
-        <div className="tabular-grid-cell px-3 py-2.5">
-          <p className="truncate text-[11px] font-medium text-muted-foreground">
-            Pengeluaran Bulan Ini
-          </p>
-          <p className="mt-0.5 truncate font-mono text-sm font-semibold tabular-nums tracking-tight text-rose-500 sm:text-base">
-            - {formatRupiah(currentMonthSummary.expense)}
-          </p>
-          <p className="truncate text-[10px] text-muted-foreground">
-            {formatMonthLabel(currentMonth)}
-          </p>
-        </div>
-
-        <div className="tabular-grid-cell px-3 py-2.5">
-          <p className="truncate text-[11px] font-medium text-muted-foreground">
-            Selisih Bulan Ini
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="truncate text-[11px] font-medium text-muted-foreground">
+              Selisih Bulan Ini
+            </p>
+            {currentMonthSummary.net >= 0 ? (
+              <TrendingUp className="h-3.5 w-3.5 text-emerald-500" aria-hidden="true" />
+            ) : (
+              <TrendingDown className="h-3.5 w-3.5 text-rose-500" aria-hidden="true" />
+            )}
+          </div>
           <p
             className={`mt-0.5 truncate font-mono text-sm font-semibold tabular-nums tracking-tight sm:text-base ${
               currentMonthSummary.net >= 0
@@ -126,6 +107,36 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
             {currentMonthSummary.net >= 0 ? "Surplus tabungan" : "Pengeluaran lebih besar"}
           </p>
         </div>
+        <div className="tabular-grid-cell px-3 py-2.5">
+          <div className="flex items-center justify-between">
+            <p className="truncate text-[11px] font-medium text-muted-foreground">
+              Pemasukan Bulan Ini
+            </p>
+            <TrendingUp className="h-3.5 w-3.5 text-emerald-500" aria-hidden="true" />
+          </div>
+          <p className="mt-0.5 truncate font-mono text-sm font-semibold tabular-nums tracking-tight text-emerald-500 sm:text-base">
+            + {formatRupiah(currentMonthSummary.income)}
+          </p>
+          <p className="truncate text-[10px] text-muted-foreground">
+            {formatMonthLabel(currentMonth)}
+          </p>
+        </div>
+
+        <div className="tabular-grid-cell px-3 py-2.5">
+          <div className="flex items-center justify-between">
+            <p className="truncate text-[11px] font-medium text-muted-foreground">
+              Pengeluaran Bulan Ini
+            </p>
+            <TrendingDown className="h-3.5 w-3.5 text-rose-500" aria-hidden="true" />
+          </div>
+          <p className="mt-0.5 truncate font-mono text-sm font-semibold tabular-nums tracking-tight text-rose-500 sm:text-base">
+            - {formatRupiah(currentMonthSummary.expense)}
+          </p>
+          <p className="truncate text-[10px] text-muted-foreground">
+            {formatMonthLabel(currentMonth)}
+          </p>
+        </div>
+
       </div>
 
       {/* Middle Row: Account Balances & Top 3 Budgets This Month */}
@@ -266,7 +277,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
               <h2 className="truncate text-xs font-semibold text-foreground sm:text-sm">
                 Riwayat Bulanan
               </h2>
-              <p className="truncate text-[11px] text-muted-foreground">
+              <p className="text-[11px] text-muted-foreground">
                 Ringkasan uang masuk & keluar 6 bulan terakhir
               </p>
             </div>
@@ -307,11 +318,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
                   </div>
 
                   <div className="flex items-center justify-between font-mono text-[11px] tabular-nums">
-                    <span className="text-emerald-500">
-                      Masuk: + {formatRupiah(row.income)}
+                    <span className="inline-flex items-center gap-1 text-emerald-500">
+                      <TrendingUp className="h-3 w-3 shrink-0" aria-hidden="true" />
+                      {formatRupiah(row.income)}
                     </span>
-                    <span className="text-rose-500">
-                      Keluar: - {formatRupiah(row.expense)}
+                    <span className="inline-flex items-center gap-1 text-rose-500">
+                      <TrendingDown className="h-3 w-3 shrink-0" aria-hidden="true" />
+                      {formatRupiah(row.expense)}
                     </span>
                   </div>
                 </div>
@@ -324,8 +337,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
             <div className="grid min-w-[440px] grid-cols-1 gap-px bg-border">
               <div className="tabular-grid-cell grid grid-cols-4 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                 <div>Bulan</div>
-                <div className="text-right">Pemasukan</div>
-                <div className="text-right">Pengeluaran</div>
+                <div className="flex items-center justify-end gap-1 text-right">
+                  <TrendingUp className="h-3 w-3 text-emerald-500" aria-hidden="true" />
+                  <span>Pemasukan</span>
+                </div>
+                <div className="flex items-center justify-end gap-1 text-right">
+                  <TrendingDown className="h-3 w-3 text-rose-500" aria-hidden="true" />
+                  <span>Pengeluaran</span>
+                </div>
                 <div className="text-right">Sisa / Selisih</div>
               </div>
 
@@ -342,11 +361,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
                     <div className="font-sans font-semibold text-foreground">
                       {formatMonthLabel(row.month)}
                     </div>
-                    <div className="text-right text-emerald-500">
-                      + {formatRupiah(row.income)}
+                    <div className="flex items-center justify-end gap-1 text-right text-emerald-500">
+                      <TrendingUp className="h-3 w-3 shrink-0" aria-hidden="true" />
+                      {formatRupiah(row.income)}
                     </div>
-                    <div className="text-right text-rose-500">
-                      - {formatRupiah(row.expense)}
+                    <div className="flex items-center justify-end gap-1 text-right text-rose-500">
+                      <TrendingDown className="h-3 w-3 shrink-0" aria-hidden="true" />
+                      {formatRupiah(row.expense)}
                     </div>
                     <div
                       className={`text-right font-semibold ${
@@ -379,13 +400,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setNewTransactionModalOpen(true)}
-                className="nav-touch-item rounded border border-border bg-primary px-2 py-1 text-[11px] font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-              >
-                + Catat
-              </button>
               <Link
                 to="/books/$bookId/transactions"
                 params={{ bookId }}
@@ -408,6 +422,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
+                    {tx.tx_type === "EXPENSE" ? (
+                      <TrendingDown
+                        className="h-3.5 w-3.5 shrink-0 text-rose-500"
+                        aria-hidden="true"
+                      />
+                    ) : tx.tx_type === "INCOME" ? (
+                      <TrendingUp
+                        className="h-3.5 w-3.5 shrink-0 text-emerald-500"
+                        aria-hidden="true"
+                      />
+                    ) : null}
                     <span className="truncate font-medium text-foreground">
                       {tx.tx_type === "TRANSFER"
                         ? `${tx.account_name} → ${tx.to_account_name ?? "-"}`
@@ -420,7 +445,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
                     )}
                   </div>
                   <p className="truncate text-[11px] text-muted-foreground">
-                    {tx.tx_date} · {tx.account_name}
+                    <span title={tx.tx_date}>
+                      {formatDateReadable(tx.tx_date)}
+                    </span>{" "}
+                    · {tx.account_name}
                     {tx.note ? ` · ${tx.note}` : ""}
                   </p>
                 </div>

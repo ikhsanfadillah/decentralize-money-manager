@@ -7,6 +7,7 @@ import {
   animate,
 } from "motion/react";
 import { cn } from "../../lib/utils";
+import { LucideMoveRight } from "lucide-react";
 
 export type SlideConfirmResult =
   | boolean
@@ -437,7 +438,7 @@ export const ButtonSlideToConfirm: React.FC<ButtonSlideToConfirmProps> = ({
                     aria-hidden="true"
                     className="inline-flex items-center text-primary/80 font-mono text-[11px]"
                   >
-                    »»
+                    <LucideMoveRight size={16}/>
                   </span>
                 </motion.span>
               )}

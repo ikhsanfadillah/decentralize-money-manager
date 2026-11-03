@@ -44,7 +44,7 @@ export function getBudgetStatusMeta(status: BudgetStatus): {
 export const BudgetProgressBar: React.FC<BudgetProgressBarProps> = ({
   pct,
   status,
-  alertThresholdPct,
+  alertThresholdPct: _alertThresholdPct,
   className,
 }) => {
   const meta = getBudgetStatusMeta(status);
@@ -64,7 +64,7 @@ export const BudgetProgressBar: React.FC<BudgetProgressBarProps> = ({
           {meta.label}
         </span>
         <span className="shrink-0 font-mono text-xs tabular-nums tracking-tight text-muted-foreground">
-          {pct}% (Ambang: {alertThresholdPct}%)
+          {pct}%
         </span>
       </div>
 

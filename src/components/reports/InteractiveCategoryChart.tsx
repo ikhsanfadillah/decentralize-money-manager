@@ -1,9 +1,10 @@
 import * as React from "react";
+import { TrendingDown, TrendingUp } from "lucide-react";
 import type {
   CategoryKind,
   CategoryMonthlyBreakdownItem,
 } from "../../lib/tauri-api";
-import { formatRupiah } from "../../lib/utils";
+import { formatMonthLabel, formatPercent, formatRupiah } from "../../lib/utils";
 
 export type CategoryChartViewMode = "DONUT_PARETO" | "MOM_DELTA";
 
@@ -72,7 +73,7 @@ export const InteractiveCategoryChart: React.FC<
         ...item,
         color: SLICE_PALETTE[idx % SLICE_PALETTE.length],
         cumulativePct: Math.min(100, Math.round(cumulativeBps / 100)),
-        sharePctText: (item.share_bps / 100).toFixed(1),
+        sharePctText: formatPercent(item.share_bps / 100, 1),
         strokeDasharray,
         strokeDashoffset,
       };
@@ -112,64 +113,76 @@ export const InteractiveCategoryChart: React.FC<
             Distribusi Kategori
           </h2>
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Proporsi kategori dan perbandingan terhadap {prevMonth}.
+            Proporsi kategori dan perbandingan terhadap {formatMonthLabel(prevMonth)}.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveKind("EXPENSE");
-              onSelectCategoryId(null);
-            }}
-            className={`nav-touch-item rounded border px-2.5 py-1 text-xs font-medium focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
-              activeKind === "EXPENSE"
-                ? "border-rose-500 bg-rose-500 font-semibold text-white"
-                : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
-          >
-            Pengeluaran
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveKind("INCOME");
-              onSelectCategoryId(null);
-            }}
-            className={`nav-touch-item rounded border px-2.5 py-1 text-xs font-medium focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
-              activeKind === "INCOME"
-                ? "border-emerald-500 bg-emerald-500 font-semibold text-white"
-                : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
-          >
-            Pemasukan
-          </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Segmented Control 1: Jenis Kategori */}
+          <div className="inline-flex items-center rounded-lg border border-border bg-muted/40 p-0.5">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveKind("EXPENSE");
+                onSelectCategoryId(null);
+              }}
+              className={`nav-touch-item inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs transition-all ${
+                activeKind === "EXPENSE"
+                  ? "bg-background text-foreground font-semibold shadow-xs border border-border/50"
+                  : "text-muted-foreground hover:text-foreground font-medium"
+              }`}
+            >
+              <TrendingDown
+                className={`h-3.5 w-3.5 shrink-0 ${activeKind === "EXPENSE" ? "text-rose-500" : "text-muted-foreground"}`}
+                aria-hidden="true"
+              />
+              <span>Pengeluaran</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveKind("INCOME");
+                onSelectCategoryId(null);
+              }}
+              className={`nav-touch-item inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs transition-all ${
+                activeKind === "INCOME"
+                  ? "bg-background text-foreground font-semibold shadow-xs border border-border/50"
+                  : "text-muted-foreground hover:text-foreground font-medium"
+              }`}
+            >
+              <TrendingUp
+                className={`h-3.5 w-3.5 shrink-0 ${activeKind === "INCOME" ? "text-emerald-500" : "text-muted-foreground"}`}
+                aria-hidden="true"
+              />
+              <span>Pemasukan</span>
+            </button>
+          </div>
 
-          <span className="mx-0.5 text-muted-foreground/50">|</span>
-
-          <button
-            type="button"
-            onClick={() => setViewMode("DONUT_PARETO")}
-            className={`nav-touch-item rounded border px-2.5 py-1 text-xs font-medium focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
-              viewMode === "DONUT_PARETO"
-                ? "border-primary bg-primary font-semibold text-primary-foreground"
-                : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
-          >
-            Diagram Lingkaran
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("MOM_DELTA")}
-            className={`nav-touch-item rounded border px-2.5 py-1 text-xs font-medium focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
-              viewMode === "MOM_DELTA"
-                ? "border-primary bg-primary font-semibold text-primary-foreground"
-                : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
-          >
-            Bandingkan Bulan Lalu
-          </button>
+          {/* Segmented Control 2: Mode Tampilan Visual */}
+          <div className="inline-flex items-center rounded-lg border border-border bg-muted/40 p-0.5">
+            <button
+              type="button"
+              onClick={() => setViewMode("DONUT_PARETO")}
+              className={`nav-touch-item rounded-md px-2.5 py-1 text-xs transition-all ${
+                viewMode === "DONUT_PARETO"
+                  ? "bg-background text-foreground font-semibold shadow-xs border border-border/50"
+                  : "text-muted-foreground hover:text-foreground font-medium"
+              }`}
+            >
+              Diagram Lingkaran
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("MOM_DELTA")}
+              className={`nav-touch-item rounded-md px-2.5 py-1 text-xs transition-all ${
+                viewMode === "MOM_DELTA"
+                  ? "bg-background text-foreground font-semibold shadow-xs border border-border/50"
+                  : "text-muted-foreground hover:text-foreground font-medium"
+              }`}
+            >
+              Batang Selisih
+            </button>
+          </div>
         </div>
       </div>
 
@@ -259,13 +272,12 @@ export const InteractiveCategoryChart: React.FC<
             )}
           </div>
 
-          {/* Pareto 80/20 Interactive Table (7 cols) */}
-          <div className="tabular-grid-cell divide-y divide-border overflow-x-auto scrollbar-thin lg:col-span-7">
-            <div className="min-w-[440px]">
-              <div className="grid grid-cols-12 items-center bg-muted/40 px-4 py-2 text-[11px] font-medium text-muted-foreground">
-                <div className="col-span-5">Kategori & Proporsi</div>
-                <div className="col-span-3 text-right">Bulan Ini</div>
-                <div className="col-span-2 text-right">vs {prevMonth}</div>
+          {/* Pareto 80/20 Interactive Table (Fully Responsive, Delta moved under Nominal) */}
+          <div className="tabular-grid-cell divide-y divide-border lg:col-span-7">
+            <div>
+              <div className="grid grid-cols-12 items-center bg-muted/40 px-3 py-2 text-[11px] font-medium text-muted-foreground sm:px-4">
+                <div className="col-span-6 sm:col-span-5">Kategori & Porsi</div>
+                <div className="col-span-4 sm:col-span-5 text-right">Nominal & Tren</div>
                 <div className="col-span-2 text-right">Akumulasi</div>
               </div>
 
@@ -283,7 +295,7 @@ export const InteractiveCategoryChart: React.FC<
                     onClick={() =>
                       onSelectCategoryId(isSelected ? null : item.category_id)
                     }
-                    className={`grid cursor-pointer grid-cols-12 items-center gap-2 px-4 py-3 text-xs transition-colors ${
+                    className={`grid cursor-pointer grid-cols-12 items-center gap-2 px-3 py-2.5 text-xs transition-colors sm:px-4 sm:py-3 ${
                       isSelected
                         ? "bg-primary/10"
                         : isHovered
@@ -291,8 +303,9 @@ export const InteractiveCategoryChart: React.FC<
                           : ""
                     }`}
                   >
-                    <div className="col-span-5 space-y-1.5">
-                      <div className="flex items-center gap-2">
+                    {/* Col 1: Kategori & Porsi Bar */}
+                    <div className="col-span-6 sm:col-span-5 space-y-1.5 min-w-0">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
                         <span
                           className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm"
                           style={{ backgroundColor: item.color }}
@@ -301,7 +314,7 @@ export const InteractiveCategoryChart: React.FC<
                           {item.category_name}
                         </span>
                         {item.is_system && (
-                          <span className="rounded border border-primary/40 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                          <span className="shrink-0 rounded border border-primary/40 px-1 py-0.2 text-[9px] font-medium text-primary">
                             Khusus
                           </span>
                         )}
@@ -317,50 +330,50 @@ export const InteractiveCategoryChart: React.FC<
                       </div>
                     </div>
 
-                    <div className="col-span-3 space-y-0.5 text-right font-mono tabular-nums tracking-tight">
-                      <p className="font-semibold text-foreground">
+                    {/* Col 2: Nominal & Delta Badge Underneath */}
+                    <div className="col-span-4 sm:col-span-5 space-y-1 text-right font-mono tabular-nums tracking-tight">
+                      <p className="font-semibold text-foreground text-xs sm:text-sm">
                         {formatRupiah(item.current_amount)}
                       </p>
-                      <p className="font-sans text-[11px] text-muted-foreground">
-                        {item.sharePctText}% · {item.tx_count} tx
-                      </p>
-                    </div>
-
-                    <div className="col-span-2 text-right font-mono text-xs tabular-nums tracking-tight">
-                      {item.delta_pct !== null ? (
-                        <span
-                          className={
-                            item.delta_amount > 0
-                              ? activeKind === "EXPENSE"
-                                ? "text-rose-500"
-                                : "text-emerald-500"
-                              : item.delta_amount < 0
+                      <div className="flex flex-wrap items-center justify-end gap-1 font-sans text-[10px] sm:text-[11px]">
+                        {item.delta_pct !== null ? (
+                          <span
+                            className={`inline-flex items-center gap-0.5 rounded px-1 py-0.2 font-mono font-medium ${
+                              item.delta_amount > 0
                                 ? activeKind === "EXPENSE"
-                                  ? "text-emerald-500"
-                                  : "text-rose-500"
-                                : "text-muted-foreground"
-                          }
-                        >
-                          {item.delta_pct > 0
-                            ? `+${item.delta_pct}%`
-                            : `${item.delta_pct}%`}
+                                  ? "bg-rose-500/10 text-rose-500"
+                                  : "bg-emerald-500/10 text-emerald-500"
+                                : item.delta_amount < 0
+                                  ? activeKind === "EXPENSE"
+                                    ? "bg-emerald-500/10 text-emerald-500"
+                                    : "bg-rose-500/10 text-rose-500"
+                                  : "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            <span>{item.delta_amount > 0 ? "▲" : item.delta_amount < 0 ? "▼" : "•"}</span>
+                            <span>{formatPercent(Math.abs(item.delta_pct), 0)}</span>
+                          </span>
+                        ) : (
+                          <span className="rounded bg-primary/10 px-1 py-0.2 font-medium text-primary">
+                            Baru
+                          </span>
+                        )}
+                        <span className="text-muted-foreground">
+                          {item.sharePctText} · {item.tx_count} transaksi
                         </span>
-                      ) : (
-                        <span className="font-sans text-[11px] text-muted-foreground">
-                          Baru
-                        </span>
-                      )}
+                      </div>
                     </div>
 
+                    {/* Col 3: Akumulasi Pareto */}
                     <div className="col-span-2 text-right font-mono text-xs tabular-nums tracking-tight">
                       <span
-                        className={`rounded border px-1.5 py-0.5 text-[11px] ${
+                        className={`rounded border px-1.5 py-0.5 text-[10px] sm:text-[11px] ${
                           isParetoCore
                             ? "border-amber-500/30 bg-amber-500/5 text-amber-500"
                             : "border-border text-muted-foreground"
                         }`}
                       >
-                        {item.cumulativePct}%
+                        {formatPercent(item.cumulativePct, 0)}
                       </span>
                     </div>
                   </div>
@@ -375,8 +388,8 @@ export const InteractiveCategoryChart: React.FC<
           <div className="min-w-[440px]">
             <div className="grid grid-cols-12 items-center bg-muted/40 px-4 py-2 text-[11px] font-medium text-muted-foreground">
               <div className="col-span-3">Kategori</div>
-              <div className="col-span-2 text-right">{prevMonth}</div>
-              <div className="col-span-2 text-right">{month}</div>
+              <div className="col-span-2 text-right">{formatMonthLabel(prevMonth)}</div>
+              <div className="col-span-2 text-right">{formatMonthLabel(month)}</div>
               <div className="col-span-5 px-3 text-center">
                 Perubahan Nominal vs Bulan Lalu
               </div>
@@ -434,12 +447,30 @@ export const InteractiveCategoryChart: React.FC<
                         />
                       )}
                     </div>
-                    <div className="text-right font-mono text-[11px] tabular-nums tracking-tight text-muted-foreground">
-                      {item.delta_amount > 0
-                        ? `+${formatRupiah(item.delta_amount)}`
-                        : item.delta_amount < 0
-                          ? `−${formatRupiah(Math.abs(item.delta_amount))}`
-                          : "Tetap (Rp 0)"}
+                    <div className="flex items-center justify-end gap-1 font-mono text-[11px] tabular-nums tracking-tight text-muted-foreground">
+                      {item.delta_amount > 0 ? (
+                        <>
+                          <TrendingUp
+                            className={`h-3 w-3 shrink-0 ${
+                              activeKind === "EXPENSE" ? "text-rose-500" : "text-emerald-500"
+                            }`}
+                            aria-hidden="true"
+                          />
+                          <span>+{formatRupiah(item.delta_amount)}</span>
+                        </>
+                      ) : item.delta_amount < 0 ? (
+                        <>
+                          <TrendingDown
+                            className={`h-3 w-3 shrink-0 ${
+                              activeKind === "EXPENSE" ? "text-emerald-500" : "text-rose-500"
+                            }`}
+                            aria-hidden="true"
+                          />
+                          <span>−{formatRupiah(Math.abs(item.delta_amount))}</span>
+                        </>
+                      ) : (
+                        <span>Tetap (Rp 0)</span>
+                      )}
                     </div>
                   </div>
                 </div>

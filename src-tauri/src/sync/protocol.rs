@@ -1,20 +1,22 @@
 use crate::crdt::{merge_remote_oplog, CrdtOp, MergeReport};
 use crate::db::now_iso8601;
 use crate::error::{AppError, AppResult};
-use crate::hlc::system_now_ms;
+use crate::hlc::{load_clock_from_tx, save_clock_to_tx, system_now_ms};
 use crate::sync::crypto::{
     compute_auth_mac, decrypt_wire_payload, encrypt_wire_payload, random_nonce_32, verify_auth_mac,
     DerivedBookKeys, ROLE_CLIENT_AUTH, ROLE_SERVER_AUTH,
 };
 use crate::sync::keystore::KeyStore;
 use crate::sync::transport::{NodeTicketAddr, PeerSession, Transport};
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{params, Connection, OptionalExtension, TransactionBehavior};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};
 use std::sync::{Arc, Mutex};
+use tokio::sync::{mpsc, watch};
 
 pub const MAX_DELTA_BATCH_OPS: usize = 500;
 pub const MAX_DELTA_BATCH_BYTES: usize = 256 * 1024; // 256 KiB per batch (Section 6.3)
+pub const LIVE_HEARTBEAT_INTERVAL_SECS: u64 = 20;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HelloMessage {
@@ -26,6 +28,10 @@ pub struct HelloMessage {
     pub sender_addr: Option<NodeTicketAddr>,
     #[serde(default)]
     pub known_peer_addrs: Vec<NodeTicketAddr>,
+    #[serde(default)]
+    pub preferred_hub_node_id: Option<String>,
+    #[serde(default)]
+    pub preferred_hub_hlc: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -38,6 +44,10 @@ pub struct ChallengeMessage {
     pub sender_addr: Option<NodeTicketAddr>,
     #[serde(default)]
     pub known_peer_addrs: Vec<NodeTicketAddr>,
+    #[serde(default)]
+    pub preferred_hub_node_id: Option<String>,
+    #[serde(default)]
+    pub preferred_hub_hlc: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -61,6 +71,34 @@ pub struct SyncAckMessage {
     pub ok: bool,
 }
 
+/// Persistent stream frame exchanged after initial handshake & SyncAck (Section 6.3 step 4).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum LiveStreamFrame {
+    PushOps {
+        ops: Vec<CrdtOp>,
+    },
+    Heartbeat {
+        frontier: HashMap<String, String>,
+        preferred_hub_node_id: Option<String>,
+        preferred_hub_hlc: Option<String>,
+    },
+    Disconnect,
+}
+
+#[derive(Debug, Clone)]
+pub enum LiveSessionEvent {
+    OpsApplied {
+        book_id: String,
+        from_node_id: String,
+        applied_ops: Vec<CrdtOp>,
+        changed_tables: Vec<String>,
+    },
+    PreferredHubChanged {
+        book_id: String,
+        preferred_hub_node_id: Option<String>,
+    },
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct SyncSessionOutcome {
     pub book_id: String,
@@ -69,6 +107,7 @@ pub struct SyncSessionOutcome {
     pub sent_ops: usize,
     pub received_ops: usize,
     pub changed_tables: Vec<String>,
+    pub hub_updated: bool,
 }
 
 pub fn load_local_device_id(conn: &Connection) -> AppResult<String> {
@@ -80,6 +119,91 @@ pub fn load_local_device_id(conn: &Connection) -> AppResult<String> {
         )
         .optional()?;
     Ok(dev_id.unwrap_or_else(|| "00000000".to_string()))
+}
+
+pub fn load_preferred_hub(conn: &Connection) -> AppResult<(Option<String>, Option<String>)> {
+    let raw_hub: Option<String> = conn
+        .query_row(
+            "SELECT value FROM meta WHERE key = 'preferred_hub_node_id'",
+            [],
+            |r| r.get(0),
+        )
+        .optional()?;
+    let hlc: Option<String> = conn
+        .query_row(
+            "SELECT value FROM meta WHERE key = 'preferred_hub_hlc'",
+            [],
+            |r| r.get(0),
+        )
+        .optional()?;
+    let normalized_hub = raw_hub
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+    Ok((normalized_hub, hlc))
+}
+
+pub fn set_local_preferred_hub(
+    conn: &mut Connection,
+    hub_node_id: Option<&str>,
+) -> AppResult<(Option<String>, String)> {
+    let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+    let mut clock = load_clock_from_tx(&tx)?;
+    let new_hlc = clock.tick(system_now_ms())?.to_string();
+    save_clock_to_tx(&tx, &clock)?;
+
+    let clean_hub = hub_node_id
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+    let stored_val = clean_hub.clone().unwrap_or_default();
+
+    tx.execute(
+        "INSERT INTO meta (key, value) VALUES ('preferred_hub_node_id', ?1)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        params![stored_val],
+    )?;
+    tx.execute(
+        "INSERT INTO meta (key, value) VALUES ('preferred_hub_hlc', ?1)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        params![new_hlc],
+    )?;
+    tx.commit()?;
+    Ok((clean_hub, new_hlc))
+}
+
+pub fn apply_remote_preferred_hub(
+    conn: &Connection,
+    remote_hub: Option<&str>,
+    remote_hlc: Option<&str>,
+) -> AppResult<bool> {
+    let Some(r_hlc) = remote_hlc.map(|s| s.trim()).filter(|s| !s.is_empty()) else {
+        return Ok(false);
+    };
+    let (local_hub, local_hlc) = load_preferred_hub(conn)?;
+    let should_apply = match local_hlc {
+        None => true,
+        Some(ref cur) => r_hlc > cur.as_str(),
+    };
+    if !should_apply {
+        return Ok(false);
+    }
+
+    let clean_remote = remote_hub
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+    let changed = clean_remote != local_hub;
+    let stored_val = clean_remote.unwrap_or_default();
+
+    conn.execute(
+        "INSERT INTO meta (key, value) VALUES ('preferred_hub_node_id', ?1)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        params![stored_val],
+    )?;
+    conn.execute(
+        "INSERT INTO meta (key, value) VALUES ('preferred_hub_hlc', ?1)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        params![r_hlc],
+    )?;
+    Ok(changed)
 }
 
 pub fn load_known_peer_tickets(conn: &Connection) -> AppResult<Vec<NodeTicketAddr>> {
@@ -211,36 +335,126 @@ pub fn compute_local_frontier(conn: &Connection) -> AppResult<HashMap<String, St
     Ok(map)
 }
 
+pub fn load_max_oplog_hlc(conn: &Connection) -> AppResult<Option<String>> {
+    let max_hlc: Option<String> = conn
+        .query_row("SELECT MAX(hlc_timestamp) FROM crdt_oplog", [], |r| {
+            r.get(0)
+        })
+        .optional()?
+        .flatten();
+    Ok(max_hlc)
+}
+
+pub fn collect_ops_since_hlc(
+    conn: &Connection,
+    since_hlc: Option<&str>,
+) -> AppResult<Vec<CrdtOp>> {
+    let mut out = Vec::new();
+    match since_hlc.map(|s| s.trim()).filter(|s| !s.is_empty()) {
+        Some(hlc_bound) => {
+            let mut stmt = conn.prepare(
+                "SELECT hlc_timestamp, table_name, row_id, payload_json, device_id
+                 FROM crdt_oplog
+                 WHERE hlc_timestamp > ?1
+                 ORDER BY hlc_timestamp ASC",
+            )?;
+            let rows = stmt.query_map(params![hlc_bound], |r| {
+                Ok(CrdtOp {
+                    hlc_timestamp: r.get(0)?,
+                    table_name: r.get(1)?,
+                    row_id: r.get(2)?,
+                    payload_json: r.get(3)?,
+                    device_id: r.get(4)?,
+                })
+            })?;
+            for r in rows {
+                out.push(r?);
+            }
+        }
+        None => {
+            let mut stmt = conn.prepare(
+                "SELECT hlc_timestamp, table_name, row_id, payload_json, device_id
+                 FROM crdt_oplog
+                 ORDER BY hlc_timestamp ASC",
+            )?;
+            let rows = stmt.query_map([], |r| {
+                Ok(CrdtOp {
+                    hlc_timestamp: r.get(0)?,
+                    table_name: r.get(1)?,
+                    row_id: r.get(2)?,
+                    payload_json: r.get(3)?,
+                    device_id: r.get(4)?,
+                })
+            })?;
+            for r in rows {
+                out.push(r?);
+            }
+        }
+    }
+    Ok(out)
+}
+
 pub fn collect_delta_ops_for_peer(
     conn: &Connection,
     peer_frontier: &HashMap<String, String>,
 ) -> AppResult<Vec<CrdtOp>> {
-    let mut stmt = conn.prepare(
-        "SELECT hlc_timestamp, table_name, row_id, payload_json, device_id
-         FROM crdt_oplog
-         ORDER BY hlc_timestamp ASC",
-    )?;
-    let rows = stmt.query_map([], |r| {
-        Ok(CrdtOp {
-            hlc_timestamp: r.get(0)?,
-            table_name: r.get(1)?,
-            row_id: r.get(2)?,
-            payload_json: r.get(3)?,
-            device_id: r.get(4)?,
-        })
-    })?;
+    if peer_frontier.is_empty() {
+        return collect_ops_since_hlc(conn, None);
+    }
+
+    // Use idx_crdt_oplog_device_hlc (device_id, hlc_timestamp) per distinct device
+    let mut dev_stmt = conn.prepare("SELECT DISTINCT device_id FROM crdt_oplog")?;
+    let dev_rows = dev_stmt.query_map([], |r| r.get::<_, String>(0))?;
+    let mut devices = Vec::new();
+    for d in dev_rows {
+        devices.push(d?);
+    }
 
     let mut delta = Vec::new();
-    for r in rows {
-        let op = r?;
-        let needed = match peer_frontier.get(&op.device_id) {
-            None => true,
-            Some(peer_max) => op.hlc_timestamp.as_str() > peer_max.as_str(),
-        };
-        if needed {
-            delta.push(op);
+    let mut bounded_stmt = conn.prepare(
+        "SELECT hlc_timestamp, table_name, row_id, payload_json, device_id
+         FROM crdt_oplog
+         WHERE device_id = ?1 AND hlc_timestamp > ?2
+         ORDER BY hlc_timestamp ASC",
+    )?;
+    let mut full_dev_stmt = conn.prepare(
+        "SELECT hlc_timestamp, table_name, row_id, payload_json, device_id
+         FROM crdt_oplog
+         WHERE device_id = ?1
+         ORDER BY hlc_timestamp ASC",
+    )?;
+
+    for dev in devices {
+        if let Some(peer_max) = peer_frontier.get(&dev) {
+            let rows = bounded_stmt.query_map(params![dev, peer_max], |r| {
+                Ok(CrdtOp {
+                    hlc_timestamp: r.get(0)?,
+                    table_name: r.get(1)?,
+                    row_id: r.get(2)?,
+                    payload_json: r.get(3)?,
+                    device_id: r.get(4)?,
+                })
+            })?;
+            for r in rows {
+                delta.push(r?);
+            }
+        } else {
+            let rows = full_dev_stmt.query_map(params![dev], |r| {
+                Ok(CrdtOp {
+                    hlc_timestamp: r.get(0)?,
+                    table_name: r.get(1)?,
+                    row_id: r.get(2)?,
+                    payload_json: r.get(3)?,
+                    device_id: r.get(4)?,
+                })
+            })?;
+            for r in rows {
+                delta.push(r?);
+            }
         }
     }
+
+    delta.sort_by(|a, b| a.hlc_timestamp.cmp(&b.hlc_timestamp));
     Ok(delta)
 }
 
@@ -294,7 +508,7 @@ pub fn chunk_ops_into_batches(ops: Vec<CrdtOp>) -> Vec<DeltaBatchMessage> {
 
 async fn send_delta_stream(
     transport: &dyn Transport,
-    session: &mut dyn PeerSession,
+    session: &dyn PeerSession,
     enc_key: &[u8; 32],
     ops: Vec<CrdtOp>,
 ) -> AppResult<usize> {
@@ -313,7 +527,7 @@ async fn send_delta_stream(
 
 async fn recv_and_apply_delta_stream(
     transport: &dyn Transport,
-    session: &mut dyn PeerSession,
+    session: &dyn PeerSession,
     enc_key: &[u8; 32],
     book_conn: &Arc<Mutex<Connection>>,
 ) -> AppResult<(usize, BTreeSet<String>)> {
@@ -358,10 +572,11 @@ async fn recv_and_apply_delta_stream(
     Ok((total_applied, changed_tables))
 }
 
-/// Runs a complete initiator sync session over `Transport` (Section 6.3).
+/// Runs a complete initiator sync handshake and initial delta exchange over `Transport` (Section 6.3).
+/// Leaves `session` open on success so it can transition into `run_live_session_loop`.
 pub async fn run_initiator_sync(
     transport: &dyn Transport,
-    session: &mut dyn PeerSession,
+    session: &dyn PeerSession,
     book_id: &str,
     book_key: &[u8; 32],
     book_conn: Arc<Mutex<Connection>>,
@@ -371,7 +586,7 @@ pub async fn run_initiator_sync(
     let local_node_id = local_ticket.node_id.clone();
     let remote_node_id = session.remote_node_id().to_string();
 
-    let (local_device_id, known_peer_addrs, local_frontier) = {
+    let (local_device_id, known_peer_addrs, local_frontier, pref_hub, pref_hub_hlc) = {
         let conn_arc = Arc::clone(&book_conn);
         tokio::task::spawn_blocking(move || -> AppResult<_> {
             let guard = conn_arc
@@ -380,7 +595,8 @@ pub async fn run_initiator_sync(
             let dev = load_local_device_id(&guard)?;
             let peers = load_known_peer_tickets(&guard)?;
             let frontier = compute_local_frontier(&guard)?;
-            Ok((dev, peers, frontier))
+            let (hub, hub_hlc) = load_preferred_hub(&guard)?;
+            Ok((dev, peers, frontier, hub, hub_hlc))
         })
         .await
         .map_err(|e| AppError::TaskJoin(e.to_string()))??
@@ -388,7 +604,7 @@ pub async fn run_initiator_sync(
 
     let known_peers: Vec<String> = known_peer_addrs.iter().map(|p| p.node_id.clone()).collect();
 
-    // 1. Send Hello (includes initiator's full NodeTicketAddr so responder can dial back anytime)
+    // 1. Send Hello (includes initiator's full NodeTicketAddr and preferred hub metadata)
     let client_nonce = random_nonce_32();
     let hello = HelloMessage {
         book_topic_id: keys.topic_id,
@@ -397,6 +613,8 @@ pub async fn run_initiator_sync(
         known_peers,
         sender_addr: Some(local_ticket),
         known_peer_addrs,
+        preferred_hub_node_id: pref_hub,
+        preferred_hub_hlc: pref_hub_hlc,
     };
     let hello_bytes = postcard::to_allocvec(&hello)
         .map_err(|e| AppError::Crypto(format!("Hello encode error: {}", e)))?;
@@ -434,16 +652,18 @@ pub async fn run_initiator_sync(
         .map_err(|e| AppError::Crypto(format!("AuthProof encode error: {}", e)))?;
     transport.send_batch(session, &proof_bytes).await?;
 
-    // Record authenticated peer & gossip peers (including full NodeTicketAddr)
-    {
+    // Record authenticated peer, gossip peers & remote preferred hub if newer
+    let hub_updated = {
         let conn_arc = Arc::clone(&book_conn);
         let r_node = remote_node_id.clone();
         let r_dev = challenge.device_id.clone();
         let r_addr = challenge.sender_addr.clone();
         let gossip = challenge.known_peers.clone();
         let gossip_addrs = challenge.known_peer_addrs.clone();
+        let r_hub = challenge.preferred_hub_node_id.clone();
+        let r_hub_hlc = challenge.preferred_hub_hlc.clone();
         let l_node = local_node_id.clone();
-        tokio::task::spawn_blocking(move || -> AppResult<()> {
+        tokio::task::spawn_blocking(move || -> AppResult<bool> {
             let guard = conn_arc
                 .lock()
                 .map_err(|_| AppError::Internal("Book DB mutex poisoned".into()))?;
@@ -455,11 +675,12 @@ pub async fn run_initiator_sync(
                 &gossip,
                 &gossip_addrs,
                 &l_node,
-            )
+            )?;
+            apply_remote_preferred_hub(&guard, r_hub.as_deref(), r_hub_hlc.as_deref())
         })
         .await
-        .map_err(|e| AppError::TaskJoin(e.to_string()))??;
-    }
+        .map_err(|e| AppError::TaskJoin(e.to_string()))??
+    };
 
     // 4. Frontier exchange (encrypted with enc_key)
     let local_frontier_msg = FrontierMessage {
@@ -490,9 +711,9 @@ pub async fn run_initiator_sync(
     let (received_ops, changed_tables) =
         recv_and_apply_delta_stream(transport, session, &keys.enc_key, &book_conn).await?;
 
-    // 6. Send final SyncAck so Responder knows all delta batches have been received & committed before closing QUIC stream
+    // 6. Send final SyncAck so Responder knows initial delta exchange is complete
     let ack_frame = encrypt_wire_payload(&keys.enc_key, &SyncAckMessage { ok: true })?;
-    let _ = transport.send_batch(session, &ack_frame).await;
+    transport.send_batch(session, &ack_frame).await?;
 
     Ok(SyncSessionOutcome {
         book_id: book_id.to_string(),
@@ -501,13 +722,15 @@ pub async fn run_initiator_sync(
         sent_ops,
         received_ops,
         changed_tables: changed_tables.into_iter().collect(),
+        hub_updated,
     })
 }
 
-/// Runs a complete responder sync session over `Transport` (Section 6.3).
+/// Runs a complete responder sync handshake and initial delta exchange over `Transport` (Section 6.3).
+/// Leaves `session` open on success so it can transition into `run_live_session_loop`.
 pub async fn run_responder_sync<F>(
     transport: &dyn Transport,
-    session: &mut dyn PeerSession,
+    session: &dyn PeerSession,
     keystore: &dyn KeyStore,
     resolve_book_conn: F,
 ) -> AppResult<SyncSessionOutcome>
@@ -551,7 +774,7 @@ where
         }
     };
 
-    let (local_device_id, known_peer_addrs, local_frontier) = {
+    let (local_device_id, known_peer_addrs, local_frontier, pref_hub, pref_hub_hlc) = {
         let conn_arc = Arc::clone(&book_conn);
         tokio::task::spawn_blocking(move || -> AppResult<_> {
             let guard = conn_arc
@@ -560,7 +783,8 @@ where
             let dev = load_local_device_id(&guard)?;
             let peers = load_known_peer_tickets(&guard)?;
             let frontier = compute_local_frontier(&guard)?;
-            Ok((dev, peers, frontier))
+            let (hub, hub_hlc) = load_preferred_hub(&guard)?;
+            Ok((dev, peers, frontier, hub, hub_hlc))
         })
         .await
         .map_err(|e| AppError::TaskJoin(e.to_string()))??
@@ -586,6 +810,8 @@ where
         known_peers,
         sender_addr: Some(local_ticket),
         known_peer_addrs,
+        preferred_hub_node_id: pref_hub,
+        preferred_hub_hlc: pref_hub_hlc,
     };
     let challenge_bytes = postcard::to_allocvec(&challenge)
         .map_err(|e| AppError::Crypto(format!("Challenge encode error: {}", e)))?;
@@ -620,16 +846,18 @@ where
         return Err(err);
     }
 
-    // Record authenticated peer & gossip peers (including full NodeTicketAddr)
-    {
+    // Record authenticated peer, gossip peers & remote preferred hub if newer
+    let hub_updated = {
         let conn_arc = Arc::clone(&book_conn);
         let r_node = remote_node_id.clone();
         let r_dev = hello.device_id.clone();
         let r_addr = hello.sender_addr.clone();
         let gossip = hello.known_peers.clone();
         let gossip_addrs = hello.known_peer_addrs.clone();
+        let r_hub = hello.preferred_hub_node_id.clone();
+        let r_hub_hlc = hello.preferred_hub_hlc.clone();
         let l_node = local_node_id.clone();
-        tokio::task::spawn_blocking(move || -> AppResult<()> {
+        tokio::task::spawn_blocking(move || -> AppResult<bool> {
             let guard = conn_arc
                 .lock()
                 .map_err(|_| AppError::Internal("Book DB mutex poisoned".into()))?;
@@ -641,11 +869,12 @@ where
                 &gossip,
                 &gossip_addrs,
                 &l_node,
-            )
+            )?;
+            apply_remote_preferred_hub(&guard, r_hub.as_deref(), r_hub_hlc.as_deref())
         })
         .await
-        .map_err(|e| AppError::TaskJoin(e.to_string()))??;
-    }
+        .map_err(|e| AppError::TaskJoin(e.to_string()))??
+    };
 
     // 4. Frontier exchange (encrypted with enc_key)
     let remote_frontier_frame = transport.recv_batch(session).await?;
@@ -677,12 +906,19 @@ where
 
     let sent_ops = send_delta_stream(transport, session, &keys.enc_key, delta_to_send).await?;
 
-    // 6. Wait for Initiator's SyncAck before closing session so QUIC stream is never truncated early
-    let _ = tokio::time::timeout(
+    // 6. Wait for Initiator's SyncAck so initial reconciliation is complete
+    let ack_bytes = tokio::time::timeout(
         std::time::Duration::from_secs(5),
         transport.recv_batch(session),
     )
-    .await;
+    .await
+    .map_err(|_| {
+        AppError::Io(std::io::Error::new(
+            std::io::ErrorKind::TimedOut,
+            "Timed out waiting for initiator SyncAck",
+        ))
+    })??;
+    let _ack: SyncAckMessage = decrypt_wire_payload(&keys.enc_key, &ack_bytes)?;
 
     Ok(SyncSessionOutcome {
         book_id,
@@ -691,19 +927,279 @@ where
         sent_ops,
         received_ops,
         changed_tables: changed_tables.into_iter().collect(),
+        hub_updated,
     })
 }
 
 /// Encrypts and pushes a live batch of newly committed local ops over an active session (Section 6.3 step 4).
 pub async fn send_live_push_batch(
     transport: &dyn Transport,
-    session: &mut dyn PeerSession,
+    session: &dyn PeerSession,
     book_key: &[u8; 32],
     ops: Vec<CrdtOp>,
 ) -> AppResult<()> {
     let keys = DerivedBookKeys::derive(book_key);
-    send_delta_stream(transport, session, &keys.enc_key, ops).await?;
+    for chunk in chunk_ops_into_batches(ops) {
+        if chunk.ops.is_empty() {
+            continue;
+        }
+        let live_frame = LiveStreamFrame::PushOps { ops: chunk.ops };
+        let encrypted = encrypt_wire_payload(&keys.enc_key, &live_frame)?;
+        transport.send_batch(session, &encrypted).await?;
+    }
     Ok(())
+}
+
+/// Runs a persistent full-duplex live stream on an already-authenticated `PeerSession`.
+/// - A dedicated writer task sends outgoing `LiveStreamFrame`s (`PushOps`, periodic `Heartbeat`, `Disconnect`).
+/// - The reader loop continuously awaits incoming `LiveStreamFrame`s without ever cancelling `recv_batch`.
+pub async fn run_live_session_loop<F>(
+    transport: Arc<dyn Transport>,
+    session: Arc<dyn PeerSession>,
+    book_id: String,
+    book_key: [u8; 32],
+    book_conn: Arc<Mutex<Connection>>,
+    mut outbound_rx: mpsc::Receiver<LiveStreamFrame>,
+    mut stop_rx: watch::Receiver<bool>,
+    on_event: F,
+) -> AppResult<()>
+where
+    F: Fn(LiveSessionEvent) + Send + Sync + 'static,
+{
+    let keys = DerivedBookKeys::derive(&book_key);
+    let enc_key = keys.enc_key;
+    let remote_node_id = session.remote_node_id().to_string();
+
+    let (internal_tx, mut internal_rx) = mpsc::channel::<LiveStreamFrame>(64);
+
+    // Dedicated Writer Task: multiplexes caller's outbound_rx, internal catch-up frames, and heartbeats
+    let writer_transport = Arc::clone(&transport);
+    let writer_session = Arc::clone(&session);
+    let writer_conn = Arc::clone(&book_conn);
+    let mut writer_stop_rx = stop_rx.clone();
+
+    let writer_handle = tokio::spawn(async move {
+        let mut heartbeat_ticker = tokio::time::interval(std::time::Duration::from_secs(
+            LIVE_HEARTBEAT_INTERVAL_SECS,
+        ));
+        // Skip immediate first tick since initial sync just completed
+        heartbeat_ticker.tick().await;
+
+        let send_encrypted_frame = |frame: &LiveStreamFrame| {
+            let t = Arc::clone(&writer_transport);
+            let s = Arc::clone(&writer_session);
+            let encoded = encrypt_wire_payload(&enc_key, frame);
+            async move {
+                let bytes = encoded?;
+                t.send_batch(s.as_ref(), &bytes).await
+            }
+        };
+
+        loop {
+            tokio::select! {
+                _ = writer_stop_rx.changed() => {
+                    if *writer_stop_rx.borrow() {
+                        let _ = tokio::time::timeout(
+                            std::time::Duration::from_millis(200),
+                            send_encrypted_frame(&LiveStreamFrame::Disconnect),
+                        ).await;
+                        break;
+                    }
+                }
+                maybe_ext = outbound_rx.recv() => {
+                    let Some(frame) = maybe_ext else {
+                        break;
+                    };
+                    match frame {
+                        LiveStreamFrame::PushOps { ops } => {
+                            for batch in chunk_ops_into_batches(ops) {
+                                if batch.ops.is_empty() {
+                                    continue;
+                                }
+                                let chunk_frame = LiveStreamFrame::PushOps { ops: batch.ops };
+                                if send_encrypted_frame(&chunk_frame).await.is_err() {
+                                    return;
+                                }
+                            }
+                        }
+                        other => {
+                            if send_encrypted_frame(&other).await.is_err() {
+                                return;
+                            }
+                        }
+                    }
+                }
+                maybe_int = internal_rx.recv() => {
+                    if let Some(frame) = maybe_int {
+                        match frame {
+                            LiveStreamFrame::PushOps { ops } => {
+                                for batch in chunk_ops_into_batches(ops) {
+                                    if batch.ops.is_empty() {
+                                        continue;
+                                    }
+                                    let chunk_frame = LiveStreamFrame::PushOps { ops: batch.ops };
+                                    if send_encrypted_frame(&chunk_frame).await.is_err() {
+                                        return;
+                                    }
+                                }
+                            }
+                            other => {
+                                if send_encrypted_frame(&other).await.is_err() {
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+                _ = heartbeat_ticker.tick() => {
+                    let conn_arc = Arc::clone(&writer_conn);
+                    let hb_data = tokio::task::spawn_blocking(move || -> AppResult<_> {
+                        let guard = conn_arc
+                            .lock()
+                            .map_err(|_| AppError::Internal("Book DB mutex poisoned".into()))?;
+                        let frontier = compute_local_frontier(&guard)?;
+                        let (hub, hub_hlc) = load_preferred_hub(&guard)?;
+                        Ok((frontier, hub, hub_hlc))
+                    }).await;
+
+                    if let Ok(Ok((frontier, preferred_hub_node_id, preferred_hub_hlc))) = hb_data {
+                        let hb_frame = LiveStreamFrame::Heartbeat {
+                            frontier,
+                            preferred_hub_node_id,
+                            preferred_hub_hlc,
+                        };
+                        if send_encrypted_frame(&hb_frame).await.is_err() {
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Reader Loop: continuously reads frames without ever being cancelled by outgoing writes
+    let mut loop_result: AppResult<()> = Ok(());
+    loop {
+        tokio::select! {
+            _ = stop_rx.changed() => {
+                if *stop_rx.borrow() {
+                    break;
+                }
+            }
+            recv_res = transport.recv_batch(session.as_ref()) => {
+                let raw_bytes = match recv_res {
+                    Ok(b) => b,
+                    Err(_) => break,
+                };
+                let frame: LiveStreamFrame = match decrypt_wire_payload(&enc_key, &raw_bytes) {
+                    Ok(f) => f,
+                    Err(e) => {
+                        loop_result = Err(e);
+                        break;
+                    }
+                };
+
+                match frame {
+                    LiveStreamFrame::PushOps { ops } => {
+                        if ops.len() > MAX_DELTA_BATCH_OPS {
+                            loop_result = Err(AppError::Validation(format!(
+                                "Live PushOps batch size {} exceeds max {}",
+                                ops.len(),
+                                MAX_DELTA_BATCH_OPS
+                            )));
+                            break;
+                        }
+                        if ops.is_empty() {
+                            continue;
+                        }
+                        let ops_clone = ops.clone();
+                        let conn_arc = Arc::clone(&book_conn);
+                        let r_node = remote_node_id.clone();
+                        let merge_res = tokio::task::spawn_blocking(move || -> AppResult<MergeReport> {
+                            let mut guard = conn_arc
+                                .lock()
+                                .map_err(|_| AppError::Internal("Book DB mutex poisoned".into()))?;
+                            let report = merge_remote_oplog(&mut guard, &ops_clone, system_now_ms())?;
+                            let now = now_iso8601();
+                            let _ = guard.execute(
+                                "UPDATE sync_peers SET last_seen_at = ?1 WHERE node_id = ?2",
+                                params![now, r_node],
+                            );
+                            Ok(report)
+                        })
+                        .await
+                        .map_err(|e| AppError::TaskJoin(e.to_string()))?;
+
+                        match merge_res {
+                            Ok(report) => {
+                                if report.applied_count > 0 {
+                                    on_event(LiveSessionEvent::OpsApplied {
+                                        book_id: book_id.clone(),
+                                        from_node_id: remote_node_id.clone(),
+                                        applied_ops: ops,
+                                        changed_tables: report.tables,
+                                    });
+                                }
+                            }
+                            Err(e) => {
+                                loop_result = Err(e);
+                                break;
+                            }
+                        }
+                    }
+                    LiveStreamFrame::Heartbeat {
+                        frontier,
+                        preferred_hub_node_id,
+                        preferred_hub_hlc,
+                    } => {
+                        let conn_arc = Arc::clone(&book_conn);
+                        let r_node = remote_node_id.clone();
+                        let hb_outcome = tokio::task::spawn_blocking(move || -> AppResult<(Vec<CrdtOp>, bool, Option<String>)> {
+                            let guard = conn_arc
+                                .lock()
+                                .map_err(|_| AppError::Internal("Book DB mutex poisoned".into()))?;
+                            let now = now_iso8601();
+                            let _ = guard.execute(
+                                "UPDATE sync_peers SET last_seen_at = ?1 WHERE node_id = ?2",
+                                params![now, r_node],
+                            );
+                            let hub_changed = apply_remote_preferred_hub(
+                                &guard,
+                                preferred_hub_node_id.as_deref(),
+                                preferred_hub_hlc.as_deref(),
+                            )?;
+                            let (cur_hub, _) = load_preferred_hub(&guard)?;
+                            let missing = collect_delta_ops_for_peer(&guard, &frontier)?;
+                            Ok((missing, hub_changed, cur_hub))
+                        })
+                        .await
+                        .map_err(|e| AppError::TaskJoin(e.to_string()))?;
+
+                        if let Ok((missing_ops, hub_changed, cur_hub)) = hb_outcome {
+                            if hub_changed {
+                                on_event(LiveSessionEvent::PreferredHubChanged {
+                                    book_id: book_id.clone(),
+                                    preferred_hub_node_id: cur_hub,
+                                });
+                            }
+                            if !missing_ops.is_empty() {
+                                let _ = internal_tx
+                                    .send(LiveStreamFrame::PushOps { ops: missing_ops })
+                                    .await;
+                            }
+                        }
+                    }
+                    LiveStreamFrame::Disconnect => {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    writer_handle.abort();
+    session.close().await;
+    loop_result
 }
 
 #[cfg(test)]
@@ -812,14 +1308,14 @@ mod tests {
         let transport_b_for_server = Arc::clone(&transport_b);
 
         let responder_task = tokio::spawn(async move {
-            let mut session = transport_b_for_server
+            let session = transport_b_for_server
                 .accept()
                 .await
                 .unwrap()
                 .expect("expected incoming session");
             run_responder_sync(
                 transport_b_for_server.as_ref(),
-                session.as_mut(),
+                session.as_ref(),
                 ks_b_for_server.as_ref(),
                 move |_bid| {
                     let c = Arc::clone(&conn_b_for_server);
@@ -835,10 +1331,10 @@ mod tests {
             relay_url: None,
             direct_addrs: vec![],
         };
-        let mut client_session = transport_a.connect(&target_b).await.unwrap();
+        let client_session = transport_a.connect(&target_b).await.unwrap();
         let initiator_outcome = run_initiator_sync(
             transport_a.as_ref(),
-            client_session.as_mut(),
+            client_session.as_ref(),
             book_id,
             master_key.as_bytes(),
             Arc::clone(&conn_a),
@@ -857,6 +1353,175 @@ mod tests {
         let bal_b = get_account_balances_in_conn(&conn_b.lock().unwrap()).unwrap();
         assert_eq!(bal_a, bal_b);
         assert_eq!(bal_a[0].current_balance, 12_500_000);
+    }
+
+    #[tokio::test]
+    async fn test_persistent_stream_instant_live_push() {
+        let book_id = "018f0000-0000-7000-8000-000000000778";
+        let master_key = BookMasterKey::generate();
+        let key_bytes = *master_key.as_bytes();
+
+        let ks_a = Arc::new(MemoryKeyStore::new());
+        let ks_b = Arc::new(MemoryKeyStore::new());
+        ks_a.set_book_key(book_id, &key_bytes).unwrap();
+        ks_b.set_book_key(book_id, &key_bytes).unwrap();
+
+        let conn_a = Arc::new(Mutex::new(
+            open_in_memory_book(book_id, "Buku Live").unwrap(),
+        ));
+        let conn_b = Arc::new(Mutex::new(
+            open_in_memory_book(book_id, "Buku Live").unwrap(),
+        ));
+
+        {
+            let mut db_a = conn_a.lock().unwrap();
+            upsert_account_in_conn(
+                &mut db_a,
+                UpsertAccountInput {
+                    id: Some("acc-live".into()),
+                    name: "Dompet Live".into(),
+                    account_type: "EWALLET".into(),
+                    initial_balance: 5_000_000,
+                },
+            )
+            .unwrap();
+            upsert_category_in_conn(
+                &mut db_a,
+                UpsertCategoryInput {
+                    id: Some("cat-kopi".into()),
+                    name: "Kopi".into(),
+                    kind: "EXPENSE".into(),
+                },
+            )
+            .unwrap();
+        }
+
+        let mesh = InMemoryTransport::create_mesh(&["node-a", "node-b"]);
+        let transport_a: Arc<dyn Transport> = Arc::clone(mesh.get("node-a").unwrap()) as Arc<dyn Transport>;
+        let transport_b: Arc<dyn Transport> = Arc::clone(mesh.get("node-b").unwrap()) as Arc<dyn Transport>;
+
+        let (stop_tx, stop_rx) = watch::channel(false);
+        let (push_a_tx, push_a_rx) = mpsc::channel(32);
+        let (_push_b_tx, push_b_rx) = mpsc::channel(32);
+        let (applied_notify_tx, mut applied_notify_rx) = mpsc::unbounded_channel();
+
+        let conn_b_srv = Arc::clone(&conn_b);
+        let ks_b_srv = Arc::clone(&ks_b);
+        let t_b_srv = Arc::clone(&transport_b);
+        let stop_b = stop_rx.clone();
+        let bid_b = book_id.to_string();
+
+        let responder_loop = tokio::spawn(async move {
+            let sess: Arc<dyn PeerSession> = Arc::from(t_b_srv.accept().await.unwrap().unwrap());
+            let conn_lookup = Arc::clone(&conn_b_srv);
+            run_responder_sync(
+                t_b_srv.as_ref(),
+                sess.as_ref(),
+                ks_b_srv.as_ref(),
+                move |_| {
+                    let c = Arc::clone(&conn_lookup);
+                    Box::pin(async move { Ok(c) })
+                },
+            )
+            .await
+            .unwrap();
+
+            run_live_session_loop(
+                t_b_srv,
+                sess,
+                bid_b,
+                key_bytes,
+                conn_b_srv,
+                push_b_rx,
+                stop_b,
+                move |ev| {
+                    if let LiveSessionEvent::OpsApplied { changed_tables, .. } = ev {
+                        let _ = applied_notify_tx.send(changed_tables);
+                    }
+                },
+            )
+            .await
+            .unwrap();
+        });
+
+        let target_b = NodeTicketAddr {
+            node_id: "node-b".into(),
+            relay_url: None,
+            direct_addrs: vec![],
+        };
+        let sess_a: Arc<dyn PeerSession> = Arc::from(transport_a.connect(&target_b).await.unwrap());
+        run_initiator_sync(
+            transport_a.as_ref(),
+            sess_a.as_ref(),
+            book_id,
+            &key_bytes,
+            Arc::clone(&conn_a),
+        )
+        .await
+        .unwrap();
+
+        let t_a_loop = Arc::clone(&transport_a);
+        let conn_a_loop = Arc::clone(&conn_a);
+        let stop_a = stop_rx.clone();
+        let bid_a = book_id.to_string();
+        let initiator_loop = tokio::spawn(async move {
+            run_live_session_loop(
+                t_a_loop,
+                sess_a,
+                bid_a,
+                key_bytes,
+                conn_a_loop,
+                push_a_rx,
+                stop_a,
+                |_| {},
+            )
+            .await
+            .unwrap();
+        });
+
+        // Now both peers are in persistent LiveStream mode!
+        // Peer A records a new transaction and pushes it over the open session without reconnecting
+        let new_ops = {
+            let mut db_a = conn_a.lock().unwrap();
+            let prev_hlc = load_max_oplog_hlc(&db_a).unwrap();
+            add_transaction_in_conn(
+                &mut db_a,
+                AddTransactionInput {
+                    id: None,
+                    account_id: "acc-live".into(),
+                    to_account_id: None,
+                    category_id: Some("cat-kopi".into()),
+                    amount: -35_000,
+                    tx_type: "EXPENSE".into(),
+                    note: Some("Kopi Susu Live Push".into()),
+                    tx_date: "2026-06-12".into(),
+                    link_id: None,
+                },
+            )
+            .unwrap();
+            collect_ops_since_hlc(&db_a, prev_hlc.as_deref()).unwrap()
+        };
+        assert_eq!(new_ops.len(), 1);
+
+        push_a_tx
+            .send(LiveStreamFrame::PushOps { ops: new_ops })
+            .await
+            .unwrap();
+
+        let tables = tokio::time::timeout(
+            std::time::Duration::from_millis(500),
+            applied_notify_rx.recv(),
+        )
+        .await
+        .expect("live push should arrive within 500ms")
+        .unwrap();
+        assert_eq!(tables, vec!["transactions".to_string()]);
+
+        let bal_b = get_account_balances_in_conn(&conn_b.lock().unwrap()).unwrap();
+        assert_eq!(bal_b[0].current_balance, 4_965_000);
+
+        let _ = stop_tx.send(true);
+        let _ = tokio::join!(initiator_loop, responder_loop);
     }
 
     #[tokio::test]
@@ -885,8 +1550,8 @@ mod tests {
             let ks_resp = Arc::clone(&ks_responder);
             let c_resp = Arc::clone(&conn_responder);
             tokio::spawn(async move {
-                let mut sess = t_resp.accept().await.unwrap().unwrap();
-                run_responder_sync(t_resp.as_ref(), sess.as_mut(), ks_resp.as_ref(), move |_| {
+                let sess = t_resp.accept().await.unwrap().unwrap();
+                run_responder_sync(t_resp.as_ref(), sess.as_ref(), ks_resp.as_ref(), move |_| {
                     let c = Arc::clone(&c_resp);
                     Box::pin(async move { Ok(c) })
                 })
@@ -899,7 +1564,7 @@ mod tests {
             relay_url: None,
             direct_addrs: vec![],
         };
-        let mut attacker_sess = t_attacker.connect(&target).await.unwrap();
+        let attacker_sess = t_attacker.connect(&target).await.unwrap();
 
         // Attacker sends Hello with the valid topic_id, then sends forged AuthProof with wrong key
         let hello = HelloMessage {
@@ -909,16 +1574,18 @@ mod tests {
             known_peers: vec![],
             sender_addr: None,
             known_peer_addrs: vec![],
+            preferred_hub_node_id: None,
+            preferred_hub_hlc: None,
         };
         t_attacker
             .send_batch(
-                attacker_sess.as_mut(),
+                attacker_sess.as_ref(),
                 &postcard::to_allocvec(&hello).unwrap(),
             )
             .await
             .unwrap();
 
-        let _challenge_bytes = t_attacker.recv_batch(attacker_sess.as_mut()).await.unwrap();
+        let _challenge_bytes = t_attacker.recv_batch(attacker_sess.as_ref()).await.unwrap();
 
         // Forged client_mac using wrong_master
         wrong_master[0] ^= 0xFF;
@@ -927,7 +1594,7 @@ mod tests {
         };
         t_attacker
             .send_batch(
-                attacker_sess.as_mut(),
+                attacker_sess.as_ref(),
                 &postcard::to_allocvec(&bad_proof).unwrap(),
             )
             .await

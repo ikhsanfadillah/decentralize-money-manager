@@ -8,6 +8,7 @@ import {
   formatRupiah,
   shiftYearMonth,
 } from "../../lib/utils";
+import { TrendingDown, TrendingUp } from "lucide-react";
 import { BudgetProgressBar } from "./BudgetProgressBar";
 import { BudgetDialog } from "./BudgetDialog";
 import { pushToast } from "../../lib/toast";
@@ -143,7 +144,7 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ bookId }) => {
           <div className="col-span-3 text-right">Terpakai / Batas</div>
           <div className="col-span-2 text-right">Sisa Anggaran</div>
           <div className="col-span-3 px-3">Status & Realisasi</div>
-          <div className="col-span-1 text-right">Aksi</div>
+          <div className="col-span-1 text-right"></div>
         </div>
 
         {budgets.length === 0 ? (
@@ -201,13 +202,21 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ bookId }) => {
                   <span
                     className={
                       isOver
-                        ? "font-semibold text-rose-500"
-                        : "font-medium text-emerald-500"
+                        ? "inline-flex items-center gap-0.5 font-semibold text-rose-500"
+                        : "inline-flex items-center gap-0.5 font-medium text-emerald-500"
                     }
                   >
-                    {isOver
-                      ? `- ${formatRupiah(Math.abs(item.remaining))}`
-                      : formatRupiah(item.remaining)}
+                    {isOver ? (
+                      <>
+                        <TrendingDown className="h-3 w-3 shrink-0" aria-hidden="true" />
+                        <span>- {formatRupiah(Math.abs(item.remaining))}</span>
+                      </>
+                    ) : (
+                      <>
+                        <TrendingUp className="h-3 w-3 shrink-0" aria-hidden="true" />
+                        <span>{formatRupiah(item.remaining)}</span>
+                      </>
+                    )}
                   </span>
                 </div>
 

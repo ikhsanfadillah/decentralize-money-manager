@@ -10,10 +10,13 @@ import {
   currentYearMonth,
   formatAccountTypeLabel,
   formatMonthLabel,
+  formatPercent,
   formatRupiah,
   formatSignedRupiah,
   shiftYearMonth,
 } from "../../lib/utils";
+import { formatDateReadable, formatDateShort } from "../../lib/date";
+import { Download, TrendingDown, TrendingUp } from "lucide-react";
 import { pushToast } from "../../lib/toast";
 import { InteractiveCashFlowChart } from "./InteractiveCashFlowChart";
 import { InteractiveCategoryChart } from "./InteractiveCategoryChart";
@@ -40,6 +43,13 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
     budgetMonth: selectedMonth,
   });
 
+  const booksQuery = useQuery({
+    queryKey: bookQueryKeys.allBooks,
+    queryFn: () => tauriApi.listBooks(),
+  });
+  const currentBook = booksQuery.data?.find((b) => b.id === bookId);
+  const isBusinessBook = currentBook?.kind === "BUSINESS";
+
   // Reset interactive chart filters when switching month
   const handleMonthChange = (nextMonth: string) => {
     setSelectedMonth(nextMonth);
@@ -59,7 +69,7 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
           ? null
           : selectedCategoryId,
       sort_by: "amount",
-      sort_dir: "asc",
+      sort_dir: "desc",
       limit: 15,
       offset: 0,
     }),
@@ -72,7 +82,7 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
             ? null
             : selectedCategoryId,
         sort_by: "amount",
-        sort_dir: "asc",
+        sort_dir: "desc",
         limit: 15,
         offset: 0,
       }),
@@ -154,7 +164,6 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
         )
       : null;
 
-  const savingsRatePct = (report.savings_rate_bps / 100).toFixed(1);
   const isProjectedOverBudget =
     report.total_budget_limit !== null &&
     report.projected_month_expense > report.total_budget_limit;
@@ -164,7 +173,7 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
     : report.top_expenses;
 
   return (
-    <div className="w-full space-y-4 sm:space-y-6">
+    <div className="w-full sm:space-y-6">
       {/* Top Toolbar: Month Selector & Compact CSV Export */}
       <div className="tabular-grid-container grid grid-cols-1">
         <div className="tabular-grid-cell flex items-center justify-between gap-3 px-3.5 py-2.5 sm:px-4 sm:py-3">
@@ -196,91 +205,118 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
               →
             </button>
           </div>
-
+mk
           <button
             type="button"
             onClick={handleExportCsv}
-            className="nav-touch-item inline-flex h-8 shrink-0 items-center justify-center rounded border border-primary bg-primary px-3 text-xs font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+            className="nav-touch-item inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-xs font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
           >
-            Ekspor CSV
+            <Download className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+            <span>Ekspor CSV</span>
           </button>
         </div>
       </div>
 
-      {/* 6-Card Executive KPI Strip (2x3 on Mobile, 3x2 on Desktop) */}
+      {/* KPI Cards Strip (Responsive, No Label Truncation, Friendlier Personal Terms) */}
       <div className="tabular-grid-container grid grid-cols-2 border-t border-border lg:grid-cols-3">
         {/* 1. Operational Income */}
         <div className="tabular-grid-cell flex flex-col justify-between gap-1.5 p-3.5 sm:p-4">
-          <div className="flex items-center justify-between gap-1.5">
-            <span className="truncate text-xs font-medium text-muted-foreground">
-              Pemasukan
-            </span>
+          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <TrendingUp className="h-3.5 w-3.5 text-emerald-500 shrink-0" aria-hidden="true" />
+            <span>Pemasukan</span>
+          </div>
+          <div className="flex flex-wrap items-baseline gap-2">
+            <p
+              data-testid="report-operational-income"
+              className="font-mono text-base font-semibold tabular-nums tracking-tight text-emerald-500 sm:text-lg"
+            >
+              {report.operational_income > 0
+                ? `+${formatRupiah(report.operational_income)}`
+                : "Rp 0"}
+            </p>
             {incomeMoMPct !== null && (
               <span
-                className={`shrink-0 rounded border px-1.5 py-0.5 font-mono text-[10px] font-medium leading-none ${
+                className={`inline-flex items-center gap-0.5 shrink-0 rounded border px-1.5 py-0.5 font-mono text-[10px] font-medium leading-none ${
                   incomeMoMPct >= 0
                     ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-500"
                     : "border-rose-500/30 bg-rose-500/5 text-rose-500"
                 }`}
               >
-                {incomeMoMPct >= 0 ? `+${incomeMoMPct}%` : `${incomeMoMPct}%`}
+                {incomeMoMPct >= 0 ? "▲" : "▼"}
+                {formatPercent(Math.abs(incomeMoMPct), 0)}
               </span>
             )}
           </div>
-          <p
-            data-testid="report-operational-income"
-            className="truncate font-mono text-base font-semibold tabular-nums tracking-tight text-emerald-500 sm:text-lg"
-          >
-            + {formatRupiah(report.operational_income)}
-          </p>
           <p className="truncate text-[11px] leading-normal text-muted-foreground">
             Bulan lalu:{" "}
             <span className="font-mono tabular-nums">
-              {formatRupiah(report.prev_operational_income)}
+              {report.prev_operational_income > 0
+                ? formatRupiah(report.prev_operational_income)
+                : "—"}
             </span>
           </p>
         </div>
 
         {/* 2. Operational Expense */}
         <div className="tabular-grid-cell flex flex-col justify-between gap-1.5 p-3.5 sm:p-4">
-          <div className="flex items-center justify-between gap-1.5">
-            <span className="truncate text-xs font-medium text-muted-foreground">
-              Pengeluaran
-            </span>
+          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <TrendingDown className="h-3.5 w-3.5 text-rose-500 shrink-0" aria-hidden="true" />
+            <span>Pengeluaran</span>
+          </div>
+          <div className="flex flex-wrap items-baseline gap-2">
+            <p
+              data-testid="report-operational-expense"
+              className="font-mono text-base font-semibold tabular-nums tracking-tight text-rose-500 sm:text-lg"
+            >
+              {report.operational_expense > 0
+                ? `−${formatRupiah(report.operational_expense)}`
+                : "Rp 0"}
+            </p>
             {expenseMoMPct !== null && (
               <span
-                className={`shrink-0 rounded border px-1.5 py-0.5 font-mono text-[10px] font-medium leading-none ${
+                className={`inline-flex items-center gap-0.5 shrink-0 rounded border px-1.5 py-0.5 font-mono text-[10px] font-medium leading-none ${
                   expenseMoMPct <= 0
                     ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-500"
                     : "border-rose-500/30 bg-rose-500/5 text-rose-500"
                 }`}
               >
-                {expenseMoMPct >= 0
-                  ? `+${expenseMoMPct}%`
-                  : `${expenseMoMPct}%`}
+                {expenseMoMPct >= 0 ? "▲" : "▼"}
+                {formatPercent(Math.abs(expenseMoMPct), 0)}
               </span>
             )}
           </div>
-          <p
-            data-testid="report-operational-expense"
-            className="truncate font-mono text-base font-semibold tabular-nums tracking-tight text-rose-500 sm:text-lg"
-          >
-            - {formatRupiah(report.operational_expense)}
-          </p>
           <p className="truncate text-[11px] leading-normal text-muted-foreground">
             Bulan lalu:{" "}
             <span className="font-mono tabular-nums">
-              {formatRupiah(report.prev_operational_expense)}
+              {report.prev_operational_expense > 0
+                ? formatRupiah(report.prev_operational_expense)
+                : "—"}
             </span>
           </p>
         </div>
 
         {/* 3. Savings Rate & Operational Net */}
         <div className="tabular-grid-cell flex flex-col justify-between gap-1.5 p-3.5 sm:p-4">
-          <div className="flex items-center justify-between gap-1.5">
-            <span className="truncate text-xs font-medium text-muted-foreground">
-              Surplus Bersih
-            </span>
+          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            {report.operational_net >= 0 ? (
+              <TrendingUp className="h-3.5 w-3.5 text-emerald-500 shrink-0" aria-hidden="true" />
+            ) : (
+              <TrendingDown className="h-3.5 w-3.5 text-rose-500 shrink-0" aria-hidden="true" />
+            )}
+            <span>Surplus Bersih</span>
+          </div>
+          <div className="flex flex-wrap items-baseline gap-2">
+            <p
+              className={`font-mono text-base font-semibold tabular-nums tracking-tight sm:text-lg ${
+                report.operational_net >= 0 ? "text-emerald-500" : "text-rose-500"
+              }`}
+            >
+              {report.operational_net > 0
+                ? `+${formatRupiah(report.operational_net)}`
+                : report.operational_net < 0
+                  ? `−${formatRupiah(Math.abs(report.operational_net))}`
+                  : "Rp 0"}
+            </p>
             <span
               data-testid="report-savings-rate-badge"
               className={`shrink-0 rounded border px-1.5 py-0.5 font-mono text-[10px] font-medium leading-none ${
@@ -291,18 +327,9 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
                     : "border-rose-500/30 bg-rose-500/5 text-rose-500"
               }`}
             >
-              Tabungan {savingsRatePct}%
+              Tabungan {formatPercent(report.savings_rate_bps / 100, 1)}
             </span>
           </div>
-          <p
-            className={`truncate font-mono text-base font-semibold tabular-nums tracking-tight sm:text-lg ${
-              report.operational_net >= 0 ? "text-emerald-500" : "text-rose-500"
-            }`}
-          >
-            {report.operational_net >= 0
-              ? `+ ${formatRupiah(report.operational_net)}`
-              : `- ${formatRupiah(Math.abs(report.operational_net))}`}
-          </p>
           <p className="truncate text-[11px] leading-normal text-muted-foreground">
             Rasio simpan dari pemasukan
           </p>
@@ -310,10 +337,16 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
 
         {/* 4. Daily Burn Rate & End-of-Month Projection */}
         <div className="tabular-grid-cell flex flex-col justify-between gap-1.5 p-3.5 sm:p-4">
-          <div className="flex items-center justify-between gap-1.5">
-            <span className="truncate text-xs font-medium text-muted-foreground">
-              Rata-rata Harian
-            </span>
+          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <span>Rata-rata Harian</span>
+          </div>
+          <div className="flex flex-wrap items-baseline gap-2">
+            <p className="font-mono text-base font-semibold tabular-nums tracking-tight text-foreground sm:text-lg">
+              {formatRupiah(report.daily_burn_rate)}{" "}
+              <span className="font-sans text-xs font-normal text-muted-foreground">
+                /hari
+              </span>
+            </p>
             <span
               className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium leading-none ${
                 isProjectedOverBudget
@@ -324,14 +357,8 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
               {isProjectedOverBudget ? "Melebihi Anggaran" : "Aman"}
             </span>
           </div>
-          <p className="truncate font-mono text-base font-semibold tabular-nums tracking-tight text-foreground sm:text-lg">
-            {formatRupiah(report.daily_burn_rate)}{" "}
-            <span className="font-sans text-xs font-normal text-muted-foreground">
-              /hari
-            </span>
-          </p>
           <p className="truncate text-[11px] leading-normal text-muted-foreground">
-            Estimasi {report.days_in_month} hr:{" "}
+            Estimasi {report.days_in_month} hari:{" "}
             <span className="font-mono tabular-nums">
               {formatRupiah(report.projected_month_expense)}
             </span>
@@ -340,54 +367,64 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
 
         {/* 5. No-Spend Days & Activity */}
         <div className="tabular-grid-cell flex flex-col justify-between gap-1.5 p-3.5 sm:p-4">
-          <div className="flex items-center justify-between gap-1.5">
-            <span className="truncate text-xs font-medium text-muted-foreground">
-              Hari Tanpa Belanja
-            </span>
+          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <span>Hari Tanpa Belanja</span>
           </div>
-          <p className="truncate font-mono text-base font-semibold tabular-nums tracking-tight text-foreground sm:text-lg">
-            {report.no_spend_days} Hari{" "}
-            <span className="font-sans text-xs font-normal text-muted-foreground">
-              / {report.elapsed_days} hr
-            </span>
-          </p>
+          <div className="flex flex-wrap items-baseline gap-2">
+            <p className="font-mono text-base font-semibold tabular-nums tracking-tight text-foreground sm:text-lg">
+              {report.no_spend_days} Hari{" "}
+              <span className="font-sans text-xs font-normal text-muted-foreground">
+                / {report.elapsed_days} hari
+              </span>
+            </p>
+          </div>
           <p className="truncate text-[11px] leading-normal text-muted-foreground">
             Total {report.tx_count} transaksi bulan ini
           </p>
         </div>
 
-        {/* 6. Cross-Book Capital & Prive Flow */}
-        <div className="tabular-grid-cell flex flex-col justify-between gap-1.5 p-3.5 sm:p-4">
-          <div className="flex items-center justify-between gap-1.5">
-            <span className="truncate text-xs font-medium text-muted-foreground">
-              Modal & Prive
-            </span>
-            <span className="shrink-0 rounded border border-border px-1.5 py-0.5 text-[10px] font-medium leading-none text-muted-foreground">
-              Non-Konsumsi
-            </span>
-          </div>
-          <div className="space-y-0.5 font-mono text-xs tabular-nums tracking-tight">
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-sans text-[11px] text-muted-foreground">
-                Masuk
+        {/* 6. Cross-Book Capital / Transfer Antar-Buku (Shown only for business books or when non-zero) */}
+        {(isBusinessBook ||
+          report.capital_injection > 0 ||
+          report.capital_withdrawal > 0) && (
+          <div className="tabular-grid-cell flex flex-col justify-between gap-1.5 p-3.5 sm:p-4">
+            <div className="flex items-center justify-between gap-1.5">
+              <span className="text-xs font-medium text-muted-foreground">
+                {isBusinessBook ? "Modal & Prive" : "Transfer Antar-Buku"}
               </span>
-              <span className="font-semibold text-emerald-500">
-                +{formatRupiah(report.capital_injection)}
+              <span className="shrink-0 rounded border border-border px-1.5 py-0.5 text-[10px] font-medium leading-none text-muted-foreground">
+                {isBusinessBook ? "Ekuitas Usaha" : "Antar-Buku"}
               </span>
             </div>
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-sans text-[11px] text-muted-foreground">
-                Keluar
-              </span>
-              <span className="font-semibold text-amber-500">
-                −{formatRupiah(report.capital_withdrawal)}
-              </span>
+            <div className="space-y-0.5 font-mono text-xs tabular-nums tracking-tight">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-sans text-[11px] text-muted-foreground">
+                  Masuk
+                </span>
+                <span className="font-semibold text-emerald-500">
+                  {report.capital_injection > 0
+                    ? `+${formatRupiah(report.capital_injection)}`
+                    : "Rp 0"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-sans text-[11px] text-muted-foreground">
+                  Keluar
+                </span>
+                <span className="font-semibold text-amber-500">
+                  {report.capital_withdrawal > 0
+                    ? `−${formatRupiah(report.capital_withdrawal)}`
+                    : "Rp 0"}
+                </span>
+              </div>
             </div>
+            <p className="truncate text-[11px] leading-normal text-muted-foreground">
+              {isBusinessBook
+                ? "Mutasi modal & penarikan dana"
+                : "Perpindahan dana antar-buku"}
+            </p>
           </div>
-          <p className="truncate text-[11px] leading-normal text-muted-foreground">
-            Mutasi ekuitas antar-buku
-          </p>
-        </div>
+        )}
       </div>
 
       {/* Interactive Chart 1: Daily Cash Flow & Cumulative Burn Rate */}
@@ -423,7 +460,7 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
             </h2>
             <p className="text-xs leading-relaxed text-muted-foreground">
               {hasDrilldownFilter
-                ? `Filter aktif: ${selectedDate ? `Tanggal ${selectedDate}` : "Semua Tanggal"} · ${selectedCategoryId ? "Kategori terpilih" : "Semua Kategori"}`
+                ? `Filter aktif: ${selectedDate ? `Tanggal ${formatDateShort(selectedDate)}` : "Semua Tanggal"} · ${selectedCategoryId ? "Kategori terpilih" : "Semua Kategori"}`
                 : `5 transaksi pengeluaran tertinggi pada ${formatMonthLabel(report.month)}`}
             </p>
           </div>
@@ -454,6 +491,11 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
             >
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex items-center gap-2">
+                  {tx.tx_type === "EXPENSE" ? (
+                    <TrendingDown className="h-3.5 w-3.5 shrink-0 text-rose-500" aria-hidden="true" />
+                  ) : tx.tx_type === "INCOME" ? (
+                    <TrendingUp className="h-3.5 w-3.5 shrink-0 text-emerald-500" aria-hidden="true" />
+                  ) : null}
                   <span className="truncate font-semibold text-foreground">
                     {tx.tx_type === "TRANSFER"
                       ? `${tx.account_name} → ${tx.to_account_name ?? "-"}`
@@ -464,11 +506,15 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
                   </span>
                 </div>
                 <p className="truncate text-[11px] leading-normal text-muted-foreground">
-                  {tx.tx_date}
+                  <span title={tx.tx_date}>{formatDateReadable(tx.tx_date)}</span>
                   {tx.note ? ` · ${tx.note}` : ""}
                 </p>
               </div>
-              <span className="shrink-0 font-mono text-xs font-semibold tabular-nums tracking-tight text-rose-500 sm:text-sm">
+              <span
+                className={`shrink-0 font-mono text-xs font-semibold tabular-nums tracking-tight sm:text-sm ${
+                  tx.tx_type === "INCOME" ? "text-emerald-500" : "text-rose-500"
+                }`}
+              >
                 {formatSignedRupiah(tx.amount, tx.tx_type)}
               </span>
             </div>
@@ -495,8 +541,14 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
           <div className="tabular-grid-cell hidden grid-cols-12 items-center bg-muted/40 px-4 py-2 text-[11px] font-medium text-muted-foreground md:grid">
             <div className="col-span-3">Nama Rekening</div>
             <div className="col-span-2 text-right">Saldo Awal</div>
-            <div className="col-span-2 text-right">Total Masuk</div>
-            <div className="col-span-2 text-right">Total Keluar</div>
+            <div className="flex items-center justify-end gap-1 col-span-2 text-right">
+              <TrendingUp className="h-3 w-3 text-emerald-500" aria-hidden="true" />
+              <span>Total Masuk</span>
+            </div>
+            <div className="flex items-center justify-end gap-1 col-span-2 text-right">
+              <TrendingDown className="h-3 w-3 text-rose-500" aria-hidden="true" />
+              <span>Total Keluar</span>
+            </div>
             <div className="col-span-3 text-right">Saldo Akhir</div>
           </div>
 
@@ -530,14 +582,20 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
                   <span className="font-sans text-[11px] text-muted-foreground md:hidden">
                     Total Masuk
                   </span>
-                  <span>+{formatRupiah(acc.month_inflow)}</span>
+                  <span className="inline-flex items-center gap-0.5">
+                    <TrendingUp className="h-3 w-3 shrink-0" aria-hidden="true" />
+                    <span>{formatRupiah(acc.month_inflow)}</span>
+                  </span>
                 </div>
 
                 <div className="flex items-center justify-between font-mono text-xs tabular-nums tracking-tight text-rose-500 md:col-span-2 md:block md:text-right">
                   <span className="font-sans text-[11px] text-muted-foreground md:hidden">
                     Total Keluar
                   </span>
-                  <span>−{formatRupiah(acc.month_outflow)}</span>
+                  <span className="inline-flex items-center gap-0.5">
+                    <TrendingDown className="h-3 w-3 shrink-0" aria-hidden="true" />
+                    <span>{formatRupiah(acc.month_outflow)}</span>
+                  </span>
                 </div>
 
                 <div className="flex items-center justify-between border-t border-border/60 pt-1.5 font-mono text-xs font-semibold tabular-nums tracking-tight text-foreground md:col-span-3 md:block md:border-t-0 md:pt-0 md:text-right">
@@ -577,15 +635,17 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
                     Perangkat {dev.device_id}
                   </span>
                   <span className="shrink-0 font-mono text-[11px] font-medium text-primary">
-                    {dev.tx_count} transaksi ({(dev.share_bps / 100).toFixed(0)}%)
+                    {dev.tx_count} transaksi ({formatPercent(dev.share_bps / 100, 0)})
                   </span>
                 </div>
                 <div className="flex items-center justify-between font-mono text-xs tabular-nums tracking-tight">
-                  <span className="text-emerald-500">
-                    +{formatRupiah(dev.total_income)}
+                  <span className="inline-flex items-center gap-0.5 text-emerald-500">
+                    <TrendingUp className="h-3 w-3 shrink-0" aria-hidden="true" />
+                    <span>{formatRupiah(dev.total_income)}</span>
                   </span>
-                  <span className="text-rose-500">
-                    −{formatRupiah(dev.total_expense)}
+                  <span className="inline-flex items-center gap-0.5 text-rose-500">
+                    <TrendingDown className="h-3 w-3 shrink-0" aria-hidden="true" />
+                    <span>{formatRupiah(dev.total_expense)}</span>
                   </span>
                 </div>
               </div>

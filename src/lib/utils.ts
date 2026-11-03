@@ -19,16 +19,31 @@ export function formatRupiah(amount: number): string {
   return idrFormatter.format(Math.trunc(amount));
 }
 
+export function formatPercent(val: number, decimals: number = 1): string {
+  if (!Number.isFinite(val)) {
+    return "0%";
+  }
+  return (
+    new Intl.NumberFormat("id-ID", {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    }).format(val) + "%"
+  );
+}
+
 export function formatSignedRupiah(
   amount: number,
-  txType: "EXPENSE" | "INCOME" | "TRANSFER"
+  txType?: "EXPENSE" | "INCOME" | "TRANSFER"
 ): string {
-  const absFormatted = formatRupiah(Math.abs(amount));
-  if (txType === "EXPENSE") {
-    return `- ${absFormatted}`;
+  if (!Number.isFinite(amount) || Math.trunc(amount) === 0) {
+    return "Rp 0";
   }
-  if (txType === "INCOME") {
-    return `+ ${absFormatted}`;
+  const absFormatted = formatRupiah(Math.abs(amount));
+  if (txType === "EXPENSE" || amount < 0) {
+    return `−${absFormatted}`;
+  }
+  if (txType === "INCOME" || amount > 0) {
+    return `+${absFormatted}`;
   }
   return `⇄ ${absFormatted}`;
 }

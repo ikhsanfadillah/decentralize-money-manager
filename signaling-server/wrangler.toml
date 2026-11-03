@@ -1,0 +1,14 @@
+name = "dmm-webrtc-signaling"
+main = "cloudflare-worker.mjs"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[durable_objects]
+bindings = [
+  { name = "SIGNALING_ROOMS", class_name = "SignalingRoomDurableObject" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["SignalingRoomDurableObject"]
+

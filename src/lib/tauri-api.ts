@@ -1,4 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
+import { isTauriRuntime } from "./platform";
+import { callWebWorkerCommand } from "./web-api-adapter";
+import { getWebSyncEngine } from "./web-sync-engine";
 
 export interface AppErrorPayload {
   code: string;
@@ -234,10 +237,21 @@ export interface PeerInfo {
   node_id: string;
   device_id: string | null;
   last_seen_at: string | null;
+  is_online?: boolean;
+  is_preferred_hub?: boolean;
+}
+
+export interface SyncTopologyInfo {
+  book_id: string;
+  local_node_id: string | null;
+  preferred_hub_node_id: string | null;
+  active_streams: number;
 }
 
 export interface InviteResponse {
   qr_json: string;
+  invite_url?: string;
+  token?: string;
   expires_at: string;
   node_id: string;
 }
@@ -346,7 +360,10 @@ async function callCommand<T>(
   args?: Record<string, unknown>
 ): Promise<T> {
   try {
-    return await invoke<T>(cmd, args);
+    if (isTauriRuntime()) {
+      return await invoke<T>(cmd, args);
+    }
+    return await callWebWorkerCommand<T>(cmd, args);
   } catch (err: unknown) {
     throw normalizeError(err);
   }
@@ -365,11 +382,20 @@ export const tauriApi = {
   deleteBook: (bookId: string): Promise<void> =>
     callCommand("delete_book", { bookId }),
 
-  openBook: (bookId: string): Promise<BookMetadata> =>
-    callCommand("open_book", { bookId }),
+  openBook: async (bookId: string): Promise<BookMetadata> => {
+    const meta = await callCommand<BookMetadata>("open_book", { bookId });
+    if (!isTauriRuntime()) {
+      void getWebSyncEngine().startTopicSyncForBook(bookId);
+    }
+    return meta;
+  },
 
-  closeBook: (bookId: string): Promise<void> =>
-    callCommand("close_book", { bookId }),
+  closeBook: async (bookId: string): Promise<void> => {
+    await callCommand<void>("close_book", { bookId });
+    if (!isTauriRuntime()) {
+      getWebSyncEngine().stopTopicSyncForBook(bookId);
+    }
+  },
 
   exportBookEncrypted: (
     bookId: string,
@@ -380,6 +406,17 @@ export const tauriApi = {
       bookId,
       passphrase,
       destinationPath,
+    }),
+
+  importBookEncryptedBytes: (
+    encryptedBytes: Uint8Array,
+    passphrase: string,
+    kind?: BookKind
+  ): Promise<BookMetadata> =>
+    callCommand("import_book_encrypted_bytes", {
+      encryptedBytes,
+      passphrase,
+      kind,
     }),
 
   // Accounts
@@ -488,22 +525,67 @@ export const tauriApi = {
     callCommand("get_monthly_report", { bookId, month }),
 
   // Sync
-  getSyncStatus: (bookId: string): Promise<SyncStatusPayload> =>
-    callCommand("get_sync_status", { bookId }),
+  getSyncStatus: (bookId: string): Promise<SyncStatusPayload> => {
+    if (!isTauriRuntime()) {
+      return Promise.resolve(getWebSyncEngine().getSyncStatus(bookId));
+    }
+    return callCommand("get_sync_status", { bookId });
+  },
 
-  createInvite: (bookId: string, ttlSecs?: number): Promise<InviteResponse> =>
-    callCommand("create_invite", { bookId, ttlSecs }),
+  createInvite: (bookId: string, ttlSecs?: number): Promise<InviteResponse> => {
+    if (!isTauriRuntime()) {
+      return getWebSyncEngine().createInvite(bookId, ttlSecs);
+    }
+    return callCommand("create_invite", { bookId, ttlSecs });
+  },
 
   joinBookFromInvite: (
     inviteQr: string,
     kind?: BookKind
-  ): Promise<BookMetadata> =>
-    callCommand("join_book_from_invite", { inviteQr, kind }),
+  ): Promise<BookMetadata> => {
+    if (!isTauriRuntime()) {
+      return getWebSyncEngine().joinBookFromInvite(inviteQr, kind);
+    }
+    return callCommand("join_book_from_invite", { inviteQr, kind });
+  },
 
-  listPeers: (bookId: string): Promise<PeerInfo[]> =>
-    callCommand("list_peers", { bookId }),
+  listPeers: (bookId: string): Promise<PeerInfo[]> => {
+    if (!isTauriRuntime()) {
+      return getWebSyncEngine().listPeers(bookId);
+    }
+    return callCommand("list_peers", { bookId });
+  },
 
-  setAppForeground: (isForeground: boolean): Promise<void> =>
-    callCommand("set_app_foreground", { isForeground }),
+  getSyncTopology: (bookId: string): Promise<SyncTopologyInfo> => {
+    if (!isTauriRuntime()) {
+      return getWebSyncEngine().getSyncTopology(bookId);
+    }
+    return callCommand("get_sync_topology", { bookId });
+  },
+
+  setPreferredHub: async (
+    bookId: string,
+    hubNodeId: string | null
+  ): Promise<SyncTopologyInfo> => {
+    if (!isTauriRuntime()) {
+      await callCommand("set_preferred_hub", { bookId, hubNodeId });
+      return getWebSyncEngine().getSyncTopology(bookId);
+    }
+    return callCommand("set_preferred_hub", { bookId, hubNodeId });
+  },
+
+  triggerManualSync: (bookId: string): Promise<void> => {
+    if (!isTauriRuntime()) {
+      return getWebSyncEngine().triggerManualSync(bookId);
+    }
+    return callCommand("trigger_manual_sync", { bookId });
+  },
+
+  setAppForeground: (isForeground: boolean): Promise<void> => {
+    if (!isTauriRuntime()) {
+      return getWebSyncEngine().setAppForeground(isForeground);
+    }
+    return callCommand("set_app_foreground", { isForeground });
+  },
 };
 

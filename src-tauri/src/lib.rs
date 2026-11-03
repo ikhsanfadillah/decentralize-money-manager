@@ -143,6 +143,9 @@ pub fn run() {
             commands::create_invite,
             commands::join_book_from_invite,
             commands::list_peers,
+            commands::get_sync_topology,
+            commands::set_preferred_hub,
+            commands::trigger_manual_sync,
             commands::set_app_foreground,
         ])
         .run(tauri::generate_context!())

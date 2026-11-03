@@ -10,7 +10,9 @@ use std::str::FromStr;
 pub struct IrohPeerSession {
     conn: Connection,
     remote_id: String,
-    streams: Option<(SendStream, RecvStream)>,
+    send_stream: tokio::sync::Mutex<Option<SendStream>>,
+    recv_stream: tokio::sync::Mutex<Option<RecvStream>>,
+    init_lock: tokio::sync::Mutex<bool>,
     is_initiator: bool,
 }
 
@@ -20,33 +22,37 @@ impl IrohPeerSession {
         Self {
             conn,
             remote_id,
-            streams: None,
+            send_stream: tokio::sync::Mutex::new(None),
+            recv_stream: tokio::sync::Mutex::new(None),
+            init_lock: tokio::sync::Mutex::new(false),
             is_initiator,
         }
     }
 
-    async fn ensure_streams(&mut self) -> AppResult<&mut (SendStream, RecvStream)> {
-        if self.streams.is_none() {
-            let pair = if self.is_initiator {
-                self.conn.open_bi().await.map_err(|e| {
-                    AppError::Io(std::io::Error::new(
-                        std::io::ErrorKind::ConnectionAborted,
-                        format!("iroh open_bi failed: {}", e),
-                    ))
-                })?
-            } else {
-                self.conn.accept_bi().await.map_err(|e| {
-                    AppError::Io(std::io::Error::new(
-                        std::io::ErrorKind::ConnectionAborted,
-                        format!("iroh accept_bi failed: {}", e),
-                    ))
-                })?
-            };
-            self.streams = Some(pair);
+    async fn ensure_streams_initialized(&self) -> AppResult<()> {
+        let mut init_guard = self.init_lock.lock().await;
+        if *init_guard {
+            return Ok(());
         }
-        self.streams
-            .as_mut()
-            .ok_or_else(|| AppError::Internal("QUIC streams missing after initialization".into()))
+        let (send, recv) = if self.is_initiator {
+            self.conn.open_bi().await.map_err(|e| {
+                AppError::Io(std::io::Error::new(
+                    std::io::ErrorKind::ConnectionAborted,
+                    format!("iroh open_bi failed: {}", e),
+                ))
+            })?
+        } else {
+            self.conn.accept_bi().await.map_err(|e| {
+                AppError::Io(std::io::Error::new(
+                    std::io::ErrorKind::ConnectionAborted,
+                    format!("iroh accept_bi failed: {}", e),
+                ))
+            })?
+        };
+        *self.send_stream.lock().await = Some(send);
+        *self.recv_stream.lock().await = Some(recv);
+        *init_guard = true;
+        Ok(())
     }
 }
 
@@ -55,7 +61,7 @@ impl PeerSession for IrohPeerSession {
         &self.remote_id
     }
 
-    fn send_frame<'a>(&'a mut self, data: &'a [u8]) -> BoxFuture<'a, AppResult<()>> {
+    fn send_frame<'a>(&'a self, data: &'a [u8]) -> BoxFuture<'a, AppResult<()>> {
         Box::pin(async move {
             if data.len() > MAX_WIRE_FRAME_BYTES {
                 return Err(AppError::Validation(format!(
@@ -64,7 +70,14 @@ impl PeerSession for IrohPeerSession {
                     MAX_WIRE_FRAME_BYTES
                 )));
             }
-            let (send, _) = self.ensure_streams().await?;
+            self.ensure_streams_initialized().await?;
+            let mut send_guard = self.send_stream.lock().await;
+            let send = send_guard.as_mut().ok_or_else(|| {
+                AppError::Io(std::io::Error::new(
+                    std::io::ErrorKind::BrokenPipe,
+                    "QUIC send stream closed",
+                ))
+            })?;
             let len_prefix = (data.len() as u32).to_be_bytes();
             send.write_all(&len_prefix).await.map_err(|e| {
                 AppError::Io(std::io::Error::new(
@@ -82,9 +95,16 @@ impl PeerSession for IrohPeerSession {
         })
     }
 
-    fn recv_frame<'a>(&'a mut self) -> BoxFuture<'a, AppResult<Vec<u8>>> {
+    fn recv_frame<'a>(&'a self) -> BoxFuture<'a, AppResult<Vec<u8>>> {
         Box::pin(async move {
-            let (_, recv) = self.ensure_streams().await?;
+            self.ensure_streams_initialized().await?;
+            let mut recv_guard = self.recv_stream.lock().await;
+            let recv = recv_guard.as_mut().ok_or_else(|| {
+                AppError::Io(std::io::Error::new(
+                    std::io::ErrorKind::UnexpectedEof,
+                    "QUIC recv stream closed",
+                ))
+            })?;
             let mut len_buf = [0u8; 4];
             recv.read_exact(&mut len_buf).await.map_err(|e| {
                 AppError::Io(std::io::Error::new(
@@ -112,9 +132,10 @@ impl PeerSession for IrohPeerSession {
         })
     }
 
-    fn close<'a>(&'a mut self) -> BoxFuture<'a, ()> {
+    fn close<'a>(&'a self) -> BoxFuture<'a, ()> {
         Box::pin(async move {
-            if let Some((mut send, _)) = self.streams.take() {
+            let maybe_send = self.send_stream.lock().await.take();
+            if let Some(mut send) = maybe_send {
                 let _ = send.finish();
                 let _ = tokio::time::timeout(
                     std::time::Duration::from_millis(250),
@@ -122,6 +143,7 @@ impl PeerSession for IrohPeerSession {
                 )
                 .await;
             }
+            let _ = self.recv_stream.lock().await.take();
             self.conn.close(0u8.into(), b"sync_done");
         })
     }
@@ -327,13 +349,13 @@ mod tests {
         assert!(!addr2.direct_addrs.is_empty());
 
         let accept_handle = tokio::spawn(async move {
-            let mut session = t2.accept().await.unwrap().unwrap();
+            let session = t2.accept().await.unwrap().unwrap();
             let frame = session.recv_frame().await.unwrap();
             session.send_frame(&frame).await.unwrap();
             session.close().await;
         });
 
-        let mut s1 = t1.connect(&addr2).await.unwrap();
+        let s1 = t1.connect(&addr2).await.unwrap();
         s1.send_frame(b"ping").await.unwrap();
         let reply = s1.recv_frame().await.unwrap();
         assert_eq!(reply, b"ping");

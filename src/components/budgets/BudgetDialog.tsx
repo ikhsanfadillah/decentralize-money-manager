@@ -1,7 +1,18 @@
 import * as React from "react";
 import { useForm, Controller } from "react-hook-form";
+import { X } from "lucide-react";
 import { CurrencyInput } from "../ui/currency-input";
 import { Input } from "../ui/input";
+import {
+  ButtonSlideToConfirm,
+  type SlideConfirmResult,
+} from "../ui/ButtonSlideToConfirm";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerTitle,
+} from "../ui/drawer";
 import type {
   BudgetProgressItem,
   CategoryView,
@@ -49,7 +60,7 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
         ? "__ALL__"
         : initialCategoryId;
 
-  const { control, register, handleSubmit, watch, setValue, reset } =
+  const { control, register, getValues, watch, setValue, reset } =
     useForm<BudgetFormValues>({
       defaultValues: {
         categorySelection: defaultSelection,
@@ -60,7 +71,7 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
 
   const selectedCategoryKey = watch("categorySelection");
 
-  // Detect if budget for selected category + MONTHLY already exists -> automatically switch to edit mode (Section 9.5)
+  // Detect if budget for selected category + MONTHLY already exists -> automatically switch to edit mode
   const matchedExistingBudget = React.useMemo(() => {
     const targetCatId =
       selectedCategoryKey === "__ALL__" ? null : selectedCategoryKey;
@@ -103,26 +114,24 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
     }
   }, [matchedExistingBudget, isOpen, setValue]);
 
-  if (!isOpen) {
-    return null;
-  }
-
-  const onSubmit = async (values: BudgetFormValues) => {
+  const handleSlideConfirm = async (): Promise<SlideConfirmResult> => {
+    const values = getValues();
     if (values.amountLimit === null || values.amountLimit <= 0) {
       pushToast("Batas anggaran wajib diisi", {
         description: "Masukkan nominal batas anggaran lebih dari Rp 0.",
         variant: "error",
       });
-      return;
+      return { ok: false, message: "Nominal batas anggaran wajib diisi" };
     }
 
     const threshold = Number(values.alertThresholdPct);
     if (!Number.isInteger(threshold) || threshold < 1 || threshold > 100) {
       pushToast("Ambang peringatan tidak valid", {
-        description: "Ambang peringatan harus bilangan bulat antara 1% hingga 100%.",
+        description:
+          "Ambang peringatan harus bilangan bulat antara 1% hingga 100%.",
         variant: "error",
       });
-      return;
+      return { ok: false, message: "Ambang peringatan harus 1% - 100%" };
     }
 
     const categoryId =
@@ -141,7 +150,7 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
           : "Anggaran baru berhasil disimpan",
         { variant: "success" }
       );
-      onClose();
+      return { ok: true };
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : "Gagal menyimpan anggaran";
@@ -149,132 +158,150 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
         description: msg,
         variant: "error",
       });
+      return { ok: false, message: "Gagal Menyimpan Anggaran" };
     }
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="budget-dialog-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
+    <Drawer
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) {
+          onClose();
+        }
+      }}
+      shouldScaleBackground={false}
     >
-      <div className="tabular-grid-container w-full max-w-md shadow-none">
+      <DrawerContent className="fixed inset-x-0 bottom-0 z-50 flex h-[100dvh] max-h-[100dvh] w-full flex-col rounded-none border-t border-border bg-card p-0 shadow-2xl focus:outline-none sm:mx-auto sm:h-auto sm:max-h-[90vh] sm:max-w-xl sm:rounded-t-2xl">
         <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="tabular-grid-cell space-y-4 p-5"
+          onSubmit={(e) => e.preventDefault()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+            }
+          }}
+          className="flex h-full sm:h-auto flex-1 flex-col overflow-hidden"
         >
-          <div className="flex items-center justify-between border-b border-border pb-3">
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6 shrink-0 bg-card">
             <div>
-              <h2
+              <DrawerTitle
                 id="budget-dialog-title"
                 className="text-sm font-semibold text-foreground"
               >
                 {matchedExistingBudget
                   ? "Edit Anggaran Bulanan"
-                  : "Buat Anggaran Bulanan"}
-              </h2>
-              <p className="text-xs text-muted-foreground">
+                  : "Atur Anggaran Bulanan Baru"}
+              </DrawerTitle>
+              <DrawerDescription className="mt-0.5 text-xs text-muted-foreground">
                 {matchedExistingBudget
-                  ? "Perbarui batas anggaran untuk kategori ini."
-                  : "Tentukan batas pengeluaran untuk satu bulan."}
-              </p>
+                  ? "Perbarui batas anggaran belanja dan ambang peringatan dini."
+                  : "Tentukan batas pengeluaran untuk satu bulan dan ambang peringatan dini."}
+              </DrawerDescription>
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="rounded border border-border px-2 py-1 font-mono text-xs text-muted-foreground shadow-none hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+              aria-label="Tutup"
+              className="nav-touch-item inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
             >
-              ESC
+              <X className="h-4 w-4" />
             </button>
           </div>
 
-          <div className="space-y-1.5">
-            <label
-              htmlFor="budget-category-select"
-              className="block text-xs font-medium text-foreground"
-            >
-              Cakupan Kategori Pengeluaran
-            </label>
-            <select
-              id="budget-category-select"
-              {...register("categorySelection")}
-              className="flex h-9 w-full rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-            >
-              <option value="__ALL__">
-                Semua pengeluaran (Total Pengeluaran Bulanan)
-              </option>
-              {expenseCategories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 space-y-4">
+            <div className="space-y-1.5">
+              <label
+                htmlFor="budget-category-select"
+                className="block text-xs font-medium text-foreground"
+              >
+                Cakupan Kategori Pengeluaran
+              </label>
+              <select
+                id="budget-category-select"
+                {...register("categorySelection")}
+                className="flex h-9 w-full rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+              >
+                <option value="__ALL__">
+                  Semua pengeluaran (Total Pengeluaran Bulanan)
                 </option>
-              ))}
-            </select>
+                {expenseCategories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label
+                htmlFor="budget-limit-input"
+                className="block text-xs font-medium text-foreground"
+              >
+                Batas Anggaran Bulanan (Rupiah)
+              </label>
+              <Controller
+                name="amountLimit"
+                control={control}
+                render={({ field }) => (
+                  <CurrencyInput
+                    id="budget-limit-input"
+                    aria-label="Batas Anggaran Bulanan"
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    onBlur={field.onBlur}
+                    ref={field.ref}
+                  />
+                )}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label
+                htmlFor="budget-threshold-input"
+                className="block text-xs font-medium text-foreground"
+              >
+                Ingatkan Saya Saat Mencapai (%) — misal 80%
+              </label>
+              <Input
+                id="budget-threshold-input"
+                type="number"
+                min={1}
+                max={100}
+                {...register("alertThresholdPct")}
+                className="font-mono tabular-nums tracking-tight"
+              />
+            </div>
           </div>
 
-          <div className="space-y-1.5">
-            <label
-              htmlFor="budget-limit-input"
-              className="block text-xs font-medium text-foreground"
-            >
-              Batas Anggaran Bulanan (Rupiah)
-            </label>
-            <Controller
-              name="amountLimit"
-              control={control}
-              render={({ field }) => (
-                <CurrencyInput
-                  id="budget-limit-input"
-                  aria-label="Batas Anggaran Bulanan"
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  onBlur={field.onBlur}
-                  ref={field.ref}
-                />
-              )}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label
-              htmlFor="budget-threshold-input"
-              className="block text-xs font-medium text-foreground"
-            >
-              Ingatkan Saya Saat Mencapai (%) — misal 80%
-            </label>
-            <Input
-              id="budget-threshold-input"
-              type="number"
-              min={1}
-              max={100}
-              {...register("alertThresholdPct")}
-              className="font-mono tabular-nums tracking-tight"
-            />
-          </div>
-
-          <div className="flex items-center justify-end gap-2 border-t border-border pt-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-none hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
+          {/* Footer with ButtonSlideToConfirm */}
+          <div className="flex items-center justify-end gap-2 border-t border-border p-2.5 sm:px-6 bg-card/60 backdrop-blur-xs shrink-0">
+            <ButtonSlideToConfirm
+              key={
+                isOpen
+                  ? `budget-${selectedCategoryKey}-${matchedExistingBudget?.id ?? "new"}`
+                  : "closed"
+              }
               disabled={isSaving}
-              className="rounded-md border border-border bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-none hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
-            >
-              {isSaving
-                ? "Menyimpan..."
-                : matchedExistingBudget
-                  ? "Simpan Perubahan"
-                  : "Buat Anggaran"}
-            </button>
+              label={
+                matchedExistingBudget
+                  ? "Geser untuk Perbarui Anggaran"
+                  : "Geser untuk Simpan Anggaran"
+              }
+              readyLabel="Lepas untuk Simpan"
+              loadingLabel="Menyimpan Anggaran..."
+              successLabel={
+                matchedExistingBudget
+                  ? "Anggaran Diperbarui!"
+                  : "Anggaran Disimpan!"
+              }
+              onConfirm={handleSlideConfirm}
+              onSuccessComplete={onClose}
+            />
           </div>
         </form>
-      </div>
-    </div>
+      </DrawerContent>
+    </Drawer>
   );
 };
-

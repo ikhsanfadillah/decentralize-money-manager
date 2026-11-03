@@ -1,6 +1,8 @@
 import * as React from "react";
+import { TrendingDown, TrendingUp } from "lucide-react";
 import type { DailyCashFlowPoint } from "../../lib/tauri-api";
 import { formatRupiah } from "../../lib/utils";
+import { formatDateReadable } from "../../lib/date";
 
 export type CashFlowChartMode = "DAILY_BARS" | "CUMULATIVE_BURN";
 export type TimeScaleMode = "FULL_MONTH" | "TWO_WEEKS";
@@ -107,6 +109,11 @@ export const InteractiveCashFlowChart: React.FC<
     const pt = dailySeries.find((d) => d.date === todayStr);
     return pt ? pt.day : null;
   }, [dailySeries, todayStr]);
+
+  const selectedPoint = React.useMemo(() => {
+    if (!selectedDate) return null;
+    return dailySeries.find((d) => d.date === selectedDate) ?? null;
+  }, [dailySeries, selectedDate]);
 
   const activePoint = React.useMemo(() => {
     if (hoveredDay !== null) {
@@ -234,15 +241,21 @@ export const InteractiveCashFlowChart: React.FC<
   const formatCompactRupiah = (val: number): string => {
     const abs = Math.abs(val);
     if (abs >= 1_000_000_000) {
-      return `${(val / 1_000_000_000).toFixed(1)}M`;
+      const num = new Intl.NumberFormat("id-ID", {
+        maximumFractionDigits: 1,
+      }).format(abs / 1_000_000_000);
+      return `${num}M`;
     }
     if (abs >= 1_000_000) {
-      return `${(val / 1_000_000).toFixed(1)}jt`;
+      const num = new Intl.NumberFormat("id-ID", {
+        maximumFractionDigits: 1,
+      }).format(abs / 1_000_000);
+      return `${num}jt`;
     }
     if (abs >= 1_000) {
-      return `${Math.round(val / 1_000)}rb`;
+      return `${Math.round(abs / 1_000)}rb`;
     }
-    return String(val);
+    return String(abs);
   };
 
   // Smooth Bézier Spline Curves
@@ -339,15 +352,15 @@ export const InteractiveCashFlowChart: React.FC<
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Mode Arus Kas */}
-          <div className="inline-flex rounded border border-border bg-background p-0.5">
+          {/* Mode Arus Kas: Standardized Segmented Control */}
+          <div className="inline-flex items-center rounded-lg border border-border bg-muted/40 p-0.5">
             <button
               type="button"
               onClick={() => setChartMode("DAILY_BARS")}
-              className={`nav-touch-item rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+              className={`nav-touch-item rounded-md px-2.5 py-1 text-xs transition-all ${
                 chartMode === "DAILY_BARS"
-                  ? "bg-primary text-primary-foreground font-semibold"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "bg-background text-foreground font-semibold shadow-xs border border-border/50"
+                  : "text-muted-foreground hover:text-foreground font-medium"
               }`}
             >
               Arus Harian
@@ -355,25 +368,25 @@ export const InteractiveCashFlowChart: React.FC<
             <button
               type="button"
               onClick={() => setChartMode("CUMULATIVE_BURN")}
-              className={`nav-touch-item rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+              className={`nav-touch-item rounded-md px-2.5 py-1 text-xs transition-all ${
                 chartMode === "CUMULATIVE_BURN"
-                  ? "bg-primary text-primary-foreground font-semibold"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "bg-background text-foreground font-semibold shadow-xs border border-border/50"
+                  : "text-muted-foreground hover:text-foreground font-medium"
               }`}
             >
               Akumulasi & Laju Anggaran
             </button>
           </div>
 
-          {/* Rentang Skala Waktu (1 Bulan vs 2 Minggu) */}
-          <div className="inline-flex rounded border border-border bg-background p-0.5">
+          {/* Rentang Skala Waktu: Standardized Segmented Control */}
+          <div className="inline-flex items-center rounded-lg border border-border bg-muted/40 p-0.5">
             <button
               type="button"
               onClick={() => handleTimeScaleChange("FULL_MONTH")}
-              className={`nav-touch-item rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+              className={`nav-touch-item rounded-md px-2.5 py-1 text-xs transition-all ${
                 timeScale === "FULL_MONTH"
-                  ? "bg-muted text-foreground font-semibold"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "bg-background text-foreground font-semibold shadow-xs border border-border/50"
+                  : "text-muted-foreground hover:text-foreground font-medium"
               }`}
             >
               1 Bulan
@@ -381,10 +394,10 @@ export const InteractiveCashFlowChart: React.FC<
             <button
               type="button"
               onClick={() => handleTimeScaleChange("TWO_WEEKS")}
-              className={`nav-touch-item rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+              className={`nav-touch-item rounded-md px-2.5 py-1 text-xs transition-all ${
                 timeScale === "TWO_WEEKS"
-                  ? "bg-muted text-foreground font-semibold"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "bg-background text-foreground font-semibold shadow-xs border border-border/50"
+                  : "text-muted-foreground hover:text-foreground font-medium"
               }`}
             >
               2 Minggu
@@ -393,136 +406,185 @@ export const InteractiveCashFlowChart: React.FC<
         </div>
       </div>
 
-      {/* Series Toggle Bar, Quick Period Jump & Live HUD Inspector */}
-      <div className="tabular-grid-cell flex flex-wrap items-center justify-between gap-2.5 bg-background/50 px-4 py-2.5 text-xs">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setShowIncome((v) => !v)}
-            className={`inline-flex items-center gap-1.5 rounded border px-2.5 py-1 text-xs font-medium shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
-              showIncome
-                ? "border-emerald-500/40 bg-card text-emerald-500"
-                : "border-border bg-background text-muted-foreground opacity-60"
-            }`}
-          >
-            <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
-            Pemasukan
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowExpense((v) => !v)}
-            className={`inline-flex items-center gap-1.5 rounded border px-2.5 py-1 text-xs font-medium shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
-              showExpense
-                ? "border-rose-500/40 bg-card text-rose-500"
-                : "border-border bg-background text-muted-foreground opacity-60"
-            }`}
-          >
-            <span className="inline-block h-2 w-2 rounded-full bg-rose-500" />
-            Pengeluaran
-          </button>
-
-          {chartMode === "DAILY_BARS" && (
+      {/* Series Toggle Bar & Selected Date 2-Line Card (No Hover Jumping!) */}
+      <div className="tabular-grid-cell flex flex-col gap-2.5 bg-background/50 px-4 py-2.5 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button"
-              onClick={() => setShowNetLine((v) => !v)}
-              className={`inline-flex items-center gap-1.5 rounded border px-2.5 py-1 text-xs font-medium shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
-                showNetLine
-                  ? "border-sky-500/40 bg-card text-sky-500"
+              onClick={() => setShowIncome((v) => !v)}
+              className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium shadow-none transition-colors ${
+                showIncome
+                  ? "border-emerald-500/40 bg-card text-emerald-500"
                   : "border-border bg-background text-muted-foreground opacity-60"
               }`}
             >
-              <span className="inline-block h-2 w-2 rounded-full bg-sky-500" />
-              Surplus
+              <TrendingUp className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span>Pemasukan</span>
             </button>
-          )}
 
-          {/* Quick period jump chips when in 2 Minggu mode */}
-          {timeScale === "TWO_WEEKS" && (
-            <div className="inline-flex items-center gap-1 text-xs">
-              <span className="text-[11px] text-muted-foreground">Lompat:</span>
-              <button
-                type="button"
-                onClick={() => scrollToDay(1)}
-                className="rounded border border-border bg-card px-2 py-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-              >
-                Tgl 1–15
-              </button>
-              <button
-                type="button"
-                onClick={() => scrollToDay(16)}
-                className="rounded border border-border bg-card px-2 py-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-              >
-                Tgl 16–{daysInMonth}
-              </button>
-            </div>
-          )}
-
-          {selectedDate && (
             <button
               type="button"
-              onClick={() => onSelectDate(null)}
-              className="rounded border border-primary/50 bg-card px-2.5 py-1 text-xs font-medium text-primary shadow-none hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+              onClick={() => setShowExpense((v) => !v)}
+              className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium shadow-none transition-colors ${
+                showExpense
+                  ? "border-rose-500/40 bg-card text-rose-500"
+                  : "border-border bg-background text-muted-foreground opacity-60"
+              }`}
             >
-              Filter: {selectedDate} ×
+              <TrendingDown className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span>Pengeluaran</span>
             </button>
+
+            {chartMode === "DAILY_BARS" && (
+              <button
+                type="button"
+                onClick={() => setShowNetLine((v) => !v)}
+                className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium shadow-none transition-colors ${
+                  showNetLine
+                    ? "border-sky-500/40 bg-card text-sky-500"
+                    : "border-border bg-background text-muted-foreground opacity-60"
+                }`}
+              >
+                <span className="inline-block h-2 w-2 rounded-full bg-sky-500" />
+                Surplus
+              </button>
+            )}
+
+            {/* Quick period jump chips when in 2 Minggu mode */}
+            {timeScale === "TWO_WEEKS" && (
+              <div className="inline-flex items-center gap-1 text-xs">
+                <span className="text-[11px] text-muted-foreground">Lompat:</span>
+                <button
+                  type="button"
+                  onClick={() => scrollToDay(1)}
+                  className="rounded border border-border bg-card px-2 py-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                >
+                  Tgl 1–15
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollToDay(16)}
+                  className="rounded border border-border bg-card px-2 py-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                >
+                  Tgl 16–{daysInMonth}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Mode Cumulative Summary (for quick glance and test compatibility) */}
+          {chartMode === "CUMULATIVE_BURN" && !selectedPoint && activePoint && (
+            <div
+              data-testid="cashflow-hud-readout"
+              className="flex items-center gap-2 font-mono text-xs tabular-nums text-rose-500"
+            >
+              <TrendingDown className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span>Kumulatif Keluar: {formatRupiah(activePoint.cumulative_expense)}</span>
+              {idealPaceOnActiveDay !== null && (
+                <span
+                  className={
+                    activePoint.cumulative_expense <= idealPaceOnActiveDay
+                      ? "text-emerald-500 font-sans text-[11px]"
+                      : "text-amber-500 font-sans text-[11px]"
+                  }
+                >
+                  (Target: {formatRupiah(idealPaceOnActiveDay)})
+                </span>
+              )}
+            </div>
           )}
         </div>
 
-        {/* Live Hovered / Selected Day Readout */}
-        {activePoint && (
+        {/* Selected Date Filter Card: Exactly Two Clean, Spacious Rows */}
+        {selectedPoint && (
           <div
             data-testid="cashflow-hud-readout"
-            className="flex flex-wrap items-center gap-2 font-mono text-xs tabular-nums tracking-tight"
+            className="flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-card p-2.5 text-xs shadow-xs"
           >
-            <span className="rounded border border-border bg-card px-2 py-0.5 font-sans text-xs font-medium text-foreground">
-              {activePoint.date}
-              {activePoint.day === todayDay && (
-                <span className="ml-1 text-[11px] text-primary">· Hari Ini</span>
-              )}{" "}
-              <span className="text-muted-foreground">
-                ({activePoint.tx_count} tx)
-              </span>
-            </span>
-            {chartMode === "DAILY_BARS" ? (
-              <>
-                <span className="text-emerald-500">
-                  +{formatRupiah(activePoint.income)}
+            <div className="space-y-1">
+              {/* Row 1: Date & transactions count */}
+              <div className="flex flex-wrap items-center gap-1.5 font-medium text-foreground">
+                <span className="font-semibold">
+                  {formatDateReadable(selectedPoint.date, {
+                    withDayName: true,
+                    relativePrefix: false,
+                  })}
                 </span>
-                <span className="text-rose-500">
-                  −{formatRupiah(activePoint.expense)}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="text-rose-500">
-                  Kumulatif Keluar: {formatRupiah(activePoint.cumulative_expense)}
-                </span>
-                {idealPaceOnActiveDay !== null && (
-                  <span
-                    className={
-                      activePoint.cumulative_expense <= idealPaceOnActiveDay
-                        ? "text-emerald-500"
-                        : "text-amber-500"
-                    }
-                  >
-                    Target: {formatRupiah(idealPaceOnActiveDay)}
+                {selectedPoint.day === todayDay && (
+                  <span className="rounded bg-primary/10 px-1.5 py-0.2 text-[10px] font-semibold text-primary">
+                    Hari Ini
                   </span>
                 )}
-              </>
-            )}
+                <span className="text-muted-foreground">
+                  ({selectedPoint.tx_count} transaksi)
+                </span>
+              </div>
 
-            {/* Quick drilldown jump button on HUD */}
-            {activePoint.tx_count > 0 && (
+              {/* Row 2: Incomes and expenses with true minus & neutral zero */}
+              <div className="flex flex-wrap items-center gap-3 font-mono text-xs tabular-nums">
+                {chartMode === "DAILY_BARS" ? (
+                  <>
+                    <span className="inline-flex items-center gap-1 text-emerald-500 font-semibold">
+                      <TrendingUp className="h-3 w-3 shrink-0" aria-hidden="true" />
+                      <span>
+                        {selectedPoint.income > 0
+                          ? `+${formatRupiah(selectedPoint.income)}`
+                          : "Rp 0"}
+                      </span>
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-rose-500 font-semibold">
+                      <TrendingDown className="h-3 w-3 shrink-0" aria-hidden="true" />
+                      <span>
+                        {selectedPoint.expense > 0
+                          ? `−${formatRupiah(selectedPoint.expense)}`
+                          : "Rp 0"}
+                      </span>
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="inline-flex items-center gap-1 text-rose-500 font-semibold">
+                      <TrendingDown className="h-3 w-3 shrink-0" aria-hidden="true" />
+                      <span>Kumulatif Keluar: {formatRupiah(selectedPoint.cumulative_expense)}</span>
+                    </span>
+                    {idealPaceOnActiveDay !== null && (
+                      <span
+                        className={
+                          selectedPoint.cumulative_expense <= idealPaceOnActiveDay
+                            ? "text-emerald-500"
+                            : "text-amber-500"
+                        }
+                      >
+                        Target: {formatRupiah(idealPaceOnActiveDay)}
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Action buttons on right */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {selectedPoint.tx_count > 0 && (
+                <button
+                  type="button"
+                  onClick={() => handleScrollToTransactions(selectedPoint.date)}
+                  className="inline-flex items-center gap-1 rounded-md border border-primary/40 bg-primary/10 px-2.5 py-1 font-sans text-xs font-medium text-primary transition-all hover:bg-primary/20 active:scale-95"
+                >
+                  <span>Rincian</span>
+                  <span>↓</span>
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => handleScrollToTransactions(activePoint.date)}
-                className="inline-flex items-center gap-1 rounded border border-primary/40 bg-primary/10 px-2 py-0.5 font-sans text-xs font-medium text-primary transition-all hover:bg-primary/20 active:scale-95"
+                onClick={() => onSelectDate(null)}
+                title="Hapus filter tanggal"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
               >
-                <span>Rincian</span>
-                <span>↓</span>
+                ×
               </button>
-            )}
+            </div>
           </div>
         )}
       </div>
@@ -577,7 +639,7 @@ export const InteractiveCashFlowChart: React.FC<
             className="relative flex-1 h-full"
             style={{ minWidth: `${plotSvgWidth}px` }}
           >
-            {/* Saran #1: Floating Mini-Tooltip Pill (Mobile Peek) anchored above active day */}
+            {/* Floating Mini-Tooltip Pill anchored above active day */}
             {activePoint && (
               <div
                 style={{
@@ -592,19 +654,23 @@ export const InteractiveCashFlowChart: React.FC<
                 </span>
                 <span className="text-muted-foreground">·</span>
                 {chartMode === "DAILY_BARS" ? (
-                  activePoint.expense > 0 ? (
-                    <span className="font-mono font-bold text-rose-500 whitespace-nowrap">
-                      −{formatCompactRupiah(activePoint.expense)}
-                    </span>
-                  ) : activePoint.income > 0 ? (
-                    <span className="font-mono font-bold text-emerald-500 whitespace-nowrap">
-                      +{formatCompactRupiah(activePoint.income)}
-                    </span>
-                  ) : (
-                    <span className="font-mono text-muted-foreground whitespace-nowrap">
-                      Rp 0
-                    </span>
-                  )
+                  <div className="flex items-center gap-1 font-mono font-bold whitespace-nowrap">
+                    {activePoint.income > 0 && (
+                      <span className="text-emerald-500">
+                        +{formatCompactRupiah(activePoint.income)}
+                      </span>
+                    )}
+                    {activePoint.expense > 0 && (
+                      <span className="text-rose-500">
+                        −{formatCompactRupiah(activePoint.expense)}
+                      </span>
+                    )}
+                    {activePoint.income === 0 && activePoint.expense === 0 && (
+                      <span className="font-normal text-muted-foreground">
+                        Rp 0
+                      </span>
+                    )}
+                  </div>
                 ) : (
                   <span className="font-mono font-bold text-rose-500 whitespace-nowrap">
                     {formatCompactRupiah(activePoint.cumulative_expense)}
@@ -618,14 +684,14 @@ export const InteractiveCashFlowChart: React.FC<
                       e.stopPropagation();
                       handleScrollToTransactions(activePoint.date);
                     }}
-                    className="ml-0.5 inline-flex whitespace-nowrap items-center gap-0.5 rounded-full bg-primary px-2 py-0.5 font-mono text-[10px] font-semibold text-primary-foreground shadow-xs hover:opacity-90 active:scale-95 transition-all"
+                    className="ml-0.5 inline-flex whitespace-nowrap items-center gap-1 rounded-full bg-primary px-2 py-0.5 font-mono text-[10px] font-semibold text-primary-foreground shadow-xs hover:opacity-90 active:scale-95 transition-all"
                   >
-                    <span>{activePoint.tx_count} tx</span>
+                    <span>{activePoint.tx_count} transaksi</span>
                     <span>↓</span>
                   </button>
                 ) : (
                   <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                    (0 tx)
+                    (0)
                   </span>
                 )}
               </div>

@@ -61,7 +61,7 @@ describe("TransactionTable (Mobile Friendly & Responsive)", () => {
     expect(mobileCard1).toBeInTheDocument();
     expect(mobileCard1).toHaveTextContent("Jajan");
     expect(mobileCard1).toHaveTextContent("Somai");
-    expect(mobileCard1).toHaveTextContent("- Rp 7.000");
+    expect(mobileCard1).toHaveTextContent("−Rp 7.000");
     expect(mobileCard1).toHaveTextContent("BCA");
     expect(mobileCard1).toHaveTextContent("2026-10-27");
     expect(mobileCard1).toHaveTextContent("#683742");

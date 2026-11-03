@@ -207,6 +207,18 @@ pub struct PeerInfo {
     pub node_id: String,
     pub device_id: Option<String>,
     pub last_seen_at: Option<String>,
+    #[serde(default)]
+    pub is_online: bool,
+    #[serde(default)]
+    pub is_preferred_hub: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SyncTopologyInfo {
+    pub book_id: String,
+    pub local_node_id: Option<String>,
+    pub preferred_hub_node_id: Option<String>,
+    pub active_streams: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -1941,7 +1953,7 @@ pub fn get_monthly_report_in_conn(
             .then_with(|| a.device_id.cmp(&b.device_id))
     });
 
-    // 6. Top 5 Expenses in Month
+    // 6. Top 5 Expenses in Month (Sorted descending by largest absolute amount)
     let month_end_inclusive = format!("{}-{:02}", trimmed_month, days_in_month);
     let top_tx_page = list_transactions_in_conn(
         conn,
@@ -1950,7 +1962,7 @@ pub fn get_monthly_report_in_conn(
             end_date: Some(month_end_inclusive),
             tx_type: Some("EXPENSE".to_string()),
             sort_by: Some("amount".to_string()),
-            sort_dir: Some("asc".to_string()), // Most negative first = largest expense
+            sort_dir: Some("desc".to_string()), // Largest absolute amount first = largest expense
             limit: Some(5),
             offset: Some(0),
             ..Default::default()
@@ -2018,9 +2030,8 @@ pub async fn list_books(state: State<'_, AppState>) -> AppResult<Vec<BookMetadat
         .await
 }
 
-#[tauri::command]
-pub async fn create_book(
-    state: State<'_, AppState>,
+pub async fn create_book_in_state(
+    state: &AppState,
     name: String,
     kind: String,
 ) -> AppResult<BookMetadata> {
@@ -2045,7 +2056,7 @@ pub async fn create_book(
         file_exists: true,
     };
 
-    let state_clone = state.inner().clone();
+    let state_clone = state.clone();
     let meta_clone = meta.clone();
 
     tokio::task::spawn_blocking(move || -> AppResult<()> {
@@ -2075,14 +2086,26 @@ pub async fn create_book(
             .pool
             .write()
             .map_err(|_| AppError::Internal("Pool RwLock poisoned".into()))?;
-        pool_guard.insert(meta_clone.id, std::sync::Arc::new(std::sync::Mutex::new(conn)));
+        pool_guard.insert(
+            meta_clone.id,
+            std::sync::Arc::new(std::sync::Mutex::new(conn)),
+        );
         Ok(())
     })
     .await
     .map_err(|e| AppError::TaskJoin(e.to_string()))??;
 
-    let _ = state.sync.start_book_sync(state.inner(), &meta.id).await;
+    let _ = state.sync.start_book_sync(state, &meta.id).await;
     Ok(meta)
+}
+
+#[tauri::command]
+pub async fn create_book(
+    state: State<'_, AppState>,
+    name: String,
+    kind: String,
+) -> AppResult<BookMetadata> {
+    create_book_in_state(state.inner(), name, kind).await
 }
 
 #[tauri::command]
@@ -2844,16 +2867,27 @@ pub async fn list_peers(
     state: State<'_, AppState>,
     book_id: String,
 ) -> AppResult<Vec<PeerInfo>> {
+    let valid_id = validate_book_id(&book_id)?;
+    let online_ids = state.sync.online_peer_node_ids(&valid_id).await;
+
     state
-        .with_book(&book_id, |conn| {
+        .with_book(&valid_id, move |conn| {
+            let (pref_hub, _) = crate::sync::protocol::load_preferred_hub(conn)?;
             let mut stmt = conn.prepare(
                 "SELECT node_id, device_id, last_seen_at FROM sync_peers ORDER BY last_seen_at DESC",
             )?;
             let rows = stmt.query_map([], |r| {
+                let node_id: String = r.get(0)?;
+                let device_id: Option<String> = r.get(1)?;
+                let last_seen_at: Option<String> = r.get(2)?;
+                let is_online = online_ids.contains(&node_id);
+                let is_preferred_hub = pref_hub.as_deref() == Some(node_id.as_str());
                 Ok(PeerInfo {
-                    node_id: r.get(0)?,
-                    device_id: r.get(1)?,
-                    last_seen_at: r.get(2)?,
+                    node_id,
+                    device_id,
+                    last_seen_at,
+                    is_online,
+                    is_preferred_hub,
                 })
             })?;
             let mut out = Vec::new();
@@ -2863,6 +2897,61 @@ pub async fn list_peers(
             Ok(out)
         })
         .await
+}
+
+#[tauri::command]
+pub async fn get_sync_topology(
+    state: State<'_, AppState>,
+    book_id: String,
+) -> AppResult<SyncTopologyInfo> {
+    let valid_id = validate_book_id(&book_id)?;
+    let local_node_id = state.sync.get_local_node_id(state.inner()).await;
+    let active_streams = state.sync.active_peer_count(&valid_id).await;
+    let preferred_hub_node_id = state
+        .with_book(&valid_id, |conn| {
+            let (hub, _) = crate::sync::protocol::load_preferred_hub(conn)?;
+            Ok(hub)
+        })
+        .await?;
+
+    Ok(SyncTopologyInfo {
+        book_id: valid_id,
+        local_node_id,
+        preferred_hub_node_id,
+        active_streams,
+    })
+}
+
+#[tauri::command]
+pub async fn set_preferred_hub(
+    state: State<'_, AppState>,
+    book_id: String,
+    hub_node_id: Option<String>,
+) -> AppResult<SyncTopologyInfo> {
+    let valid_id = validate_book_id(&book_id)?;
+    let updated_hub = state
+        .sync
+        .set_preferred_hub(state.inner(), &valid_id, hub_node_id)
+        .await?;
+    let local_node_id = state.sync.get_local_node_id(state.inner()).await;
+    let active_streams = state.sync.active_peer_count(&valid_id).await;
+
+    Ok(SyncTopologyInfo {
+        book_id: valid_id,
+        local_node_id,
+        preferred_hub_node_id: updated_hub,
+        active_streams,
+    })
+}
+
+#[tauri::command]
+pub async fn trigger_manual_sync(
+    state: State<'_, AppState>,
+    book_id: String,
+) -> AppResult<()> {
+    let valid_id = validate_book_id(&book_id)?;
+    state.sync.trigger_sync_now(state.inner(), &valid_id);
+    Ok(())
 }
 
 #[cfg(test)]
@@ -3693,6 +3782,83 @@ mod tests {
         assert_eq!(bca_recon.month_inflow, 10_000_000);
         assert_eq!(bca_recon.month_outflow, 800_000);
         assert_eq!(bca_recon.closing_balance, 13_800_000);
+    }
+
+    #[test]
+    fn test_get_monthly_report_top_expenses_descending_order() {
+        let mut conn =
+            open_in_memory_book("00000000-0000-7000-8000-000000000100", "TopExpensesBook").unwrap();
+
+        let acc = upsert_account_in_conn(
+            &mut conn,
+            UpsertAccountInput {
+                id: Some("acc-1".into()),
+                name: "Dompet".into(),
+                account_type: "CASH".into(),
+                initial_balance: 10_000_000,
+            },
+        )
+        .unwrap();
+
+        let cat = upsert_category_in_conn(
+            &mut conn,
+            UpsertCategoryInput {
+                id: Some("cat-1".into()),
+                name: "Kebutuhan".into(),
+                kind: "EXPENSE".into(),
+            },
+        )
+        .unwrap();
+
+        // Add 7 expenses with varying amounts
+        let expenses = vec![
+            (-2_222, "Snack Ringan"),
+            (-7_000, "Air Mineral"),
+            (-10_000, "Kopi"),
+            (-16_000, "Makan Siang"),
+            (-25_000, "Transport"),
+            (-190_000, "Hiburan"),
+            (-200_000, "Tagihan Listrik"),
+        ];
+
+        for (amt, note) in expenses {
+            add_transaction_in_conn(
+                &mut conn,
+                AddTransactionInput {
+                    id: None,
+                    account_id: acc.id.clone(),
+                    to_account_id: None,
+                    category_id: Some(cat.id.clone()),
+                    amount: amt,
+                    tx_type: "EXPENSE".into(),
+                    note: Some(note.into()),
+                    tx_date: "2026-10-15".into(),
+                    link_id: None,
+                },
+            )
+            .unwrap();
+        }
+
+        let report = get_monthly_report_in_conn(&conn, "2026-10").unwrap();
+
+        // top_expenses must be limited to 5 and sorted DESCENDING by magnitude:
+        // 1. 200.000 (Tagihan Listrik)
+        // 2. 190.000 (Hiburan)
+        // 3. 25.000 (Transport)
+        // 4. 16.000 (Makan Siang)
+        // 5. 10.000 (Kopi)
+        // (7.000 and 2.222 should be excluded because they are lower than the top 5)
+        assert_eq!(report.top_expenses.len(), 5);
+        assert_eq!(report.top_expenses[0].amount, -200_000);
+        assert_eq!(
+            report.top_expenses[0].note.as_deref(),
+            Some("Tagihan Listrik")
+        );
+        assert_eq!(report.top_expenses[1].amount, -190_000);
+        assert_eq!(report.top_expenses[1].note.as_deref(), Some("Hiburan"));
+        assert_eq!(report.top_expenses[2].amount, -25_000);
+        assert_eq!(report.top_expenses[3].amount, -16_000);
+        assert_eq!(report.top_expenses[4].amount, -10_000);
     }
 }
 

@@ -20,11 +20,14 @@ pub struct NodeTicketAddr {
 }
 
 /// Active bidirectional session between two peers.
+/// Uses `&self` with independent internal send/receive locks so full-duplex
+/// reader loops and event-driven live pushes can run concurrently without
+/// cancelling an in-flight `read_exact`.
 pub trait PeerSession: Send + Sync {
     fn remote_node_id(&self) -> &str;
-    fn send_frame<'a>(&'a mut self, data: &'a [u8]) -> BoxFuture<'a, AppResult<()>>;
-    fn recv_frame<'a>(&'a mut self) -> BoxFuture<'a, AppResult<Vec<u8>>>;
-    fn close<'a>(&'a mut self) -> BoxFuture<'a, ()>;
+    fn send_frame<'a>(&'a self, data: &'a [u8]) -> BoxFuture<'a, AppResult<()>>;
+    fn recv_frame<'a>(&'a self) -> BoxFuture<'a, AppResult<Vec<u8>>>;
+    fn close<'a>(&'a self) -> BoxFuture<'a, ()>;
 }
 
 /// Network abstraction shielding the sync protocol from direct `iroh` types (Section 6.1).
@@ -38,7 +41,7 @@ pub trait Transport: Send + Sync {
 
     fn send_batch<'a>(
         &'a self,
-        session: &'a mut dyn PeerSession,
+        session: &'a dyn PeerSession,
         payload: &'a [u8],
     ) -> BoxFuture<'a, AppResult<()>> {
         Box::pin(async move {
@@ -55,7 +58,7 @@ pub trait Transport: Send + Sync {
 
     fn recv_batch<'a>(
         &'a self,
-        session: &'a mut dyn PeerSession,
+        session: &'a dyn PeerSession,
     ) -> BoxFuture<'a, AppResult<Vec<u8>>> {
         Box::pin(async move {
             let bytes = session.recv_frame().await?;
@@ -80,23 +83,23 @@ pub trait Transport: Send + Sync {
 pub struct ChannelPeerSession {
     remote_id: String,
     tx: mpsc::Sender<Vec<u8>>,
-    rx: mpsc::Receiver<Vec<u8>>,
+    rx: Mutex<mpsc::Receiver<Vec<u8>>>,
 }
 
 impl ChannelPeerSession {
     pub fn pair(node_a: String, node_b: String) -> (Self, Self) {
-        let (tx_a_to_b, rx_b_from_a) = mpsc::channel(64);
-        let (tx_b_to_a, rx_a_from_b) = mpsc::channel(64);
+        let (tx_a_to_b, rx_b_from_a) = mpsc::channel(256);
+        let (tx_b_to_a, rx_a_from_b) = mpsc::channel(256);
         (
             Self {
                 remote_id: node_b,
                 tx: tx_a_to_b,
-                rx: rx_a_from_b,
+                rx: Mutex::new(rx_a_from_b),
             },
             Self {
                 remote_id: node_a,
                 tx: tx_b_to_a,
-                rx: rx_b_from_a,
+                rx: Mutex::new(rx_b_from_a),
             },
         )
     }
@@ -107,7 +110,7 @@ impl PeerSession for ChannelPeerSession {
         &self.remote_id
     }
 
-    fn send_frame<'a>(&'a mut self, data: &'a [u8]) -> BoxFuture<'a, AppResult<()>> {
+    fn send_frame<'a>(&'a self, data: &'a [u8]) -> BoxFuture<'a, AppResult<()>> {
         Box::pin(async move {
             if data.len() > MAX_WIRE_FRAME_BYTES {
                 return Err(AppError::Validation("Frame exceeds maximum size".into()));
@@ -119,18 +122,20 @@ impl PeerSession for ChannelPeerSession {
         })
     }
 
-    fn recv_frame<'a>(&'a mut self) -> BoxFuture<'a, AppResult<Vec<u8>>> {
+    fn recv_frame<'a>(&'a self) -> BoxFuture<'a, AppResult<Vec<u8>>> {
         Box::pin(async move {
-            self.rx
+            let mut rx_guard = self.rx.lock().await;
+            rx_guard
                 .recv()
                 .await
                 .ok_or_else(|| AppError::Io(std::io::Error::from(std::io::ErrorKind::UnexpectedEof)))
         })
     }
 
-    fn close<'a>(&'a mut self) -> BoxFuture<'a, ()> {
+    fn close<'a>(&'a self) -> BoxFuture<'a, ()> {
         Box::pin(async move {
-            self.rx.close();
+            let mut rx_guard = self.rx.lock().await;
+            rx_guard.close();
         })
     }
 }
