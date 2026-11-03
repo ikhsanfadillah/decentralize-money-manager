@@ -237,8 +237,33 @@ export interface PeerInfo {
   node_id: string;
   device_id: string | null;
   last_seen_at: string | null;
+  device_name?: string | null;
+  custom_alias?: string | null;
   is_online?: boolean;
   is_preferred_hub?: boolean;
+}
+
+export interface DeviceIdentity {
+  device_id: string;
+  device_name: string;
+}
+
+export function resolvePeerDisplayName(peer: {
+  device_id?: string | null;
+  node_id: string;
+  device_name?: string | null;
+  custom_alias?: string | null;
+}): string {
+  if (peer.custom_alias && peer.custom_alias.trim()) {
+    return peer.custom_alias.trim();
+  }
+  if (peer.device_name && peer.device_name.trim()) {
+    return peer.device_name.trim();
+  }
+  if (peer.device_id && peer.device_id.trim()) {
+    return `Perangkat ${peer.device_id.slice(0, 8)}`;
+  }
+  return `Perangkat ${peer.node_id.slice(0, 8)}`;
 }
 
 export interface SyncTopologyInfo {
@@ -294,6 +319,7 @@ export interface AccountReconciliationItem {
 
 export interface DeviceContributionItem {
   device_id: string;
+  device_name?: string | null;
   tx_count: number;
   total_income: number;
   total_expense: number;
@@ -555,6 +581,19 @@ export const tauriApi = {
     }
     return callCommand("list_peers", { bookId });
   },
+
+  getDeviceIdentity: (bookId: string): Promise<DeviceIdentity> =>
+    callCommand("get_device_identity", { bookId }),
+
+  setDeviceName: (bookId: string, deviceName: string): Promise<DeviceIdentity> =>
+    callCommand("set_device_name", { bookId, deviceName }),
+
+  setPeerCustomAlias: (
+    bookId: string,
+    nodeId: string,
+    customAlias: string | null
+  ): Promise<void> =>
+    callCommand("set_peer_custom_alias", { bookId, nodeId, customAlias }),
 
   getSyncTopology: (bookId: string): Promise<SyncTopologyInfo> => {
     if (!isTauriRuntime()) {

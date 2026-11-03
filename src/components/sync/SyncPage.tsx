@@ -9,8 +9,11 @@ import {
   Info,
   Laptop,
   Network,
+  Pencil,
   RefreshCw,
+  RotateCcw,
   ShieldCheck,
+  X,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import {
@@ -18,7 +21,12 @@ import {
   useBookFinance,
   useBookSyncEvents,
 } from "../../hooks/useBookFinance";
-import { tauriApi, type InviteResponse } from "../../lib/tauri-api";
+import {
+  tauriApi,
+  resolvePeerDisplayName,
+  type InviteResponse,
+  type PeerInfo,
+} from "../../lib/tauri-api";
 import { pushToast } from "../../lib/toast";
 import {
   formatDateTime,
@@ -33,7 +41,55 @@ export interface SyncPageProps {
 export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
   const queryClient = useQueryClient();
   const syncStatus = useBookSyncEvents(bookId);
-  const { peersQuery } = useBookFinance({ bookId });
+  const { peersQuery, setPeerCustomAliasMutation } = useBookFinance({ bookId });
+
+  const [editingPeer, setEditingPeer] = React.useState<PeerInfo | null>(null);
+  const [customAliasInput, setCustomAliasInput] = React.useState("");
+
+  const handleOpenAliasModal = (peer: PeerInfo) => {
+    setEditingPeer(peer);
+    setCustomAliasInput(peer.custom_alias ?? "");
+  };
+
+  const handleSaveAlias = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPeer) return;
+    const trimmed = customAliasInput.trim();
+    try {
+      await setPeerCustomAliasMutation.mutateAsync({
+        nodeId: editingPeer.node_id,
+        customAlias: trimmed || null,
+      });
+      pushToast("Nama panggilan perangkat berhasil disimpan", {
+        variant: "success",
+      });
+      setEditingPeer(null);
+    } catch (err: unknown) {
+      pushToast(
+        err instanceof Error ? err.message : "Gagal menyimpan nama alias",
+        { variant: "error" }
+      );
+    }
+  };
+
+  const handleResetAlias = async () => {
+    if (!editingPeer) return;
+    try {
+      await setPeerCustomAliasMutation.mutateAsync({
+        nodeId: editingPeer.node_id,
+        customAlias: null,
+      });
+      pushToast("Nama perangkat dikembalikan ke nama bawaan", {
+        variant: "success",
+      });
+      setEditingPeer(null);
+    } catch (err: unknown) {
+      pushToast(
+        err instanceof Error ? err.message : "Gagal mereset alias",
+        { variant: "error" }
+      );
+    }
+  };
 
   const topologyQuery = useQuery({
     queryKey: bookQueryKeys.syncTopology(bookId),
@@ -363,9 +419,6 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
               <p className="mt-2 text-xs font-semibold text-foreground">
                 Belum ada perangkat terhubung
               </p>
-              <p className="mt-0.5 max-w-xs text-[11px] text-muted-foreground">
-                Gunakan kode undangan di samping untuk menghubungkan perangkat kedua (HP atau laptop lain).
-              </p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -381,11 +434,17 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
                     </div>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="truncate text-xs font-medium text-foreground">
-                          {peer.device_id
-                            ? peer.device_id.slice(0, 14)
-                            : `Perangkat ${peer.node_id.slice(0, 8)}`}
+                        <span className="truncate text-xs font-semibold text-foreground">
+                          {resolvePeerDisplayName(peer)}
                         </span>
+                        <span className="rounded border border-border bg-muted/40 px-1 py-0.2 font-mono text-[9px] text-muted-foreground">
+                          ID: {peer.device_id ? peer.device_id.slice(0, 8) : peer.node_id.slice(0, 8)}
+                        </span>
+                        {peer.custom_alias && (
+                          <span className="rounded bg-sky-500/10 px-1 py-0.2 text-[9px] font-semibold text-sky-600 dark:text-sky-400">
+                            Alias
+                          </span>
+                        )}
                         {peer.is_preferred_hub && (
                           <span className="rounded border border-primary/30 bg-primary/10 px-1.5 py-0.2 font-mono text-[9px] font-semibold text-primary">
                             HUB UTAMA
@@ -432,7 +491,18 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
                     </div>
                   </div>
 
-                  <div className="shrink-0">
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <button
+                      type="button"
+                      data-testid={`btn-edit-alias-${peer.node_id}`}
+                      onClick={() => handleOpenAliasModal(peer)}
+                      title="Ubah Nama Panggilan"
+                      className="nav-touch-item inline-flex h-6 w-6 items-center justify-center rounded border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                    >
+                      <Pencil className="h-3 w-3" />
+                      <span className="sr-only">Ubah Nama</span>
+                    </button>
+
                     {!peer.is_preferred_hub && (
                       <button
                         type="button"
@@ -448,6 +518,109 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Modal Edit Peer Custom Alias */}
+          {editingPeer && (
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="edit-peer-alias-title"
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-fade-in"
+            >
+              <div className="w-full max-w-sm rounded-lg border border-border bg-card p-4 shadow-xl">
+                <div className="flex items-center justify-between pb-2 border-b border-border">
+                  <h3
+                    id="edit-peer-alias-title"
+                    className="text-xs font-semibold text-foreground sm:text-sm flex items-center gap-1.5"
+                  >
+                    <Pencil className="h-4 w-4 text-primary" />
+                    <span>Ubah Nama Panggilan Perangkat</span>
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setEditingPeer(null)}
+                    className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSaveAlias} className="mt-3 space-y-3">
+                  <div className="rounded border border-border/60 bg-muted/20 p-2 text-[11px] space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">ID Perangkat:</span>
+                      <span className="font-mono font-medium text-foreground">
+                        {editingPeer.device_id || editingPeer.node_id.slice(0, 14)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Nama Asli:</span>
+                      <span className="font-medium text-foreground">
+                        {editingPeer.device_name || "Tidak disiarkan"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="input-peer-alias"
+                      className="block text-[11px] font-medium text-muted-foreground mb-1"
+                    >
+                      Nama Panggilan (Alias Lokal)
+                    </label>
+                    <input
+                      id="input-peer-alias"
+                      type="text"
+                      value={customAliasInput}
+                      onChange={(e) => setCustomAliasInput(e.target.value)}
+                      placeholder="Contoh: Mas Budi, Laptop Kasir Toko"
+                      maxLength={64}
+                      autoFocus
+                      className="w-full rounded border border-border bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-hidden"
+                    />
+                    <p className="mt-1 text-[10px] text-muted-foreground">
+                      Nama ini hanya disimpan di perangkat ini untuk memudahkan Anda mengenali perangkat tersebut.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-border">
+                    {editingPeer.custom_alias ? (
+                      <button
+                        type="button"
+                        onClick={handleResetAlias}
+                        disabled={setPeerCustomAliasMutation.isPending}
+                        className="inline-flex items-center gap-1 text-[11px] text-rose-500 hover:underline"
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                        <span>Kembalikan ke Asli</span>
+                      </button>
+                    ) : (
+                      <div />
+                    )}
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingPeer(null)}
+                        className="rounded border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
+                      >
+                        Batal
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={setPeerCustomAliasMutation.isPending}
+                        className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                      >
+                        {setPeerCustomAliasMutation.isPending
+                          ? "Menyimpan..."
+                          : "Simpan"}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </div>
             </div>
           )}
 

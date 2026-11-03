@@ -90,6 +90,7 @@ describe("MonthlyReportPage & Interactive Charts", () => {
     device_contributions: [
       {
         device_id: "dev-alpha",
+        device_name: "Laptop Budi",
         tx_count: 8,
         total_income: 13_000_000,
         total_expense: 3_500_000,
@@ -169,6 +170,7 @@ describe("MonthlyReportPage & Interactive Charts", () => {
     expect(
       screen.getByTestId("account-reconciliation-table")
     ).toHaveTextContent("Rp 14.500.000");
+    expect(screen.getByText("Laptop Budi")).toBeInTheDocument();
 
     // Switch cashflow chart to Cumulative Burn mode
     await user.click(

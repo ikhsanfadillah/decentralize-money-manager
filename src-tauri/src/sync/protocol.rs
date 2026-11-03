@@ -32,6 +32,8 @@ pub struct HelloMessage {
     pub preferred_hub_node_id: Option<String>,
     #[serde(default)]
     pub preferred_hub_hlc: Option<String>,
+    #[serde(default)]
+    pub device_name: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -48,6 +50,8 @@ pub struct ChallengeMessage {
     pub preferred_hub_node_id: Option<String>,
     #[serde(default)]
     pub preferred_hub_hlc: Option<String>,
+    #[serde(default)]
+    pub device_name: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -119,6 +123,17 @@ pub fn load_local_device_id(conn: &Connection) -> AppResult<String> {
         )
         .optional()?;
     Ok(dev_id.unwrap_or_else(|| "00000000".to_string()))
+}
+
+pub fn load_local_device_name(conn: &Connection) -> AppResult<String> {
+    let name_opt: Option<String> = conn
+        .query_row(
+            "SELECT value FROM meta WHERE key = 'device_name'",
+            [],
+            |r| r.get(0),
+        )
+        .optional()?;
+    Ok(name_opt.unwrap_or_else(crate::db::default_device_name))
 }
 
 pub fn load_preferred_hub(conn: &Connection) -> AppResult<(Option<String>, Option<String>)> {
@@ -247,6 +262,7 @@ pub fn upsert_peer_ticket(
     conn: &Connection,
     ticket: &NodeTicketAddr,
     device_id: Option<&str>,
+    device_name: Option<&str>,
     last_seen_at: Option<&str>,
 ) -> AppResult<()> {
     let trimmed_node = ticket.node_id.trim();
@@ -260,19 +276,21 @@ pub fn upsert_peer_ticket(
     };
 
     conn.execute(
-        "INSERT INTO sync_peers (node_id, device_id, last_seen_at, relay_url, direct_addrs_json)
-         VALUES (?1, ?2, ?3, ?4, ?5)
+        "INSERT INTO sync_peers (node_id, device_id, last_seen_at, relay_url, direct_addrs_json, device_name)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
          ON CONFLICT(node_id) DO UPDATE SET
             device_id = COALESCE(excluded.device_id, sync_peers.device_id),
             last_seen_at = COALESCE(excluded.last_seen_at, sync_peers.last_seen_at),
             relay_url = COALESCE(excluded.relay_url, sync_peers.relay_url),
-            direct_addrs_json = COALESCE(excluded.direct_addrs_json, sync_peers.direct_addrs_json)",
+            direct_addrs_json = COALESCE(excluded.direct_addrs_json, sync_peers.direct_addrs_json),
+            device_name = COALESCE(excluded.device_name, sync_peers.device_name)",
         params![
             trimmed_node,
             device_id,
             last_seen_at,
             ticket.relay_url,
-            direct_json
+            direct_json,
+            device_name,
         ],
     )?;
     Ok(())
@@ -282,6 +300,7 @@ pub fn record_authenticated_peer(
     conn: &Connection,
     remote_node_id: &str,
     remote_device_id: &str,
+    remote_device_name: Option<&str>,
     remote_sender_addr: Option<&NodeTicketAddr>,
     gossip_peers: &[String],
     gossip_peer_addrs: &[NodeTicketAddr],
@@ -295,12 +314,12 @@ pub fn record_authenticated_peer(
             relay_url: None,
             direct_addrs: Vec::new(),
         });
-    upsert_peer_ticket(conn, &primary_ticket, Some(remote_device_id), Some(&now))?;
+    upsert_peer_ticket(conn, &primary_ticket, Some(remote_device_id), remote_device_name, Some(&now))?;
 
     for addr in gossip_peer_addrs.iter().take(64) {
         let trimmed = addr.node_id.trim();
         if !trimmed.is_empty() && trimmed != local_node_id && trimmed != remote_node_id {
-            upsert_peer_ticket(conn, addr, None, None)?;
+            upsert_peer_ticket(conn, addr, None, None, None)?;
         }
     }
 
@@ -312,7 +331,7 @@ pub fn record_authenticated_peer(
                 relay_url: None,
                 direct_addrs: Vec::new(),
             };
-            upsert_peer_ticket(conn, &fallback, None, None)?;
+            upsert_peer_ticket(conn, &fallback, None, None, None)?;
         }
     }
     Ok(())
@@ -586,17 +605,18 @@ pub async fn run_initiator_sync(
     let local_node_id = local_ticket.node_id.clone();
     let remote_node_id = session.remote_node_id().to_string();
 
-    let (local_device_id, known_peer_addrs, local_frontier, pref_hub, pref_hub_hlc) = {
+    let (local_device_id, local_device_name, known_peer_addrs, local_frontier, pref_hub, pref_hub_hlc) = {
         let conn_arc = Arc::clone(&book_conn);
         tokio::task::spawn_blocking(move || -> AppResult<_> {
             let guard = conn_arc
                 .lock()
                 .map_err(|_| AppError::Internal("Book DB mutex poisoned".into()))?;
             let dev = load_local_device_id(&guard)?;
+            let dev_name = load_local_device_name(&guard)?;
             let peers = load_known_peer_tickets(&guard)?;
             let frontier = compute_local_frontier(&guard)?;
             let (hub, hub_hlc) = load_preferred_hub(&guard)?;
-            Ok((dev, peers, frontier, hub, hub_hlc))
+            Ok((dev, dev_name, peers, frontier, hub, hub_hlc))
         })
         .await
         .map_err(|e| AppError::TaskJoin(e.to_string()))??
@@ -615,6 +635,7 @@ pub async fn run_initiator_sync(
         known_peer_addrs,
         preferred_hub_node_id: pref_hub,
         preferred_hub_hlc: pref_hub_hlc,
+        device_name: Some(local_device_name),
     };
     let hello_bytes = postcard::to_allocvec(&hello)
         .map_err(|e| AppError::Crypto(format!("Hello encode error: {}", e)))?;
@@ -657,6 +678,7 @@ pub async fn run_initiator_sync(
         let conn_arc = Arc::clone(&book_conn);
         let r_node = remote_node_id.clone();
         let r_dev = challenge.device_id.clone();
+        let r_name = challenge.device_name.clone();
         let r_addr = challenge.sender_addr.clone();
         let gossip = challenge.known_peers.clone();
         let gossip_addrs = challenge.known_peer_addrs.clone();
@@ -671,6 +693,7 @@ pub async fn run_initiator_sync(
                 &guard,
                 &r_node,
                 &r_dev,
+                r_name.as_deref(),
                 r_addr.as_ref(),
                 &gossip,
                 &gossip_addrs,
@@ -774,17 +797,18 @@ where
         }
     };
 
-    let (local_device_id, known_peer_addrs, local_frontier, pref_hub, pref_hub_hlc) = {
+    let (local_device_id, local_device_name, known_peer_addrs, local_frontier, pref_hub, pref_hub_hlc) = {
         let conn_arc = Arc::clone(&book_conn);
         tokio::task::spawn_blocking(move || -> AppResult<_> {
             let guard = conn_arc
                 .lock()
                 .map_err(|_| AppError::Internal("Book DB mutex poisoned".into()))?;
             let dev = load_local_device_id(&guard)?;
+            let dev_name = load_local_device_name(&guard)?;
             let peers = load_known_peer_tickets(&guard)?;
             let frontier = compute_local_frontier(&guard)?;
             let (hub, hub_hlc) = load_preferred_hub(&guard)?;
-            Ok((dev, peers, frontier, hub, hub_hlc))
+            Ok((dev, dev_name, peers, frontier, hub, hub_hlc))
         })
         .await
         .map_err(|e| AppError::TaskJoin(e.to_string()))??
@@ -812,6 +836,7 @@ where
         known_peer_addrs,
         preferred_hub_node_id: pref_hub,
         preferred_hub_hlc: pref_hub_hlc,
+        device_name: Some(local_device_name),
     };
     let challenge_bytes = postcard::to_allocvec(&challenge)
         .map_err(|e| AppError::Crypto(format!("Challenge encode error: {}", e)))?;
@@ -851,6 +876,7 @@ where
         let conn_arc = Arc::clone(&book_conn);
         let r_node = remote_node_id.clone();
         let r_dev = hello.device_id.clone();
+        let r_name = hello.device_name.clone();
         let r_addr = hello.sender_addr.clone();
         let gossip = hello.known_peers.clone();
         let gossip_addrs = hello.known_peer_addrs.clone();
@@ -865,6 +891,7 @@ where
                 &guard,
                 &r_node,
                 &r_dev,
+                r_name.as_deref(),
                 r_addr.as_ref(),
                 &gossip,
                 &gossip_addrs,

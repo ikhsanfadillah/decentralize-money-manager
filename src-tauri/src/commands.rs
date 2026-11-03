@@ -207,10 +207,18 @@ pub struct PeerInfo {
     pub node_id: String,
     pub device_id: Option<String>,
     pub last_seen_at: Option<String>,
+    pub device_name: Option<String>,
+    pub custom_alias: Option<String>,
     #[serde(default)]
     pub is_online: bool,
     #[serde(default)]
     pub is_preferred_hub: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct DeviceIdentity {
+    pub device_id: String,
+    pub device_name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -267,6 +275,8 @@ pub struct DeviceContributionItem {
     pub total_income: i64,
     pub total_expense: i64,
     pub share_bps: i64,
+    #[serde(default)]
+    pub device_name: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -1933,17 +1943,48 @@ pub fn get_monthly_report_in_conn(
     });
 
     // 5. Device Contributions
+    let local_dev_id: Option<String> = conn
+        .query_row("SELECT value FROM meta WHERE key = 'device_id'", [], |r| r.get(0))
+        .optional()
+        .unwrap_or(None);
+    let local_dev_name: Option<String> = conn
+        .query_row("SELECT value FROM meta WHERE key = 'device_name'", [], |r| r.get(0))
+        .optional()
+        .unwrap_or(None);
+
+    let mut peer_name_map: HashMap<String, String> = HashMap::new();
+    if let Ok(mut stmt) = conn.prepare("SELECT device_id, device_name, custom_alias FROM sync_peers WHERE device_id IS NOT NULL") {
+        if let Ok(rows) = stmt.query_map([], |r| {
+            let dev_id: String = r.get(0)?;
+            let dev_name: Option<String> = r.get(1)?;
+            let custom_alias: Option<String> = r.get(2)?;
+            Ok((dev_id, custom_alias.or(dev_name)))
+        }) {
+            for row in rows.flatten() {
+                if let (dev_id, Some(name)) = row {
+                    peer_name_map.insert(dev_id, name);
+                }
+            }
+        }
+    }
+
     let total_dev_tx = tx_count.max(1) as i128;
     let mut device_contributions: Vec<DeviceContributionItem> = device_map
         .into_iter()
         .map(|(device_id, (cnt, inc, exp))| {
             let share_bps = i64::try_from((cnt as i128) * 10_000 / total_dev_tx).unwrap_or(0);
+            let resolved_name = if Some(&device_id) == local_dev_id.as_ref() {
+                local_dev_name.clone()
+            } else {
+                peer_name_map.get(&device_id).cloned()
+            };
             DeviceContributionItem {
                 device_id,
                 tx_count: cnt,
                 total_income: inc,
                 total_expense: exp,
                 share_bps,
+                device_name: resolved_name,
             }
         })
         .collect();
@@ -2874,18 +2915,22 @@ pub async fn list_peers(
         .with_book(&valid_id, move |conn| {
             let (pref_hub, _) = crate::sync::protocol::load_preferred_hub(conn)?;
             let mut stmt = conn.prepare(
-                "SELECT node_id, device_id, last_seen_at FROM sync_peers ORDER BY last_seen_at DESC",
+                "SELECT node_id, device_id, last_seen_at, device_name, custom_alias FROM sync_peers ORDER BY last_seen_at DESC",
             )?;
             let rows = stmt.query_map([], |r| {
                 let node_id: String = r.get(0)?;
                 let device_id: Option<String> = r.get(1)?;
                 let last_seen_at: Option<String> = r.get(2)?;
+                let device_name: Option<String> = r.get(3)?;
+                let custom_alias: Option<String> = r.get(4)?;
                 let is_online = online_ids.contains(&node_id);
                 let is_preferred_hub = pref_hub.as_deref() == Some(node_id.as_str());
                 Ok(PeerInfo {
                     node_id,
                     device_id,
                     last_seen_at,
+                    device_name,
+                    custom_alias,
                     is_online,
                     is_preferred_hub,
                 })
@@ -2895,6 +2940,106 @@ pub async fn list_peers(
                 out.push(r?);
             }
             Ok(out)
+        })
+        .await
+}
+
+#[tauri::command]
+pub async fn get_device_identity(
+    state: State<'_, AppState>,
+    book_id: String,
+) -> AppResult<DeviceIdentity> {
+    let valid_id = validate_book_id(&book_id)?;
+    state
+        .with_book(&valid_id, |conn| {
+            let device_id: String = conn
+                .query_row(
+                    "SELECT value FROM meta WHERE key = 'device_id'",
+                    [],
+                    |r| r.get(0),
+                )
+                .unwrap_or_else(|_| "00000000".to_string());
+            let device_name: String = conn
+                .query_row(
+                    "SELECT value FROM meta WHERE key = 'device_name'",
+                    [],
+                    |r| r.get(0),
+                )
+                .unwrap_or_else(|_| crate::db::default_device_name());
+            Ok(DeviceIdentity {
+                device_id,
+                device_name,
+            })
+        })
+        .await
+}
+
+#[tauri::command]
+pub async fn set_device_name(
+    state: State<'_, AppState>,
+    book_id: String,
+    device_name: String,
+) -> AppResult<DeviceIdentity> {
+    let valid_id = validate_book_id(&book_id)?;
+    let trimmed = device_name.trim();
+    if trimmed.is_empty() {
+        return Err(AppError::Validation("Nama perangkat tidak boleh kosong".into()));
+    }
+    if trimmed.chars().count() > 64 {
+        return Err(AppError::Validation("Nama perangkat maksimal 64 karakter".into()));
+    }
+    let sanitized_name = trimmed.to_string();
+    state
+        .with_book(&valid_id, move |conn| {
+            conn.execute(
+                "INSERT INTO meta (key, value) VALUES ('device_name', ?1)
+                 ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                params![sanitized_name],
+            )?;
+            let device_id: String = conn
+                .query_row(
+                    "SELECT value FROM meta WHERE key = 'device_id'",
+                    [],
+                    |r| r.get(0),
+                )
+                .unwrap_or_else(|_| "00000000".to_string());
+            Ok(DeviceIdentity {
+                device_id,
+                device_name: sanitized_name,
+            })
+        })
+        .await
+}
+
+#[tauri::command]
+pub async fn set_peer_custom_alias(
+    state: State<'_, AppState>,
+    book_id: String,
+    node_id: String,
+    custom_alias: Option<String>,
+) -> AppResult<()> {
+    let valid_id = validate_book_id(&book_id)?;
+    let trimmed_node = node_id.trim().to_string();
+    let sanitized_alias = match custom_alias {
+        Some(a) => {
+            let t = a.trim();
+            if t.is_empty() {
+                None
+            } else if t.chars().count() > 64 {
+                return Err(AppError::Validation("Nama alias maksimal 64 karakter".into()));
+            } else {
+                Some(t.to_string())
+            }
+        }
+        None => None,
+    };
+    state
+        .with_book(&valid_id, move |conn| {
+            conn.execute(
+                "UPDATE sync_peers SET custom_alias = ?1 WHERE node_id = ?2",
+                params![sanitized_alias, trimmed_node],
+            )?;
+            Ok(())
         })
         .await
 }
@@ -2959,6 +3104,71 @@ mod tests {
     use super::*;
     use crate::crdt::{merge_remote_oplog, CrdtEnvelope, CrdtOp};
     use crate::db::open_in_memory_book;
+
+    #[test]
+    fn test_device_labeling_and_peer_alias() {
+        let conn =
+            open_in_memory_book("00000000-0000-7000-8000-000000000200", "DeviceTestBook").unwrap();
+
+        // 1. Verify default device_name in meta
+        let initial_name: String = conn
+            .query_row("SELECT value FROM meta WHERE key = 'device_name'", [], |r| r.get(0))
+            .unwrap();
+        assert!(!initial_name.is_empty());
+
+        // 2. Update device_name in meta
+        conn.execute(
+            "INSERT INTO meta (key, value) VALUES ('device_name', ?1)
+             ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            params!["Laptop Kantor Budi"],
+        )
+        .unwrap();
+        let updated_name: String = conn
+            .query_row("SELECT value FROM meta WHERE key = 'device_name'", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(updated_name, "Laptop Kantor Budi");
+
+        // 3. Insert a peer with broadcasted device_name
+        let ticket = crate::sync::transport::NodeTicketAddr {
+            node_id: "node_peer_123".into(),
+            relay_url: None,
+            direct_addrs: vec![],
+        };
+        crate::sync::protocol::upsert_peer_ticket(
+            &conn,
+            &ticket,
+            Some("dev_05817910"),
+            Some("HP Xiaomi Toko"),
+            Some("2026-11-03T10:00:00Z"),
+        )
+        .unwrap();
+
+        let (dev_name, alias): (Option<String>, Option<String>) = conn
+            .query_row(
+                "SELECT device_name, custom_alias FROM sync_peers WHERE node_id = 'node_peer_123'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(dev_name.as_deref(), Some("HP Xiaomi Toko"));
+        assert_eq!(alias, None);
+
+        // 4. Update custom_alias
+        conn.execute(
+            "UPDATE sync_peers SET custom_alias = ?1 WHERE node_id = ?2",
+            params!["Mas Budi HP", "node_peer_123"],
+        )
+        .unwrap();
+
+        let alias2: Option<String> = conn
+            .query_row(
+                "SELECT custom_alias FROM sync_peers WHERE node_id = 'node_peer_123'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(alias2.as_deref(), Some("Mas Budi HP"));
+    }
 
     #[test]
     fn test_add_transaction_atomicity_on_failure() {

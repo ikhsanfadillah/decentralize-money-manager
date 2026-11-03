@@ -631,9 +631,14 @@ mk
                 className="tabular-grid-cell space-y-1.5 px-4 py-3 text-xs"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="truncate font-semibold text-foreground">
-                    Perangkat {dev.device_id}
-                  </span>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="truncate font-semibold text-foreground">
+                      {dev.device_name || `Perangkat ${dev.device_id}`}
+                    </span>
+                    <span className="rounded border border-border bg-muted/40 px-1 py-0.2 font-mono text-[9px] text-muted-foreground shrink-0">
+                      ID: {dev.device_id.slice(0, 8)}
+                    </span>
+                  </div>
                   <span className="shrink-0 font-mono text-[11px] font-medium text-primary">
                     {dev.tx_count} transaksi ({formatPercent(dev.share_bps / 100, 0)})
                   </span>

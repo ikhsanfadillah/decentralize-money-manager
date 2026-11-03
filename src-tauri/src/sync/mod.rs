@@ -1069,7 +1069,7 @@ impl SyncEngine {
                 let guard = conn_arc
                     .lock()
                     .map_err(|_| AppError::Internal("Book DB mutex poisoned".into()))?;
-                upsert_peer_ticket(&guard, &ticket_clone, None, None)?;
+                upsert_peer_ticket(&guard, &ticket_clone, None, None, None)?;
                 Ok(())
             })
             .await
@@ -1274,6 +1274,7 @@ mod tests {
 
         // Both Spoke A and Spoke B should now have an active persistent session with Hub H,
         // and both should have learned preferred_hub_node_id == "node-h" via handshake!
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
         assert_eq!(state_a.sync.active_peer_count(&book_id).await, 1);
         assert_eq!(state_b.sync.active_peer_count(&book_id).await, 1);
         assert_eq!(state_h.sync.active_peer_count(&book_id).await, 2);

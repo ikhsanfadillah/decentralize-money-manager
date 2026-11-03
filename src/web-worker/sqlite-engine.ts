@@ -366,7 +366,9 @@ export class WebSqliteEngine {
               device_id TEXT,
               last_seen_at TEXT,
               relay_url TEXT,
-              direct_addrs_json TEXT
+              direct_addrs_json TEXT,
+              device_name TEXT,
+              custom_alias TEXT
           );
 
           CREATE INDEX IF NOT EXISTS idx_transactions_tx_date ON transactions(tx_date DESC);
@@ -393,6 +395,16 @@ export class WebSqliteEngine {
       } catch {
         // Column already exists
       }
+      try {
+        tx.exec("ALTER TABLE sync_peers ADD COLUMN device_name TEXT");
+      } catch {
+        // Column already exists
+      }
+      try {
+        tx.exec("ALTER TABLE sync_peers ADD COLUMN custom_alias TEXT");
+      } catch {
+        // Column already exists
+      }
 
       tx.exec({
         sql: "INSERT OR IGNORE INTO meta (key, value) VALUES ('book_id', ?1)",
@@ -403,6 +415,29 @@ export class WebSqliteEngine {
               ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
         bind: [bookName],
       });
+
+      let deviceName = tx.selectValue(
+        "SELECT value FROM meta WHERE key = 'device_name'"
+      ) as string | undefined;
+
+      if (!deviceName) {
+        deviceName =
+          typeof navigator !== "undefined" && /android/i.test(navigator.userAgent)
+            ? "Android Phone"
+            : typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent)
+            ? "iPhone"
+            : typeof navigator !== "undefined" && /macintosh|mac os x/i.test(navigator.userAgent)
+            ? "Mac"
+            : typeof navigator !== "undefined" && /windows/i.test(navigator.userAgent)
+            ? "Windows PC"
+            : typeof navigator !== "undefined" && /linux/i.test(navigator.userAgent)
+            ? "Linux PC"
+            : "Web Browser";
+        tx.exec({
+          sql: "INSERT INTO meta (key, value) VALUES ('device_name', ?1)",
+          bind: [deviceName],
+        });
+      }
 
       let deviceId = tx.selectValue(
         "SELECT value FROM meta WHERE key = 'device_id'"
@@ -2727,15 +2762,33 @@ export class WebSqliteEngine {
 
     // 5. Device Contributions
     const totalDevTx = Math.max(1, txCount);
+    const localDevId = (db.selectValue("SELECT value FROM meta WHERE key = 'device_id'") as string) || null;
+    const localDevName = (db.selectValue("SELECT value FROM meta WHERE key = 'device_name'") as string) || null;
+    const peerNameRows = db.selectArrays(
+      "SELECT device_id, device_name, custom_alias FROM sync_peers WHERE device_id IS NOT NULL"
+    );
+    const peerNameMap = new Map<string, string>();
+    for (const r of peerNameRows) {
+      const devId = String(r[0]);
+      const aliasOrName = r[2] !== null ? String(r[2]) : r[1] !== null ? String(r[1]) : null;
+      if (aliasOrName) {
+        peerNameMap.set(devId, aliasOrName);
+      }
+    }
+
     const deviceContributions: DeviceContributionItem[] = Array.from(
       deviceMap.entries()
-    ).map(([deviceId, stats]) => ({
-      device_id: deviceId,
-      tx_count: stats.txCount,
-      total_income: stats.income,
-      total_expense: stats.expense,
-      share_bps: Math.trunc((stats.txCount * 10_000) / totalDevTx),
-    }));
+    ).map(([deviceId, stats]) => {
+      const resolvedName = deviceId === localDevId ? localDevName : peerNameMap.get(deviceId) || null;
+      return {
+        device_id: deviceId,
+        device_name: resolvedName,
+        tx_count: stats.txCount,
+        total_income: stats.income,
+        total_expense: stats.expense,
+        share_bps: Math.trunc((stats.txCount * 10_000) / totalDevTx),
+      };
+    });
     deviceContributions.sort(
       (a, b) =>
         b.tx_count - a.tx_count || a.device_id.localeCompare(b.device_id)
@@ -2998,33 +3051,88 @@ export class WebSqliteEngine {
     bookId: string;
     nodeId: string;
     deviceId?: string | null;
+    deviceName?: string | null;
   }): Promise<void> {
     await this.init();
     const validId = validateBookId(args.bookId);
     await this.withBookWrite(validId, (writeDb) => {
       writeDb.exec({
-        sql: `INSERT INTO sync_peers (node_id, device_id, last_seen_at)
-              VALUES (?1, ?2, ?3)
+        sql: `INSERT INTO sync_peers (node_id, device_id, last_seen_at, device_name)
+              VALUES (?1, ?2, ?3, ?4)
               ON CONFLICT(node_id) DO UPDATE SET
                  device_id = COALESCE(excluded.device_id, sync_peers.device_id),
-                 last_seen_at = excluded.last_seen_at`,
-        bind: [args.nodeId, args.deviceId ?? null, nowIso8601()],
+                 last_seen_at = excluded.last_seen_at,
+                 device_name = COALESCE(excluded.device_name, sync_peers.device_name)`,
+        bind: [args.nodeId, args.deviceId ?? null, nowIso8601(), args.deviceName ?? null],
       });
     });
   }
 
-  async getSyncPeers(bookId: string): Promise<Array<{ node_id: string; device_id: string | null; last_seen_at: string | null }>> {
+  async getSyncPeers(bookId: string): Promise<Array<{
+    node_id: string;
+    device_id: string | null;
+    last_seen_at: string | null;
+    device_name: string | null;
+    custom_alias: string | null;
+  }>> {
     await this.init();
     const validId = validateBookId(bookId);
     const db = await this.getOrOpenBook(validId);
     const rows = db.selectArrays(
-      "SELECT node_id, device_id, last_seen_at FROM sync_peers ORDER BY last_seen_at DESC",
+      "SELECT node_id, device_id, last_seen_at, device_name, custom_alias FROM sync_peers ORDER BY last_seen_at DESC",
     );
     return rows.map((r) => ({
       node_id: String(r[0]),
       device_id: r[1] !== null ? String(r[1]) : null,
       last_seen_at: r[2] !== null ? String(r[2]) : null,
+      device_name: r[3] !== null ? String(r[3]) : null,
+      custom_alias: r[4] !== null ? String(r[4]) : null,
     }));
+  }
+
+  async getDeviceIdentity(bookId: string): Promise<{ device_id: string; device_name: string }> {
+    await this.init();
+    const validId = validateBookId(bookId);
+    const db = await this.getOrOpenBook(validId);
+    const deviceId = (db.selectValue("SELECT value FROM meta WHERE key = 'device_id'") as string) || "00000000";
+    const deviceName = (db.selectValue("SELECT value FROM meta WHERE key = 'device_name'") as string) || "Perangkat Ini";
+    return { device_id: deviceId, device_name: deviceName };
+  }
+
+  async setDeviceName(bookId: string, deviceName: string): Promise<{ device_id: string; device_name: string }> {
+    await this.init();
+    const validId = validateBookId(bookId);
+    const trimmed = deviceName.trim();
+    if (!trimmed) {
+      throw new TauriCommandError("VALIDATION_ERROR", "Nama perangkat tidak boleh kosong");
+    }
+    if (trimmed.length > 64) {
+      throw new TauriCommandError("VALIDATION_ERROR", "Nama perangkat maksimal 64 karakter");
+    }
+    await this.withBookWrite(validId, (writeDb) => {
+      writeDb.exec({
+        sql: `INSERT INTO meta (key, value) VALUES ('device_name', ?1)
+              ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+        bind: [trimmed],
+      });
+    });
+    return this.getDeviceIdentity(validId);
+  }
+
+  async setPeerCustomAlias(bookId: string, nodeId: string, customAlias: string | null): Promise<void> {
+    await this.init();
+    const validId = validateBookId(bookId);
+    const trimmedNode = nodeId.trim();
+    const sanitizedAlias = customAlias?.trim() ? customAlias.trim() : null;
+    if (sanitizedAlias && sanitizedAlias.length > 64) {
+      throw new TauriCommandError("VALIDATION_ERROR", "Nama alias maksimal 64 karakter");
+    }
+    await this.withBookWrite(validId, (writeDb) => {
+      writeDb.exec({
+        sql: "UPDATE sync_peers SET custom_alias = ?1 WHERE node_id = ?2",
+        bind: [sanitizedAlias, trimmedNode],
+      });
+    });
   }
 
   async getLocalNodeId(): Promise<string> {
@@ -3165,6 +3273,19 @@ export class WebSqliteEngine {
         );
       case "list_peers":
         return this.listPeers(String(args.bookId ?? args.book_id ?? ""));
+      case "get_device_identity":
+        return this.getDeviceIdentity(String(args.bookId ?? args.book_id ?? ""));
+      case "set_device_name":
+        return this.setDeviceName(
+          String(args.bookId ?? args.book_id ?? ""),
+          String(args.deviceName ?? args.device_name ?? "")
+        );
+      case "set_peer_custom_alias":
+        return this.setPeerCustomAlias(
+          String(args.bookId ?? args.book_id ?? ""),
+          String(args.nodeId ?? args.node_id ?? ""),
+          (args.customAlias ?? args.custom_alias ?? null) as string | null
+        );
       case "get_sync_topology":
         return this.getSyncTopology(String(args.bookId ?? args.book_id ?? ""));
       case "set_preferred_hub":

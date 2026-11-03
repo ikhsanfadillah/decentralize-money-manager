@@ -40,6 +40,8 @@ export const bookQueryKeys = {
   monthlyReport: (bookId: string, month: string) =>
     ["books", bookId, "monthlyReport", month] as const,
   peers: (bookId: string) => ["books", bookId, "peers"] as const,
+  deviceIdentity: (bookId: string) =>
+    ["books", bookId, "deviceIdentity"] as const,
   syncStatus: (bookId: string) => ["books", bookId, "syncStatus"] as const,
   syncTopology: (bookId: string) => ["books", bookId, "syncTopology"] as const,
 };
@@ -263,6 +265,41 @@ export function useBookFinance({
     enabled: Boolean(bookId),
   });
 
+  const deviceIdentityQuery = useQuery({
+    queryKey: bookQueryKeys.deviceIdentity(bookId),
+    queryFn: () => tauriApi.getDeviceIdentity(bookId),
+    enabled: Boolean(bookId),
+  });
+
+  const setDeviceNameMutation = useMutation({
+    mutationFn: (deviceName: string) =>
+      tauriApi.setDeviceName(bookId, deviceName),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(bookQueryKeys.deviceIdentity(bookId), updated);
+      void queryClient.invalidateQueries({
+        queryKey: bookQueryKeys.monthlyReportsAll(bookId),
+      });
+    },
+  });
+
+  const setPeerCustomAliasMutation = useMutation({
+    mutationFn: ({
+      nodeId,
+      customAlias,
+    }: {
+      nodeId: string;
+      customAlias: string | null;
+    }) => tauriApi.setPeerCustomAlias(bookId, nodeId, customAlias),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: bookQueryKeys.peers(bookId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: bookQueryKeys.monthlyReportsAll(bookId),
+      });
+    },
+  });
+
   const invalidateBookFinancials = (targetBookId: string) => {
     void queryClient.invalidateQueries({
       queryKey: bookQueryKeys.accounts(targetBookId),
@@ -384,6 +421,9 @@ export function useBookFinance({
     budgetProgressQuery,
     monthlyReportQuery,
     peersQuery,
+    deviceIdentityQuery,
+    setDeviceNameMutation,
+    setPeerCustomAliasMutation,
     upsertAccountMutation,
     deleteAccountMutation,
     mergeAccountsMutation,

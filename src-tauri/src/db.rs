@@ -61,6 +61,39 @@ pub fn generate_device_id() -> String {
     hex::encode(bytes)
 }
 
+pub fn default_device_name() -> String {
+    #[cfg(target_os = "windows")]
+    {
+        "Windows PC".to_string()
+    }
+    #[cfg(target_os = "macos")]
+    {
+        "Mac".to_string()
+    }
+    #[cfg(target_os = "android")]
+    {
+        "Android Phone".to_string()
+    }
+    #[cfg(target_os = "ios")]
+    {
+        "iPhone".to_string()
+    }
+    #[cfg(target_os = "linux")]
+    {
+        "Linux PC".to_string()
+    }
+    #[cfg(not(any(
+        target_os = "windows",
+        target_os = "macos",
+        target_os = "android",
+        target_os = "ios",
+        target_os = "linux"
+    )))]
+    {
+        "Perangkat Ini".to_string()
+    }
+}
+
 pub fn now_iso8601() -> String {
     chrono::Utc::now().to_rfc3339()
 }
@@ -165,7 +198,9 @@ pub fn init_book_db(
                 device_id TEXT,
                 last_seen_at TEXT,
                 relay_url TEXT,
-                direct_addrs_json TEXT
+                direct_addrs_json TEXT,
+                device_name TEXT,
+                custom_alias TEXT
             );
 
             CREATE INDEX IF NOT EXISTS idx_transactions_tx_date ON transactions(tx_date DESC);
@@ -182,9 +217,11 @@ pub fn init_book_db(
     }
 
     let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
-    // Ensure existing v1 databases also have relay_url and direct_addrs_json on sync_peers
+    // Ensure existing v1 databases also have relay_url, direct_addrs_json, device_name, and custom_alias on sync_peers
     let _ = tx.execute("ALTER TABLE sync_peers ADD COLUMN relay_url TEXT", []);
     let _ = tx.execute("ALTER TABLE sync_peers ADD COLUMN direct_addrs_json TEXT", []);
+    let _ = tx.execute("ALTER TABLE sync_peers ADD COLUMN device_name TEXT", []);
+    let _ = tx.execute("ALTER TABLE sync_peers ADD COLUMN custom_alias TEXT", []);
     tx.execute(
         "INSERT OR IGNORE INTO meta (key, value) VALUES ('book_id', ?1)",
         params![book_id],
@@ -194,6 +231,22 @@ pub fn init_book_db(
          ON CONFLICT(key) DO UPDATE SET value = excluded.value",
         params![book_name],
     )?;
+
+    let existing_device_name: Option<String> = tx
+        .query_row(
+            "SELECT value FROM meta WHERE key = 'device_name'",
+            [],
+            |row| row.get(0),
+        )
+        .optional()?;
+
+    if existing_device_name.is_none() {
+        let default_name = default_device_name();
+        tx.execute(
+            "INSERT INTO meta (key, value) VALUES ('device_name', ?1)",
+            params![default_name],
+        )?;
+    }
 
     let existing_device_id: Option<String> = tx
         .query_row(

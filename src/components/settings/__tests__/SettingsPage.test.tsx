@@ -12,6 +12,10 @@ describe("Settings, Sync, and Backup Pages", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.spyOn(tauriApi, "listPeers").mockResolvedValue([]);
+    vi.spyOn(tauriApi, "getDeviceIdentity").mockResolvedValue({
+      device_id: "dev-01",
+      device_name: "Windows PC",
+    });
     vi.spyOn(tauriApi, "listAccounts").mockResolvedValue([]);
     vi.spyOn(tauriApi, "getAccountBalances").mockResolvedValue([]);
     vi.spyOn(tauriApi, "listCategories").mockResolvedValue([]);
@@ -50,6 +54,34 @@ describe("Settings, Sync, and Backup Pages", () => {
     expect(screen.getByText("Manajemen Akun Keuangan")).toBeInTheDocument();
     expect(screen.getByText("Kategori Transaksi")).toBeInTheDocument();
     expect(screen.getByText("Anggaran Bulanan")).toBeInTheDocument();
+    expect(screen.getByTestId("local-device-name")).toBeInTheDocument();
+    expect(screen.getByTestId("btn-edit-device-name")).toBeInTheDocument();
+  });
+
+  it("renders SyncPage with connected peer label and opens edit alias dialog", async () => {
+    vi.spyOn(tauriApi, "listPeers").mockResolvedValue([
+      {
+        node_id: "node-alpha-123456",
+        device_id: "dev-05817910",
+        last_seen_at: new Date().toISOString(),
+        device_name: "Laptop Kantor Budi",
+        custom_alias: null,
+        is_online: true,
+        is_preferred_hub: false,
+      },
+    ]);
+
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <SyncPage bookId={bookId} />
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText("Laptop Kantor Budi")).toBeInTheDocument();
+    expect(screen.getByText("ID: dev-0581")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("btn-edit-alias-node-alpha-123456")
+    ).toBeInTheDocument();
   });
 
   it("renders SyncPage as an independent page for P2P synchronization", () => {

@@ -717,7 +717,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
         {/* Row 2: Date, Account, Device */}
         <div className="mt-0.5 flex items-center justify-between gap-2 pl-3">
           <p
-            title={`Tanggal: ${tx.tx_date} · Rekening: ${accountDisplay}`}
+            title={`Tanggal: ${tx.tx_date} · Rekening: ${accountDisplay} · Dibuat oleh perangkat ID: ${tx.created_by_device.slice(0, 8)}`}
             className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground"
           >
             <span className="font-mono">

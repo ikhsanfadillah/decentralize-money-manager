@@ -582,7 +582,13 @@ export class WebSyncEngine {
   async listPeers(bookId: string): Promise<PeerInfo[]> {
     const validId = validateBookId(bookId);
     const peers = await callWebWorkerCommand<
-      Array<{ node_id: string; device_id: string | null; last_seen_at: string | null }>
+      Array<{
+        node_id: string;
+        device_id: string | null;
+        last_seen_at: string | null;
+        device_name: string | null;
+        custom_alias: string | null;
+      }>
     >("get_sync_peers", { bookId: validId });
     const meta = await callWebWorkerCommand<{ preferredHubNodeId: string | null }>(
       "get_sync_meta",
@@ -594,6 +600,8 @@ export class WebSyncEngine {
       node_id: p.node_id,
       device_id: p.device_id,
       last_seen_at: p.last_seen_at,
+      device_name: p.device_name,
+      custom_alias: p.custom_alias,
       is_online: Boolean(activeMap?.has(p.node_id)),
       is_preferred_hub: meta.preferredHubNodeId === p.node_id,
     }));

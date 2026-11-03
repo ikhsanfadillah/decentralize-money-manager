@@ -189,13 +189,23 @@ export const BookSwitcherPage: React.FC = () => {
                 Pilih buku untuk mulai mencatat keuangan
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setIsCreateBookDrawerOpen(true)}
-              className="nav-touch-item rounded border border-border bg-background px-2.5 py-1 text-[11px] font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-            >
-              + Buat Buku
-            </button>
+            <div>
+              <button
+                type="button"
+                onClick={() => setIsCreateBookDrawerOpen(true)}
+                className="nav-touch-item rounded border border-border bg-background px-2.5 py-1 text-[11px] font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+              >
+                + Buat Buku
+              </button>
+
+              {/* <button
+                type="button"
+                onClick={() => setIsJoinModalOpen(true)}
+                className="nav-touch-item rounded border border-border bg-background px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+              >
+                + Gabung Buku Bersama
+              </button> */}
+            </div>
           </div>
 
           {books.length === 0 ? (
