@@ -39,9 +39,9 @@ describe("FloatingNavbar", () => {
     expect(nav).toBeInTheDocument();
 
     // Verify 4 navigation items are present
-    expect(screen.getByText("Home")).toBeInTheDocument();
+    expect(screen.getByText("Dashboard")).toBeInTheDocument();
     expect(screen.getByText("Transactions")).toBeInTheDocument();
-    expect(screen.getByText("Reports")).toBeInTheDocument();
+    expect(screen.getByText("Budgets")).toBeInTheDocument();
     expect(screen.getByText("Settings")).toBeInTheDocument();
 
     // Verify the + FAB button
@@ -65,8 +65,8 @@ describe("FloatingNavbar", () => {
     expect(txLink).toHaveAttribute("href", "/books/book-123/transactions");
     expect(txLink?.className).toContain("bg-emerald-50/80");
 
-    const homeLink = screen.getByText("Home").closest("a");
-    expect(homeLink?.className).not.toContain("bg-emerald-50/80");
+    const dashboardLink = screen.getByText("Dashboard").closest("a");
+    expect(dashboardLink?.className).not.toContain("bg-emerald-50/80");
   });
 
   it("contains dark mode styling classes on navigation container and links", () => {
@@ -84,8 +84,8 @@ describe("FloatingNavbar", () => {
     expect(txLink?.className).toContain("dark:bg-emerald-950/40");
     expect(txLink?.className).toContain("dark:text-emerald-300");
 
-    const homeLink = screen.getByText("Home").closest("a");
-    expect(homeLink?.className).toContain("dark:text-zinc-400");
+    const dashboardLink = screen.getByText("Dashboard").closest("a");
+    expect(dashboardLink?.className).toContain("dark:text-zinc-400");
   });
 });
 

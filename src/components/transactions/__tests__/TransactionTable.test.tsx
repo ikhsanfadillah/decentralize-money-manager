@@ -136,4 +136,102 @@ describe("TransactionTable (Mobile Friendly & Responsive)", () => {
     expect(surface2).toHaveStyle({ transform: "translateX(-140px)" });
     expect(surface1).toHaveStyle({ transform: "translateX(0px)" });
   });
+
+  it("opens sort drawer on mobile sort button click and updates sorting on selection", () => {
+    const onFilterChange = vi.fn();
+    render(<TransactionTable {...defaultProps} onFilterChange={onFilterChange} />);
+
+    // Mobile sort icon button
+    const sortBtn = screen.getByTestId("sort-open-button");
+    expect(sortBtn).toBeInTheDocument();
+    fireEvent.click(sortBtn);
+
+    // Sort drawer should now be visible with options
+    expect(screen.getByText("Urutkan Transaksi")).toBeInTheDocument();
+    expect(screen.getByText("Tanggal Terbaru")).toBeInTheDocument();
+    expect(screen.getByText("Nominal Terbesar")).toBeInTheDocument();
+
+    // Select "Nominal Terbesar"
+    const nominalTerbesarBtn = screen.getByRole("button", { name: /Nominal Terbesar/i });
+    fireEvent.click(nominalTerbesarBtn);
+
+    expect(onFilterChange).toHaveBeenCalledWith(expect.any(Function));
+
+    // Verify updater function produces correct filter payload
+    const updater = onFilterChange.mock.calls[0][0];
+    const updated = updater({ sort_by: "tx_date", sort_dir: "desc", offset: 10 });
+    expect(updated).toEqual({
+      sort_by: "amount",
+      sort_dir: "desc",
+      offset: 0,
+    });
+  });
+
+  it("renders full width transaction CTA button and triggers onOpenNewTx on mobile", () => {
+    const onOpenNewTx = vi.fn();
+    render(<TransactionTable {...defaultProps} onOpenNewTx={onOpenNewTx} />);
+
+    const ctaBtns = screen.getAllByRole("button", { name: /Catat Transaksi/i });
+    // Expect mobile full-width button to exist
+    const mobileCtaBtn = ctaBtns.find((btn) => btn.className.includes("w-full"));
+    expect(mobileCtaBtn).toBeDefined();
+
+    fireEvent.click(mobileCtaBtn!);
+    expect(onOpenNewTx).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes sort drawer using the icon close button and supports reset sort in drawer", () => {
+    const onFilterChange = vi.fn();
+    render(
+      <TransactionTable
+        {...defaultProps}
+        filter={{ ...defaultProps.filter, sort_by: "amount", sort_dir: "asc" }}
+        onFilterChange={onFilterChange}
+      />
+    );
+
+    // Open sort drawer
+    fireEvent.click(screen.getByTestId("sort-open-button"));
+    expect(screen.getByText("Urutkan Transaksi")).toBeInTheDocument();
+
+    // Click Reset Urutan button inside sort drawer
+    const resetUrutanBtn = screen.getByRole("button", { name: /Reset Urutan/i });
+    fireEvent.click(resetUrutanBtn);
+
+    expect(onFilterChange).toHaveBeenCalled();
+    const updater = onFilterChange.mock.calls[0][0];
+    const resetResult = updater({ sort_by: "amount", sort_dir: "asc", offset: 5 });
+    expect(resetResult).toEqual({
+      sort_by: "tx_date",
+      sort_dir: "desc",
+      offset: 0,
+    });
+  });
+
+  it("triggers reset filter and sort from toolbar reset button", () => {
+    const onResetFilter = vi.fn();
+    const onFilterChange = vi.fn();
+    render(
+      <TransactionTable
+        {...defaultProps}
+        filter={{ ...defaultProps.filter, search: "somai", sort_by: "amount" }}
+        onResetFilter={onResetFilter}
+        onFilterChange={onFilterChange}
+      />
+    );
+
+    // Reset button should be visible when filter or sort is active
+    const resetMobileBtn = screen.getByTestId("reset-filter-sort-mobile-button");
+    expect(resetMobileBtn).toBeInTheDocument();
+    fireEvent.click(resetMobileBtn);
+
+    expect(onResetFilter).toHaveBeenCalledTimes(1);
+    expect(onFilterChange).toHaveBeenCalled();
+    const updater = onFilterChange.mock.calls[0][0];
+    expect(updater({})).toEqual({
+      sort_by: "tx_date",
+      sort_dir: "desc",
+      offset: 0,
+    });
+  });
 });

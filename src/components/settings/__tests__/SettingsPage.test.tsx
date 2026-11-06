@@ -46,14 +46,12 @@ describe("Settings, Sync, and Backup Pages", () => {
       </QueryClientProvider>
     );
 
-    expect(
-      screen.getByText("Pusat Pengaturan & Konfigurasi Buku")
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Pengaturan" })).toBeInTheDocument();
     expect(screen.getByTestId("settings-cta-sync")).toBeInTheDocument();
     expect(screen.getByTestId("settings-cta-backup")).toBeInTheDocument();
-    expect(screen.getByText("Manajemen Akun Keuangan")).toBeInTheDocument();
-    expect(screen.getByText("Kategori Transaksi")).toBeInTheDocument();
-    expect(screen.getByText("Anggaran Bulanan")).toBeInTheDocument();
+    expect(screen.getByText("Account")).toBeInTheDocument();
+    expect(screen.getByText("Categories")).toBeInTheDocument();
+    expect(screen.getByText("Budgets")).toBeInTheDocument();
     expect(screen.getByTestId("local-device-name")).toBeInTheDocument();
     expect(screen.getByTestId("btn-edit-device-name")).toBeInTheDocument();
   });
@@ -91,7 +89,7 @@ describe("Settings, Sync, and Backup Pages", () => {
       </QueryClientProvider>
     );
 
-    expect(screen.getByText("Sinkronisasi Antar-Perangkat")).toBeInTheDocument();
+    expect(screen.getByText("Syncronization")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /Buat Kode Undangan/i })
     ).toBeInTheDocument();

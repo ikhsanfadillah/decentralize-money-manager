@@ -1,12 +1,8 @@
 import * as React from "react";
 import { useForm, Controller } from "react-hook-form";
-import { X } from "lucide-react";
+import { Trash2, X } from "lucide-react";
 import { CurrencyInput } from "../ui/currency-input";
 import { Input } from "../ui/input";
-import {
-  ButtonSlideToConfirm,
-  type SlideConfirmResult,
-} from "../ui/ButtonSlideToConfirm";
 import {
   Drawer,
   DrawerContent,
@@ -27,6 +23,7 @@ export interface BudgetDialogProps {
   existingBudgets: BudgetProgressItem[];
   initialCategoryId?: string | null;
   onSave: (input: UpsertBudgetInput) => Promise<unknown>;
+  onInitiateDelete?: (budget: BudgetProgressItem) => void;
   isSaving?: boolean;
 }
 
@@ -43,6 +40,7 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
   existingBudgets,
   initialCategoryId,
   onSave,
+  onInitiateDelete,
   isSaving = false,
 }) => {
   const expenseCategories = React.useMemo(
@@ -114,14 +112,15 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
     }
   }, [matchedExistingBudget, isOpen, setValue]);
 
-  const handleSlideConfirm = async (): Promise<SlideConfirmResult> => {
+  const handleDirectSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     const values = getValues();
     if (values.amountLimit === null || values.amountLimit <= 0) {
       pushToast("Batas anggaran wajib diisi", {
         description: "Masukkan nominal batas anggaran lebih dari Rp 0.",
         variant: "error",
       });
-      return { ok: false, message: "Nominal batas anggaran wajib diisi" };
+      return;
     }
 
     const threshold = Number(values.alertThresholdPct);
@@ -131,7 +130,7 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
           "Ambang peringatan harus bilangan bulat antara 1% hingga 100%.",
         variant: "error",
       });
-      return { ok: false, message: "Ambang peringatan harus 1% - 100%" };
+      return;
     }
 
     const categoryId =
@@ -150,7 +149,7 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
           : "Anggaran baru berhasil disimpan",
         { variant: "success" }
       );
-      return { ok: true };
+      onClose();
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : "Gagal menyimpan anggaran";
@@ -158,7 +157,6 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
         description: msg,
         variant: "error",
       });
-      return { ok: false, message: "Gagal Menyimpan Anggaran" };
     }
   };
 
@@ -172,56 +170,48 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
       }}
       shouldScaleBackground={false}
     >
-      <DrawerContent className="fixed inset-x-0 bottom-0 z-50 flex h-[100dvh] max-h-[100dvh] w-full flex-col rounded-none border-t border-border bg-card p-0 shadow-2xl focus:outline-none sm:mx-auto sm:h-auto sm:max-h-[90vh] sm:max-w-xl sm:rounded-t-2xl">
-        <form
-          onSubmit={(e) => e.preventDefault()}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-            }
-          }}
-          className="flex h-full sm:h-auto flex-1 flex-col overflow-hidden"
-        >
+      <DrawerContent className="fixed inset-x-0 bottom-0 z-50 flex max-h-[90vh] flex-col rounded-t-xl border-t border-border bg-card p-0 shadow-2xl focus:outline-none sm:mx-auto sm:max-w-lg">
+        <form onSubmit={handleDirectSubmit} className="flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6 shrink-0 bg-card">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-5">
             <div>
               <DrawerTitle
                 id="budget-dialog-title"
                 className="text-sm font-semibold text-foreground"
               >
                 {matchedExistingBudget
-                  ? "Edit Anggaran Bulanan"
-                  : "Atur Anggaran Bulanan Baru"}
+                  ? "Detail & Ubah Anggaran"
+                  : "Atur Anggaran Bulanan"}
               </DrawerTitle>
-              <DrawerDescription className="mt-0.5 text-xs text-muted-foreground">
+              <DrawerDescription className="text-xs text-muted-foreground">
                 {matchedExistingBudget
-                  ? "Perbarui batas anggaran belanja dan ambang peringatan dini."
-                  : "Tentukan batas pengeluaran untuk satu bulan dan ambang peringatan dini."}
+                  ? "Perbarui batas belanja bulanan dan ambang peringatan dini"
+                  : "Tentukan batas pengeluaran bulanan dan ambang peringatan dini"}
               </DrawerDescription>
             </div>
             <button
               type="button"
               onClick={onClose}
               aria-label="Tutup"
-              className="nav-touch-item inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
+              className="nav-touch-item inline-flex h-7 w-7 items-center justify-center rounded border border-border hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
 
-          {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 space-y-4">
-            <div className="space-y-1.5">
+          {/* Form Body */}
+          <div className="space-y-3.5 px-4 py-4 sm:px-5">
+            <div className="space-y-1">
               <label
                 htmlFor="budget-category-select"
-                className="block text-xs font-medium text-foreground"
+                className="text-xs font-medium text-foreground"
               >
                 Cakupan Kategori Pengeluaran
               </label>
               <select
                 id="budget-category-select"
                 {...register("categorySelection")}
-                className="flex h-9 w-full rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                className="flex h-8 w-full rounded border border-border bg-background px-2.5 text-xs text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
               >
                 <option value="__ALL__">
                   Semua pengeluaran (Total Pengeluaran Bulanan)
@@ -234,10 +224,10 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
               </select>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <label
                 htmlFor="budget-limit-input"
-                className="block text-xs font-medium text-foreground"
+                className="text-xs font-medium text-foreground"
               >
                 Batas Anggaran Bulanan (Rupiah)
               </label>
@@ -257,13 +247,18 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label
-                htmlFor="budget-threshold-input"
-                className="block text-xs font-medium text-foreground"
-              >
-                Ingatkan Saya Saat Mencapai (%) — misal 80%
-              </label>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="budget-threshold-input"
+                  className="text-xs font-medium text-foreground"
+                >
+                  Ambang Batas Peringatan (%)
+                </label>
+                <span className="text-[10px] text-muted-foreground">
+                  Default: 80%
+                </span>
+              </div>
               <Input
                 id="budget-threshold-input"
                 type="number"
@@ -273,32 +268,46 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
                 className="font-mono tabular-nums tracking-tight"
               />
             </div>
+
+            {/* Destructive Action inside Detail (Progressive Disclosure) */}
+            {matchedExistingBudget && onInitiateDelete && (
+              <div className="pt-2 border-t border-border/60">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = matchedExistingBudget;
+                    onClose();
+                    onInitiateDelete(target);
+                  }}
+                  className="nav-touch-item flex w-full items-center justify-center gap-1.5 rounded border border-rose-500/20 bg-rose-500/5 py-2 text-xs font-medium text-rose-600 hover:bg-rose-500/10 active:scale-[0.99] dark:text-rose-400 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Hapus Anggaran Ini</span>
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Footer with ButtonSlideToConfirm */}
-          <div className="flex items-center justify-end gap-2 border-t border-border p-2.5 sm:px-6 bg-card/60 backdrop-blur-xs shrink-0">
-            <ButtonSlideToConfirm
-              key={
-                isOpen
-                  ? `budget-${selectedCategoryKey}-${matchedExistingBudget?.id ?? "new"}`
-                  : "closed"
-              }
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-2 border-t border-border px-4 py-2.5 sm:px-5">
+            <button
+              type="button"
+              onClick={onClose}
+              className="nav-touch-item rounded border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
               disabled={isSaving}
-              label={
-                matchedExistingBudget
-                  ? "Geser untuk Perbarui Anggaran"
-                  : "Geser untuk Simpan Anggaran"
-              }
-              readyLabel="Lepas untuk Simpan"
-              loadingLabel="Menyimpan Anggaran..."
-              successLabel={
-                matchedExistingBudget
-                  ? "Anggaran Diperbarui!"
-                  : "Anggaran Disimpan!"
-              }
-              onConfirm={handleSlideConfirm}
-              onSuccessComplete={onClose}
-            />
+              className="nav-touch-item rounded border border-border bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 active:scale-[0.98] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+            >
+              {isSaving
+                ? "Menyimpan..."
+                : matchedExistingBudget
+                  ? "Simpan Perubahan"
+                  : "Simpan Anggaran"}
+            </button>
           </div>
         </form>
       </DrawerContent>

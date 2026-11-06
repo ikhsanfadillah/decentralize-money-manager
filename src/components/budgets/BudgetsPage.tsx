@@ -8,10 +8,28 @@ import {
   formatRupiah,
   shiftYearMonth,
 } from "../../lib/utils";
-import { TrendingDown, TrendingUp } from "lucide-react";
+import {
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Trash2,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
 import { BudgetProgressBar } from "./BudgetProgressBar";
 import { BudgetDialog } from "./BudgetDialog";
 import { EmptyStateIllustration } from "../ui/EmptyStateIllustration";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "../ui/drawer";
+import { DeleteTransactionIllustration } from "../transactions/TransactionTable";
+import type { BudgetProgressItem } from "../../lib/tauri-api";
 import { pushToast } from "../../lib/toast";
 
 export interface BudgetsPageProps {
@@ -22,6 +40,8 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ bookId }) => {
   const [selectedMonth, setSelectedMonth] = React.useState<string>(() =>
     currentYearMonth()
   );
+  const [budgetPendingDelete, setBudgetPendingDelete] =
+    React.useState<BudgetProgressItem | null>(null);
 
   // Ensure live crdt:synced invalidation is active when BudgetsPage is mounted
   useBookSyncEvents(bookId);
@@ -60,10 +80,16 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ bookId }) => {
     return suffix;
   }, [activeDrawerId, budgets]);
 
-  const handleDelete = async (budgetId: string, name: string) => {
+  const handleConfirmDeleteBudget = async () => {
+    if (!budgetPendingDelete) return;
+
     try {
-      await deleteBudgetMutation.mutateAsync(budgetId);
-      pushToast(`Anggaran "${name}" dihapus`, { variant: "info" });
+      await deleteBudgetMutation.mutateAsync(budgetPendingDelete.id);
+      pushToast(
+        `Anggaran "${budgetPendingDelete.category_name}" berhasil dihapus`,
+        { variant: "info" }
+      );
+      setBudgetPendingDelete(null);
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : "Gagal menghapus anggaran";
@@ -76,88 +102,86 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ bookId }) => {
 
   return (
     <div className="w-full">
-      {/* Header & Month Selector */}
-      <div className="tabular-grid-container grid grid-cols-1 md:grid-cols-3">
-        <div className="tabular-grid-cell flex flex-col justify-between px-3 py-2.5 md:col-span-2">
-          <div>
-            <div className="flex items-center gap-2">
-              <Link
-                to="/books/$bookId/settings"
-                params={{ bookId }}
-                className="nav-touch-item inline-flex h-6 shrink-0 items-center rounded border border-border bg-background px-2 font-mono text-[10px] font-semibold text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-              >
-                ← Pengaturan
-              </Link>
-              <h1 className="text-xs font-semibold tracking-tight text-foreground sm:text-sm">
-                Manajemen Anggaran Bulanan
+      {/* 1. Header with Inline Plus Action */}
+      <div className="tabular-grid-container grid grid-cols-1">
+        <div className="tabular-grid-cell px-3 py-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0 items-center gap-2">
+              <h1 className="truncate text-xs font-semibold tracking-tight text-foreground sm:text-sm">
+                Budgets
               </h1>
             </div>
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              Pantau batas belanja bulanan Anda agar pengeluaran tetap terkontrol.
-            </p>
-          </div>
-        </div>
-
-        <div className="tabular-grid-cell flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex w-full items-center justify-between gap-1 sm:w-auto sm:justify-start">
             <button
               type="button"
-              aria-label="Bulan Sebelumnya"
-              onClick={() =>
-                setSelectedMonth((m) => shiftYearMonth(m, -1))
-              }
-              className="nav-touch-item inline-flex h-7 items-center justify-center rounded border border-border bg-background px-2.5 font-mono text-xs text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+              onClick={() => setActiveDrawerId("budget:new")}
+              title="Atur Anggaran Baru"
+              aria-label="Atur Anggaran Baru"
+              className="nav-touch-item inline-flex h-7 w-7 shrink-0 items-center justify-center rounded border border-border bg-primary text-primary-foreground hover:opacity-90 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-all"
             >
-              ←
+              <Plus className="h-4 w-4" />
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Month Selector Strip */}
+      <div className="tabular-grid-container grid grid-cols-1">
+        <div className="tabular-grid-cell flex items-center justify-between px-3 py-2">
+          <button
+            type="button"
+            aria-label="Bulan Sebelumnya"
+            onClick={() => setSelectedMonth((m) => shiftYearMonth(m, -1))}
+            className="nav-touch-item inline-flex h-7 w-7 items-center justify-center rounded border border-border bg-background font-mono text-xs text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+          <div className="flex items-center gap-2">
+            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
             <span
               data-testid="selected-budget-month"
-              className="min-w-[120px] flex-1 text-center font-mono text-xs font-semibold text-foreground sm:flex-initial"
+              className="font-mono text-xs font-semibold text-foreground"
             >
               {formatMonthLabel(selectedMonth)}
             </span>
-            <button
-              type="button"
-              aria-label="Bulan Berikutnya"
-              onClick={() =>
-                setSelectedMonth((m) => shiftYearMonth(m, 1))
-              }
-              className="nav-touch-item inline-flex h-7 items-center justify-center rounded border border-border bg-background px-2.5 font-mono text-xs text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-            >
-              →
-            </button>
           </div>
-
           <button
             type="button"
-            onClick={() => setActiveDrawerId("budget:new")}
-            className="nav-touch-item inline-flex h-7 w-full items-center justify-center rounded border border-border bg-primary px-2.5 text-xs font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary sm:w-auto"
+            aria-label="Bulan Berikutnya"
+            onClick={() => setSelectedMonth((m) => shiftYearMonth(m, 1))}
+            className="nav-touch-item inline-flex h-7 w-7 items-center justify-center rounded border border-border bg-background font-mono text-xs text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
           >
-            + Atur Anggaran
+            <ChevronRight className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
 
-      {/* Tabular Budget Grid (Section 8.2 & 9.5) */}
+      {/* 3. Tabular Budget Grid (Master View with Progressive Disclosure) */}
       <div className="tabular-grid-container grid grid-cols-1">
-        <div className="tabular-grid-cell hidden grid-cols-12 items-center px-3 py-2 font-mono text-[10px] font-semibold uppercase tracking-wider text-muted-foreground md:grid">
-          <div className="col-span-3">Kategori</div>
-          <div className="col-span-3 text-right">Terpakai / Batas</div>
-          <div className="col-span-2 text-right">Sisa Anggaran</div>
-          <div className="col-span-3 px-3">Status & Realisasi</div>
-          <div className="col-span-1 text-right"></div>
+        {/* Desktop Header */}
+        <div className="tabular-grid-cell hidden grid-cols-12 items-center px-3 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-muted-foreground md:grid">
+          <div className="col-span-4">Kategori</div>
+          <div className="col-span-4 text-right">Terpakai / Batas (Sisa)</div>
+          <div className="col-span-4 text-right">Status & Realisasi</div>
         </div>
 
         {budgets.length === 0 ? (
           <div className="tabular-grid-cell flex flex-col items-center justify-center p-6 text-center">
             <EmptyStateIllustration variant="active-budget-period" />
-            <p className="text-xs font-medium text-foreground">
+            <p className="mt-2 text-xs font-medium text-foreground">
               Belum ada anggaran aktif untuk periode ini
             </p>
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              Klik tombol &ldquo;+ Atur Anggaran&rdquo; untuk menetapkan batas
+            <p className="mt-1 text-[11px] text-muted-foreground max-w-sm">
+              Klik tombol &ldquo;+&rdquo; di atas untuk menetapkan batas
               pengeluaran per kategori atau total pengeluaran bulanan.
             </p>
+            <button
+              type="button"
+              onClick={() => setActiveDrawerId("budget:new")}
+              className="mt-3 nav-touch-item inline-flex items-center gap-1 rounded border border-border bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Atur Anggaran Sekarang
+            </button>
           </div>
         ) : (
           budgets.map((item, idx) => {
@@ -166,87 +190,83 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ bookId }) => {
               <div
                 key={item.id}
                 data-testid={`budget-row-${item.id}`}
-                style={{ animationDelay: `${idx * 35}ms` }}
-                className="tabular-grid-cell animate-card-up grid grid-cols-1 items-center gap-2 px-3 py-2.5 md:grid-cols-12"
+                role="button"
+                tabIndex={0}
+                onClick={() => setActiveDrawerId(`budget:${item.id}`)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setActiveDrawerId(`budget:${item.id}`);
+                  }
+                }}
+                style={{ animationDelay: `${idx * 25}ms` }}
+                className="tabular-grid-cell group nav-touch-item animate-card-up flex cursor-pointer flex-col gap-2 px-3 py-2.5 text-xs transition-colors hover:bg-muted/60 active:bg-muted/80 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
               >
-                <div className="md:col-span-3">
-                  <p className="text-xs font-semibold text-foreground sm:text-sm">
-                    {item.category_id === null
-                      ? "Total Pengeluaran"
-                      : item.category_name}
-                  </p>
-                  {item.category_id === null && (
-                    <p className="font-mono text-[10px] text-muted-foreground">
-                      Semua Kategori Belanja
-                    </p>
-                  )}
+                {/* Top: Category Name + Realization & Remaining + Chevron */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate font-semibold text-foreground text-xs sm:text-sm">
+                        {item.category_id === null
+                          ? "Total Pengeluaran"
+                          : item.category_name}
+                      </span>
+                      {item.category_id === null && (
+                        <span className="shrink-0 rounded border border-border bg-background px-1.5 py-0.2 font-mono text-[9px] text-muted-foreground">
+                          Semua Belanja
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-2 text-right">
+                    <div className="flex flex-col items-end">
+                      <div className="font-mono text-xs sm:text-sm tabular-nums tracking-tight">
+                        <span className="font-semibold text-foreground">
+                          {formatRupiah(item.spent)}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {" "}
+                          / {formatRupiah(item.amount_limit)}
+                        </span>
+                      </div>
+                      <div
+                        className={`font-mono text-[11px] tabular-nums inline-flex items-center gap-0.5 ${
+                          isOver
+                            ? "font-semibold text-rose-500"
+                            : "font-medium text-emerald-500"
+                        }`}
+                      >
+                        {isOver ? (
+                          <>
+                            <TrendingDown
+                              className="h-3 w-3 shrink-0"
+                              aria-hidden="true"
+                            />
+                            <span>- {formatRupiah(Math.abs(item.remaining))}</span>
+                          </>
+                        ) : (
+                          <>
+                            <TrendingUp
+                              className="h-3 w-3 shrink-0"
+                              aria-hidden="true"
+                            />
+                            <span>Sisa: {formatRupiah(item.remaining)}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+                  </div>
                 </div>
 
-                <div className="flex items-center justify-between font-mono text-xs tabular-nums tracking-tight md:col-span-3 md:block md:text-right">
-                  <span className="font-sans text-[10px] uppercase text-muted-foreground md:hidden">
-                    Realisasi:
-                  </span>
-                  <span>
-                    <span className="font-semibold text-foreground">
-                      {formatRupiah(item.spent)}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {" "}
-                      / {formatRupiah(item.amount_limit)}
-                    </span>
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between font-mono text-xs tabular-nums tracking-tight md:col-span-2 md:block md:text-right">
-                  <span className="font-sans text-[10px] uppercase text-muted-foreground md:hidden">
-                    Sisa:
-                  </span>
-                  <span
-                    className={
-                      isOver
-                        ? "inline-flex items-center gap-0.5 font-semibold text-rose-500"
-                        : "inline-flex items-center gap-0.5 font-medium text-emerald-500"
-                    }
-                  >
-                    {isOver ? (
-                      <>
-                        <TrendingDown className="h-3 w-3 shrink-0" aria-hidden="true" />
-                        <span>- {formatRupiah(Math.abs(item.remaining))}</span>
-                      </>
-                    ) : (
-                      <>
-                        <TrendingUp className="h-3 w-3 shrink-0" aria-hidden="true" />
-                        <span>{formatRupiah(item.remaining)}</span>
-                      </>
-                    )}
-                  </span>
-                </div>
-
-                <div className="md:col-span-3 md:px-3">
+                {/* Bottom: Progress Bar */}
+                <div className="w-full">
                   <BudgetProgressBar
                     pct={item.pct}
                     status={item.status}
                     alertThresholdPct={item.alert_threshold_pct}
                   />
-                </div>
-
-                <div className="flex items-center justify-end gap-1.5 md:col-span-1">
-                  <button
-                    type="button"
-                    onClick={() => setActiveDrawerId(`budget:${item.id}`)}
-                    className="nav-touch-item rounded border border-border bg-background px-2 py-0.5 text-[11px] font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      void handleDelete(item.id, item.category_name)
-                    }
-                    className="nav-touch-item rounded border border-border bg-background px-2 py-0.5 text-[11px] font-medium text-rose-500 hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-                  >
-                    Hapus
-                  </button>
                 </div>
               </div>
             );
@@ -254,6 +274,7 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ bookId }) => {
         )}
       </div>
 
+      {/* 4. Edit / Create Budget Drawer */}
       <BudgetDialog
         isOpen={isBudgetDrawerOpen}
         onClose={() => setActiveDrawerId(null)}
@@ -261,9 +282,82 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ bookId }) => {
         existingBudgets={budgets}
         initialCategoryId={initialCategoryId}
         onSave={(input) => upsertBudgetMutation.mutateAsync(input)}
+        onInitiateDelete={(b) => setBudgetPendingDelete(b)}
         isSaving={upsertBudgetMutation.isPending}
       />
+
+      {/* 5. Dedicated Delete Budget Confirmation Drawer */}
+      <Drawer
+        open={budgetPendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setBudgetPendingDelete(null);
+        }}
+      >
+        <DrawerContent
+          aria-describedby="delete-budget-confirm-desc"
+          className="p-0 sm:mx-auto sm:max-w-md sm:rounded-t-2xl"
+        >
+          <div className="flex flex-col items-center px-4 pt-5 pb-2 text-center">
+            <DeleteTransactionIllustration className="h-24 w-24 my-1" />
+
+            <DrawerHeader className="p-0 mt-2 space-y-1 border-0">
+              <DrawerTitle className="text-center text-base font-bold text-foreground sm:text-lg">
+                Hapus Anggaran Ini?
+              </DrawerTitle>
+              <DrawerDescription
+                id="delete-budget-confirm-desc"
+                className="text-center text-xs text-muted-foreground max-w-xs mx-auto"
+              >
+                Batas belanja untuk kategori ini akan dihapus dari buku. Transaksi
+                pengeluaran Anda tidak akan terhapus.
+              </DrawerDescription>
+            </DrawerHeader>
+
+            {/* Budget Preview Box */}
+            {budgetPendingDelete && (
+              <div className="w-full mt-3 rounded-lg border border-border bg-muted/40 p-3 text-left text-xs space-y-1.5">
+                <div className="flex items-center justify-between font-semibold">
+                  <span className="truncate text-foreground text-sm">
+                    {budgetPendingDelete.category_name}
+                  </span>
+                  <span className="font-mono text-xs text-foreground">
+                    Batas: {formatRupiah(budgetPendingDelete.amount_limit)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border/50">
+                  <span>Realisasi Saat Ini:</span>
+                  <span className="font-mono font-bold text-foreground">
+                    {formatRupiah(budgetPendingDelete.spent)} ({budgetPendingDelete.pct}%)
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DrawerFooter className="border-t border-border px-4 py-3 bg-card/60 backdrop-blur-xs flex flex-row items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setBudgetPendingDelete(null)}
+              className="nav-touch-item flex-1 h-9 rounded-lg border border-border bg-background px-4 font-mono text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground active:scale-98 transition-all focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              disabled={deleteBudgetMutation.isPending}
+              onClick={() => void handleConfirmDeleteBudget()}
+              className="nav-touch-item flex-1 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg bg-rose-600 px-4 text-xs font-semibold text-white shadow-xs hover:bg-rose-700 active:scale-98 transition-all focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-rose-600 disabled:opacity-50"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>
+                {deleteBudgetMutation.isPending
+                  ? "Menghapus..."
+                  : "Hapus Anggaran"}
+              </span>
+            </button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 };
-

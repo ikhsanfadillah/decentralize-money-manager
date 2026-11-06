@@ -150,7 +150,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
           <div className="tabular-grid-cell flex items-center justify-between gap-2 px-3 py-2">
             <div className="min-w-0">
               <h2 className="truncate text-xs font-semibold text-foreground sm:text-sm">
-                Saldo Rekening & Dompet
+                Accounts
               </h2>
               <p className="truncate text-[11px] text-muted-foreground">
                 Rincian uang Anda di bank, tunai, dan e-wallet

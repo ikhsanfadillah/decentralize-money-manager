@@ -4,14 +4,19 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ChevronDown,
   ChevronUp,
+  Clock,
   Copy,
   ExternalLink,
+  Eye,
+  EyeOff,
   Info,
   Laptop,
   Network,
   Pencil,
+  QrCode,
   RefreshCw,
   RotateCcw,
+  ShieldAlert,
   ShieldCheck,
   X,
 } from "lucide-react";
@@ -185,162 +190,224 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
   const peers = peersQuery.data ?? [];
 
   return (
-    <div className="w-full">
-      {/* Section 1: P2P Sync Status & Invite QR */}
-      <div className="tabular-grid-container grid grid-cols-1 lg:grid-cols-12">
-        <div className="tabular-grid-cell space-y-2.5 px-3 py-3 lg:col-span-7">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <div className="flex items-center gap-2">
-                <Link
-                  to="/books/$bookId/settings"
-                  params={{ bookId }}
-                  className="nav-touch-item inline-flex h-6 shrink-0 items-center rounded border border-border bg-background px-2 font-mono text-[10px] font-semibold text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-                >
-                  ← Pengaturan
-                </Link>
-                <h1 className="text-xs font-semibold tracking-tight text-foreground sm:text-sm">
-                  Sinkronisasi Antar-Perangkat
-                </h1>
-              </div>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                Data keuangan disinkronkan langsung antar-perangkat Anda secara privat dan aman.
+    <div className="w-full space-y-3">
+      {/* Page Header */}
+      <div className="tabular-grid-container grid grid-cols-1">
+        <div className="tabular-grid-cell flex flex-wrap items-center justify-between gap-2.5 px-3 py-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Link
+              to="/books/$bookId/settings"
+              params={{ bookId }}
+              className="nav-touch-item inline-flex h-7 shrink-0 items-center rounded border border-border bg-background px-2.5 font-mono text-[11px] font-semibold text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+            >
+              ← Pengaturan
+            </Link>
+            <div className="min-w-0">
+              <h1 className="text-xs font-semibold tracking-tight text-foreground sm:text-sm">
+                Sinkronisasi Antar-Perangkat
+              </h1>
+              <p className="text-[11px] text-muted-foreground truncate sm:text-clip">
+                Sinkronisasi data langsung antar-perangkat secara privat dan aman
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Link
-                to="/books/$bookId/backup"
-                params={{ bookId }}
-                className="nav-touch-item inline-flex items-center gap-1.5 rounded border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-              >
-                <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-                <span>Cadangan Terenkripsi →</span>
-              </Link>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Link
+              to="/books/$bookId/backup"
+              params={{ bookId }}
+              className="nav-touch-item inline-flex items-center gap-1.5 rounded border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+            >
+              <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+              <span>Backup</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Grid: Left = Add Device / Active Invite, Right = Connected Peers & Topology */}
+      <div className="tabular-grid-container grid grid-cols-1 lg:grid-cols-12">
+        {/* Left Column: Invite & QR */}
+        <div className="tabular-grid-cell space-y-3 px-3.5 py-3 lg:col-span-7">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-muted/30 text-primary">
+                <QrCode className="h-4 w-4" />
+              </div>
+              <h2 className="text-xs font-semibold text-foreground sm:text-sm">
+                Hubungkan Perangkat Baru
+              </h2>
+            </div>
+
+            {activeInvite && (
               <button
                 type="button"
                 onClick={() => void handleGenerateInvite()}
                 disabled={createInviteMutation.isPending}
-                className="nav-touch-item rounded border border-border bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
+                className="nav-touch-item rounded border border-border bg-background px-2.5 py-1 text-[11px] font-medium text-primary hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
               >
                 {createInviteMutation.isPending
-                  ? "Membuat Kunci..."
-                  : "Buat Kode Undangan (10 Menit)"}
+                  ? "Membuat..."
+                  : "Buat Kode Baru"}
+              </button>
+            )}
+          </div>
+
+          {!activeInvite ? (
+            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/15 p-6 text-center">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <QrCode className="h-5 w-5" />
+              </div>
+              <h3 className="mt-2.5 text-xs font-semibold text-foreground sm:text-sm">
+                Mulai Sinkronisasi Antar-Perangkat
+              </h3>
+              <p className="mt-1 max-w-sm text-[11px] text-muted-foreground">
+                Buat kode QR sementara untuk menghubungkan laptop, ponsel, atau tablet lain ke buku kas ini.
+              </p>
+              <button
+                type="button"
+                onClick={() => void handleGenerateInvite()}
+                disabled={createInviteMutation.isPending}
+                className="nav-touch-item mt-3.5 inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-2xs hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
+              >
+                <QrCode className="h-3.5 w-3.5" />
+                <span>
+                  {createInviteMutation.isPending
+                    ? "Membuat Kunci..."
+                    : "Buat Kode Undangan"}
+                </span>
               </button>
             </div>
-          </div>
-
-          {/* Mandatory Security Warning Banner (Section 6.5) */}
-          <div
-            data-testid="qr-bearer-warning"
-            className="rounded border border-amber-500/40 bg-background p-2.5 text-xs text-amber-500"
-          >
-            <p className="font-semibold">
-              PERHATIAN KEAMANAN KODE BUKU:
-            </p>
-            <p className="mt-0.5 text-[11px] text-foreground">
-              Siapa pun yang memindai kode ini memiliki akses penuh ke
-              buku ini. Pastikan hanya membagikannya ke perangkat milik Anda sendiri.
-            </p>
-          </div>
-
-          {activeInvite && (
-            <div className="animate-card-up space-y-2 rounded border border-border bg-background p-3">
-              <div className="flex flex-wrap items-center justify-between gap-1.5">
-                <div className="font-mono text-[11px]">
-                  <span className="text-muted-foreground">ID Perangkat Ini: </span>
-                  <span className="text-foreground">
-                    {activeInvite.node_id.slice(0, 16)}...
+          ) : (
+            <div className="animate-card-up space-y-3 rounded-lg border border-border bg-card p-3 shadow-2xs">
+              {/* Expiry & Meta Header */}
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 font-mono text-[10px] font-semibold text-primary">
+                    <Clock className="h-3 w-3" />
+                    <span>Kedaluwarsa: {formatExpiryTime(activeInvite.expires_at)}</span>
                   </span>
                 </div>
-                <span
-                  className="rounded border border-primary/40 px-1.5 py-0.5 font-mono text-[10px] text-primary"
-                  title={`Waktu kedaluwarsa: ${activeInvite.expires_at}`}
-                >
-                  Kedaluwarsa: {formatExpiryTime(activeInvite.expires_at)}
+                <span className="font-mono text-[10px] text-muted-foreground" title={activeInvite.node_id}>
+                  ID: {activeInvite.node_id.slice(0, 10)}...
                 </span>
               </div>
 
+              {/* QR Code Area: Revealed or Blurred */}
               {isQrRevealed ? (
-                <div className="space-y-3">
-                  {/* Visual QR Code for camera scanning */}
-                  <div className="flex justify-center">
-
-                  <QRCodeSVG
-                    value={activeInvite.invite_url || activeInvite.qr_json}
-                    size={280}
-                    level="L"
-                    marginSize={0}
-                  />
+                <div className="flex flex-col items-center justify-center py-2">
+                  <div className="rounded-xl border border-border bg-white p-3 shadow-2xs">
+                    <QRCodeSVG
+                      value={activeInvite.invite_url || activeInvite.qr_json}
+                      size={220}
+                      level="L"
+                      marginSize={0}
+                    />
                   </div>
-
-                  {/* Shareable Link Input with One-click Copy */}
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-medium text-foreground">
-                      Link Undangan Buku:
-                    </label>
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="text"
-                        readOnly
-                        value={activeInvite.invite_url || activeInvite.qr_json}
-                        className="flex-1 rounded border border-border bg-background px-2.5 py-1.5 font-mono text-[11px] text-foreground select-all focus:outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => void handleCopyInvite()}
-                        className="nav-touch-item inline-flex shrink-0 items-center gap-1.5 rounded bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-                      >
-                        <Copy className="h-3.5 w-3.5" />
-                        <span>Salin Link</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Hidden pre preserved for existing test selectors */}
-                  <pre
-                    data-testid="invite-qr-payload-display"
-                    className="hidden"
-                  >
-                    {activeInvite.qr_json}
-                  </pre>
-
-                  <div className="flex items-center justify-between pt-1">
-                    <button
-                      type="button"
-                      onClick={() => setIsQrRevealed(false)}
-                      className="nav-touch-item rounded border border-border bg-card px-2.5 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-                    >
-                      Sembunyikan QR & Link
-                    </button>
-                    {activeInvite.invite_url && (
-                      <a
-                        href={activeInvite.invite_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
-                      >
-                        <span>Buka Link Tes</span>
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between rounded border border-border bg-card p-2.5 text-xs">
-                  <span className="text-muted-foreground mr-2">
-                    Kode undangan disembunyikan demi keamanan.
-                  </span>
                   <button
                     type="button"
-                    onClick={() => setIsQrRevealed(true)}
-                    className="nav-touch-item whitespace-nowrap rounded border border-border bg-background px-2 py-0.5 text-[11px] font-medium text-primary hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                    onClick={() => setIsQrRevealed(false)}
+                    className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground"
                   >
-                    Tampilkan Kembali
+                    <EyeOff className="h-3 w-3" />
+                    <span>Sembunyikan QR</span>
                   </button>
                 </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-2">
+                  <div
+                    onClick={() => setIsQrRevealed(true)}
+                    className="group relative flex h-56 w-56 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border border-border bg-muted/40 transition-all hover:border-primary/50"
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        setIsQrRevealed(true);
+                      }
+                    }}
+                  >
+                    {/* Blurred QR silhouette in background */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-10 filter blur-[3px] select-none pointer-events-none">
+                      <QRCodeSVG
+                        value={activeInvite.invite_url || activeInvite.qr_json}
+                        size={180}
+                        level="L"
+                        marginSize={0}
+                      />
+                    </div>
+
+                    {/* Central reveal pill */}
+                    <div className="relative z-10 flex flex-col items-center gap-1.5 rounded-lg border border-border bg-card/95 px-3.5 py-2.5 shadow-sm backdrop-blur-xs transition-transform group-hover:scale-105">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <Eye className="h-4 w-4" />
+                      </div>
+                      <span className="text-xs font-semibold text-foreground">
+                        Tampilkan Kode QR
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        Disembunyikan demi keamanan
+                      </span>
+                    </div>
+                  </div>
+                </div>
               )}
+
+              {/* Shareable Link Input */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-medium text-muted-foreground">
+                    Link Undangan:
+                  </label>
+                  {activeInvite.invite_url && (
+                    <a
+                      href={activeInvite.invite_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                    >
+                      <span>Buka tab baru</span>
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    readOnly
+                    value={activeInvite.invite_url || activeInvite.qr_json}
+                    className="flex-1 rounded border border-border bg-background px-2.5 py-1.5 font-mono text-[11px] text-foreground select-all focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleCopyInvite()}
+                    className="nav-touch-item inline-flex shrink-0 items-center gap-1.5 rounded bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                    <span>Salin</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Hidden pre preserved for existing test selectors */}
+              <pre
+                data-testid="invite-qr-payload-display"
+                className="hidden"
+              >
+                {activeInvite.qr_json}
+              </pre>
             </div>
           )}
+
+          {/* Discreet Security Note */}
+          <div
+            data-testid="qr-bearer-warning"
+            className="flex items-start gap-2 rounded-lg border border-amber-500/25 bg-amber-500/10 p-2.5 text-[11px] text-amber-800 dark:text-amber-300"
+          >
+            <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <p className="leading-snug">
+              <span className="font-semibold">Perhatian Keamanan:</span> Siapa pun yang memindai kode ini memiliki akses penuh ke buku ini. Hanya bagikan ke perangkat pribadi Anda.
+            </p>
+          </div>
         </div>
 
         {/* Known Peers & Live Sync Diagnostics */}

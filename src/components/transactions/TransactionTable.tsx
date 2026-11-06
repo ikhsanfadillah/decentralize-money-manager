@@ -9,7 +9,18 @@ import { CurrencyInput } from "../ui/currency-input";
 import { EmptyStateIllustration } from "../ui/EmptyStateIllustration";
 import { Input } from "../ui/input";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
-import { Pencil, Trash2, TrendingDown, TrendingUp } from "lucide-react";
+import {
+  ArrowUpDown,
+  Check,
+  Filter,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Trash2,
+  TrendingDown,
+  TrendingUp,
+  X,
+} from "lucide-react";
 import {
   Drawer,
   DrawerClose,
@@ -920,6 +931,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   });
 
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isSortOpen, setIsSortOpen] = React.useState(false);
   const isDesktop = useMediaQuery("(min-width: 640px)");
 
   const activeFilterCount = React.useMemo(() => {
@@ -960,12 +972,44 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
     });
   };
 
+  const isCustomSort = React.useMemo(() => {
+    return Boolean(
+      (filter.sort_by && filter.sort_by !== "tx_date") ||
+      (filter.sort_dir && filter.sort_dir !== "desc")
+    );
+  }, [filter.sort_by, filter.sort_dir]);
+
+  const hasActiveFilterOrSort = activeFilterCount > 0 || isCustomSort;
+
+  const selectedSortLabel = React.useMemo(() => {
+    if (!filter.sort_by || filter.sort_by === "tx_date") {
+      return filter.sort_dir === "asc" ? "Tanggal (Terlama)" : "Tanggal (Terbaru)";
+    }
+    if (filter.sort_by === "amount") {
+      return filter.sort_dir === "asc" ? "Nominal (Terkecil)" : "Nominal (Terbesar)";
+    }
+    if (filter.sort_by === "updated_hlc") {
+      return "Terakhir Diperbarui";
+    }
+    return `${filter.sort_by}`;
+  }, [filter.sort_by, filter.sort_dir]);
+
+  const handleResetFilterAndSort = React.useCallback(() => {
+    onResetFilter();
+    onFilterChange((prev) => ({
+      ...prev,
+      sort_by: "tx_date",
+      sort_dir: "desc",
+      offset: 0,
+    }));
+  }, [onResetFilter, onFilterChange]);
+
   return (
     <div className="w-full">
       {/* Compact Flush Search & Action Toolbar */}
       <div className="tabular-grid-container grid grid-cols-1">
-        <div className="tabular-grid-cell flex flex-col gap-1.5 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
-          {/* Group 1: Search Input + Filter Button */}
+        <div className="tabular-grid-cell flex flex-col gap-2 p-2.5 sm:flex-row sm:items-center sm:justify-between sm:px-3 sm:py-2">
+          {/* Row 1 (Mobile) / Left Group (Desktop): Search Input + Filter (icon on mobile) + Sort (icon on mobile) */}
           <div className="flex flex-1 items-center gap-1.5 sm:max-w-md">
             <div className="relative min-w-0 flex-1">
               <Input
@@ -998,38 +1042,61 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
               )}
             </div>
 
+            {/* Filter Button: Icon only on mobile, icon + text on desktop */}
             <button
               type="button"
               data-testid="filter-open-button"
               onClick={() => setIsFilterOpen(true)}
-              className={`nav-touch-item inline-flex h-8 shrink-0 items-center gap-1 rounded border px-2.5 text-xs font-semibold focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
+              aria-label="Filter"
+              title="Filter Transaksi"
+              className={`nav-touch-item inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded border px-2.5 text-xs font-semibold focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
                 activeFilterCount > 0
                   ? "border-primary bg-primary/10 text-primary hover:bg-primary/20"
                   : "border-border bg-background text-foreground hover:bg-muted"
               }`}
             >
-              <svg
-                className="h-3 w-3 shrink-0"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-              </svg>
-              <span>Filter</span>
+              <Filter className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden sm:inline">Filter</span>
               {activeFilterCount > 0 && (
                 <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary px-1 font-mono text-[10px] font-bold text-primary-foreground">
                   {activeFilterCount}
                 </span>
               )}
             </button>
+
+            {/* Sort Button (Mobile: Icon only opening drawer) */}
+            <button
+              type="button"
+              data-testid="sort-open-button"
+              onClick={() => setIsSortOpen(true)}
+              aria-label="Urutkan"
+              title="Urutkan Transaksi"
+              className={`nav-touch-item inline-flex sm:hidden h-8 w-8 shrink-0 items-center justify-center rounded border text-xs font-semibold focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
+                isCustomSort
+                  ? "border-primary bg-primary/10 text-primary hover:bg-primary/20"
+                  : "border-border bg-background text-foreground hover:bg-muted"
+              }`}
+            >
+              <ArrowUpDown className="h-3.5 w-3.5 shrink-0" />
+            </button>
+
+            {/* Reset Filter / Sort Button (Mobile: Icon only when active) */}
+            {hasActiveFilterOrSort && (
+              <button
+                type="button"
+                data-testid="reset-filter-sort-mobile-button"
+                onClick={handleResetFilterAndSort}
+                aria-label="Reset Filter dan Sort"
+                title="Reset Filter & Sort"
+                className="nav-touch-item inline-flex sm:hidden h-8 w-8 shrink-0 items-center justify-center rounded border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+              >
+                <RotateCcw className="h-3.5 w-3.5 shrink-0" />
+              </button>
+            )}
           </div>
 
-          {/* Group 2: Sort Controls + Primary CTA Button */}
-          <div className="flex items-center justify-between gap-1.5 sm:justify-end">
+          {/* Desktop Right Group: Sort Controls + Primary CTA Button */}
+          <div className="hidden sm:flex sm:items-center sm:justify-end sm:gap-1.5">
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -1056,13 +1123,15 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                   : ""}
               </button>
 
-              {activeFilterCount > 0 && (
+              {hasActiveFilterOrSort && (
                 <button
                   type="button"
-                  onClick={onResetFilter}
-                  className="hidden h-7 rounded border border-border bg-background px-2 text-[11px] text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary md:inline-flex md:items-center"
+                  data-testid="reset-filter-sort-desktop-button"
+                  onClick={handleResetFilterAndSort}
+                  className="h-7 rounded border border-border bg-background px-2 text-[11px] text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary inline-flex items-center gap-1"
                 >
-                  Reset Filter
+                  <RotateCcw className="h-3 w-3 shrink-0" />
+                  <span>Reset Filter / Sort</span>
                 </button>
               )}
             </div>
@@ -1072,17 +1141,29 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
               onClick={onOpenNewTx}
               className="nav-touch-item inline-flex h-7 shrink-0 items-center justify-center rounded border border-border bg-primary px-2.5 text-[11px] font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
             >
-              <span className="sm:hidden">+ Catat</span>
-              <span className="hidden sm:inline">+ Catat Transaksi</span>
+              <Plus className="shrink-0" />
+              <span>Catat Transaksi</span>
+            </button>
+          </div>
+
+          {/* Row 2 (Mobile only): Tombol Transaksi Full Width */}
+          <div className="w-full sm:hidden">
+            <button
+              type="button"
+              onClick={onOpenNewTx}
+              className="nav-touch-item flex h-8 w-full items-center justify-center gap-1 rounded border border-border bg-primary px-3 text-[11px] font-semibold text-primary-foreground shadow-xs hover:opacity-90 active:scale-[0.99] transition-all focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+            >
+              <Plus size={16} className=" shrink-0" />
+              <span>Catat Transaksi</span>
             </button>
           </div>
         </div>
 
-        {/* Active Filter Badges Strip */}
-        {activeFilterCount > 0 && (
+        {/* Active Filter & Sort Badges Strip */}
+        {hasActiveFilterOrSort && (
           <div className="tabular-grid-cell flex flex-wrap items-center gap-1.5 px-3 py-1.5 text-[11px]">
             <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-              Filter Aktif:
+              Aktif:
             </span>
 
             {filter.account_id && (
@@ -1224,12 +1305,34 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
               </span>
             )}
 
+            {isCustomSort && (
+              <span className="inline-flex items-center gap-1 rounded border border-primary/40 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] text-primary">
+                Urut: {selectedSortLabel}
+                <button
+                  type="button"
+                  onClick={() =>
+                    onFilterChange((prev) => ({
+                      ...prev,
+                      sort_by: "tx_date",
+                      sort_dir: "desc",
+                      offset: 0,
+                    }))
+                  }
+                  className="hover:text-foreground"
+                  title="Kembalikan urutan default"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+
             <button
               type="button"
-              onClick={onResetFilter}
-              className="text-[10px] text-muted-foreground underline hover:text-foreground"
+              onClick={handleResetFilterAndSort}
+              className="ml-auto inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground underline"
             >
-              Hapus Semua
+              <RotateCcw className="h-2.5 w-2.5 shrink-0" />
+              Reset Filter / Sort
             </button>
           </div>
         )}
@@ -1250,9 +1353,11 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
               <DialogClose asChild>
                 <button
                   type="button"
-                  className="rounded border border-border px-2 py-1 font-mono text-xs text-muted-foreground shadow-none hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                  aria-label="Tutup"
+                  title="Tutup"
+                  className="rounded-md border border-border p-1.5 text-muted-foreground shadow-none hover:bg-muted hover:text-foreground transition-colors focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                 >
-                  ESC
+                  <X className="h-4 w-4" />
                 </button>
               </DialogClose>
             </DialogHeader>
@@ -1270,9 +1375,10 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
               <button
                 type="button"
                 onClick={onResetFilter}
-                className="rounded border border-border bg-background px-3 py-1.5 font-mono text-xs text-muted-foreground shadow-none hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 font-mono text-xs text-muted-foreground shadow-none hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
               >
-                Reset Filter
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span>Reset Filter</span>
               </button>
 
               <DialogClose asChild>
@@ -1302,9 +1408,11 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                 <DrawerClose asChild>
                   <button
                     type="button"
-                    className="rounded border border-border px-2 py-1 font-mono text-xs text-muted-foreground shadow-none hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                    aria-label="Tutup"
+                    title="Tutup"
+                    className="rounded-md border border-border p-1.5 text-muted-foreground shadow-none hover:bg-muted hover:text-foreground transition-colors focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                   >
-                    Tutup
+                    <X className="h-4 w-4" />
                   </button>
                 </DrawerClose>
               </div>
@@ -1324,9 +1432,10 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                 <button
                   type="button"
                   onClick={onResetFilter}
-                  className="rounded border border-border bg-background px-3 py-1.5 font-mono text-xs text-muted-foreground shadow-none hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 font-mono text-xs text-muted-foreground shadow-none hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                 >
-                  Reset Filter
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  <span>Reset Filter</span>
                 </button>
 
                 <DrawerClose asChild>
@@ -1342,6 +1451,132 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
           </DrawerContent>
         </Drawer>
       )}
+
+      {/* Mobile Sort Options Drawer */}
+      <Drawer open={isSortOpen} onOpenChange={setIsSortOpen}>
+        <DrawerContent aria-describedby="sort-drawer-desc">
+          <DrawerHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <DrawerTitle>Urutkan Transaksi</DrawerTitle>
+                <DrawerDescription id="sort-drawer-desc">
+                  Pilih cara pengurutan daftar transaksi.
+                </DrawerDescription>
+              </div>
+              <DrawerClose asChild>
+                <button
+                  type="button"
+                  aria-label="Tutup"
+                  title="Tutup"
+                  className="rounded-md border border-border p-1.5 text-muted-foreground shadow-none hover:bg-muted hover:text-foreground transition-colors focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </DrawerClose>
+            </div>
+          </DrawerHeader>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            {[
+              {
+                label: "Tanggal Terbaru",
+                desc: "Transaksi paling baru di urutan teratas",
+                by: "tx_date" as const,
+                dir: "desc" as const,
+              },
+              {
+                label: "Tanggal Terlama",
+                desc: "Transaksi awal/lama di urutan teratas",
+                by: "tx_date" as const,
+                dir: "asc" as const,
+              },
+              {
+                label: "Nominal Terbesar",
+                desc: "Urutkan dari nilai nominal paling tinggi",
+                by: "amount" as const,
+                dir: "desc" as const,
+              },
+              {
+                label: "Nominal Terkecil",
+                desc: "Urutkan dari nilai nominal paling rendah",
+                by: "amount" as const,
+                dir: "asc" as const,
+              },
+              {
+                label: "Terakhir Diperbarui",
+                desc: "Berdasarkan perubahan data terakhir",
+                by: "updated_hlc" as const,
+                dir: "desc" as const,
+              },
+            ].map((opt) => {
+              const currentBy = filter.sort_by ?? "tx_date";
+              const currentDir = filter.sort_dir ?? "desc";
+              const isSelected = currentBy === opt.by && currentDir === opt.dir;
+
+              return (
+                <button
+                  key={`${opt.by}-${opt.dir}`}
+                  type="button"
+                  onClick={() => {
+                    onFilterChange((prev) => ({
+                      ...prev,
+                      sort_by: opt.by,
+                      sort_dir: opt.dir,
+                      offset: 0,
+                    }));
+                    setIsSortOpen(false);
+                  }}
+                  className={`flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors ${
+                    isSelected
+                      ? "border-primary bg-primary/10 text-primary font-medium"
+                      : "border-border bg-background text-foreground hover:bg-muted"
+                  }`}
+                >
+                  <div>
+                    <div className="text-xs font-semibold">{opt.label}</div>
+                    <div className="text-[11px] text-muted-foreground">
+                      {opt.desc}
+                    </div>
+                  </div>
+                  {isSelected && (
+                    <Check className="h-4 w-4 shrink-0 text-primary" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <DrawerFooter>
+            <div className="flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  onFilterChange((prev) => ({
+                    ...prev,
+                    sort_by: "tx_date",
+                    sort_dir: "desc",
+                    offset: 0,
+                  }));
+                  setIsSortOpen(false);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 font-mono text-xs text-muted-foreground shadow-none hover:bg-muted hover:text-foreground transition-colors focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span>Reset Urutan</span>
+              </button>
+
+              <DrawerClose asChild>
+                <button
+                  type="button"
+                  className="rounded-md border border-border bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground shadow-none hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                >
+                  Selesai
+                </button>
+              </DrawerClose>
+            </div>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
 
       {/* Main Container: Mobile Card-List (md:hidden) & Desktop Table (md:block) */}
       <div className="tabular-grid-container grid grid-cols-1">

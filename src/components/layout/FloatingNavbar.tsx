@@ -1,13 +1,15 @@
-import * as React from "react";
 import { Link, useLocation } from "@tanstack/react-router";
-import { motion } from "motion/react";
 import {
   ArrowLeftRight,
-  BarChart3,
-  Home,
+  LucideCalendarArrowRight,
+  LucideCalendars,
+  LucideHandCoins,
+  LucidePieChart,
   Plus,
-  Settings,
+  Settings
 } from "lucide-react";
+import { motion } from "motion/react";
+import * as React from "react";
 
 export interface FloatingNavbarProps {
   bookId: string;
@@ -20,6 +22,7 @@ export interface NavItemConfig {
     | "/books/$bookId/dashboard"
     | "/books/$bookId/transactions"
     | "/books/$bookId/reports"
+    | "/books/$bookId/budgets"
     | "/books/$bookId/settings";
   label: string;
   icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
@@ -37,8 +40,8 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
     () => [
       {
         to: "/books/$bookId/dashboard",
-        label: "Home",
-        icon: Home,
+        label: "Dashboard",
+        icon: LucidePieChart,
         isActive: (p: string) => p.endsWith("/dashboard"),
       },
       {
@@ -49,8 +52,8 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
       },
       {
         to: "/books/$bookId/reports",
-        label: "Reports",
-        icon: BarChart3,
+        label: "Report",
+        icon: LucideCalendars,
         isActive: (p: string) => p.endsWith("/reports"),
       },
       {
@@ -61,7 +64,6 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
           p.endsWith("/settings") ||
           p.endsWith("/accounts") ||
           p.endsWith("/categories") ||
-          p.endsWith("/budgets") ||
           p.endsWith("/sync") ||
           p.endsWith("/backup"),
       },
