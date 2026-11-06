@@ -185,7 +185,7 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
   const peers = peersQuery.data ?? [];
 
   return (
-    <div className="page-transition-wrapper animate-page-in w-full">
+    <div className="w-full">
       {/* Section 1: P2P Sync Status & Invite QR */}
       <div className="tabular-grid-container grid grid-cols-1 lg:grid-cols-12">
         <div className="tabular-grid-cell space-y-2.5 px-3 py-3 lg:col-span-7">
@@ -263,18 +263,14 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
               {isQrRevealed ? (
                 <div className="space-y-3">
                   {/* Visual QR Code for camera scanning */}
-                  <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-card p-4 shadow-xs">
-                    <div className="rounded-lg bg-white p-2.5 shadow-xs">
-                      <QRCodeSVG
-                        value={activeInvite.invite_url || activeInvite.qr_json}
-                        size={180}
-                        level="M"
-                        includeMargin={false}
-                      />
-                    </div>
-                    <p className="mt-2 text-center text-[11px] text-muted-foreground">
-                      Pindai dengan kamera smartphone atau bagikan link di bawah
-                    </p>
+                  <div className="flex justify-center">
+
+                  <QRCodeSVG
+                    value={activeInvite.invite_url || activeInvite.qr_json}
+                    size={280}
+                    level="L"
+                    marginSize={0}
+                  />
                   </div>
 
                   {/* Shareable Link Input with One-click Copy */}
@@ -331,13 +327,13 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
                 </div>
               ) : (
                 <div className="flex items-center justify-between rounded border border-border bg-card p-2.5 text-xs">
-                  <span className="text-muted-foreground">
+                  <span className="text-muted-foreground mr-2">
                     Kode undangan disembunyikan demi keamanan.
                   </span>
                   <button
                     type="button"
                     onClick={() => setIsQrRevealed(true)}
-                    className="nav-touch-item rounded border border-border bg-background px-2 py-0.5 text-[11px] font-medium text-primary hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                    className="nav-touch-item whitespace-nowrap rounded border border-border bg-background px-2 py-0.5 text-[11px] font-medium text-primary hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                   >
                     Tampilkan Kembali
                   </button>

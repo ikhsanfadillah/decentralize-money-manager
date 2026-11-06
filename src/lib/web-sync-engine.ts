@@ -15,6 +15,7 @@ import {
   buildInviteShareUrl,
   decodeInviteToken,
   encodeInviteToken,
+  toCompactInvitePayload,
   type InviteTokenPayload,
   nowIso8601,
   randomHex,
@@ -125,7 +126,7 @@ export class WebSyncEngine {
     const relayUrl = buildSignalingRoomUrl(config.signalingUrl, "invite", roomId);
 
     const payload: InviteTokenPayload = {
-      v: 1,
+      v: 2,
       book_id: validId,
       book_name: meta.bookName,
       book_key: meta.bookKey,
@@ -137,8 +138,9 @@ export class WebSyncEngine {
       expires_at: expiresAt,
     };
 
-    const inviteUrl = buildInviteShareUrl(payload);
-    const token = encodeInviteToken(payload);
+    const compact = toCompactInvitePayload(payload, config.signalingUrl);
+    const inviteUrl = buildInviteShareUrl(compact);
+    const token = encodeInviteToken(compact);
 
     // Start background listening on the invite room for joining peer
     this.listenOnInviteRoom(validId, relayUrl, roomId).catch((err) => {
@@ -223,7 +225,7 @@ export class WebSyncEngine {
   async joinBookFromInvite(inviteQrOrUrl: string, kind?: BookKind): Promise<BookMetadata> {
     const parsed = decodeInviteToken(inviteQrOrUrl);
 
-    if (parsed.v !== 1) {
+    if (parsed.v !== 1 && parsed.v !== 2) {
       throw new TauriCommandError(
         "INVITE_INVALID",
         `Versi undangan QR (v=${parsed.v}) tidak didukung`,

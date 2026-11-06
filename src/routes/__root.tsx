@@ -1,5 +1,9 @@
 import * as React from "react";
-import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
+import {
+  createRootRouteWithContext,
+  Outlet,
+  ScrollRestoration,
+} from "@tanstack/react-router";
 import type { QueryClient } from "@tanstack/react-query";
 import { applyTheme, getStoredTheme } from "../lib/utils";
 import { tauriApi } from "../lib/tauri-api";
@@ -40,6 +44,7 @@ const RootLayout: React.FC = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Outlet />
+      <ScrollRestoration />
       <Toaster />
     </div>
   );

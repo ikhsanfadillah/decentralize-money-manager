@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { motion, useReducedMotion } from "motion/react";
 import { ScanLine, X } from "lucide-react";
 import {
   tauriApi,
@@ -183,11 +184,20 @@ export const BookSwitcherPage: React.FC = () => {
     }
   };
 
+  const shouldReduceMotion = useReducedMotion();
   const books = booksQuery.data ?? [];
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <main className="page-transition-wrapper animate-page-in w-full p-0">
+      <motion.main
+        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{
+          duration: shouldReduceMotion ? 0.08 : 0.16,
+          ease: [0.22, 1, 0.36, 1],
+        }}
+        className="w-full p-0"
+      >
         {/* Books List */}
         <div className="tabular-grid-container grid grid-cols-1">
           <div className="tabular-grid-cell flex items-center justify-between px-3 py-2.5">
@@ -322,7 +332,7 @@ export const BookSwitcherPage: React.FC = () => {
             })
           )}
         </div>
-      </main>
+      </motion.main>
 
       {/* Create New Book Drawer with ButtonSlideToConfirm */}
       <Drawer

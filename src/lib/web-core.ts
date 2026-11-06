@@ -1,4 +1,5 @@
 import { TauriCommandError } from "./tauri-api";
+import { buildSignalingRoomUrl, getWebRtcConfig } from "./webrtc-config";
 
 export const SCHEMA_VERSION = 1;
 
@@ -667,6 +668,70 @@ export interface InviteTokenPayload {
 }
 
 /**
+ * Compact Invite Token Payload (Format v2).
+ * Drastically reduces QR code payload density by:
+ * - using 1-character field names (b: book_id, n: book_name, k: book_key, r: room_id, e: expires_at, i: node_id, u: custom_relay)
+ * - eliminating redundant protocol overhead (direct_addrs)
+ * - converting ISO timestamp to Unix epoch seconds
+ * - storing only the roomId when using default signaling server
+ */
+export interface CompactInviteTokenPayload {
+  v: 2;
+  b: string; // book_id
+  n: string; // book_name
+  k: string; // book_key
+  r: string; // room_id (e.g. "inv-c80c29f44b248eb3")
+  e: number; // expires_at (epoch seconds)
+  i?: string; // inviter node_id (optional)
+  u?: string; // custom relay_url (only when not using default signaling)
+}
+
+/**
+ * Converts a full InviteTokenPayload into a compact v2 representation.
+ */
+export function toCompactInvitePayload(
+  payload: InviteTokenPayload,
+  defaultSignalingUrl?: string
+): CompactInviteTokenPayload {
+  const expiresAtEpoch = Math.floor(new Date(payload.expires_at).getTime() / 1000);
+  const relayUrl = payload.inviter_node_addr?.relay_url || "";
+
+  // Extract roomId from /ws/invite/<roomId> if present
+  const roomMatch = relayUrl.match(/\/ws\/invite\/([^/?#]+)/i);
+  const roomId = roomMatch ? decodeURIComponent(roomMatch[1]) : "";
+
+  // Determine if relayUrl uses custom (non-default) signaling
+  const signalingBase = (defaultSignalingUrl || getWebRtcConfig().signalingUrl)
+    .trim()
+    .replace(/\/+$/, "");
+  const defaultExpectedUrl = roomId
+    ? buildSignalingRoomUrl(signalingBase, "invite", roomId)
+    : "";
+
+  const isCustomRelay = Boolean(
+    relayUrl && roomId && relayUrl.toLowerCase() !== defaultExpectedUrl.toLowerCase()
+  );
+
+  const compact: CompactInviteTokenPayload = {
+    v: 2,
+    b: payload.book_id,
+    n: payload.book_name,
+    k: payload.book_key,
+    r: roomId || relayUrl,
+    e: expiresAtEpoch,
+  };
+
+  if (payload.inviter_node_addr?.node_id) {
+    compact.i = payload.inviter_node_addr.node_id;
+  }
+  if (isCustomRelay || (!roomId && relayUrl)) {
+    compact.u = relayUrl;
+  }
+
+  return compact;
+}
+
+/**
  * Returns the current application base URL dynamically (e.g. http://localhost:1420/ or https://money-manager.decentsoft.workers.dev/)
  * prioritizing runtime window location, then import.meta.env.VITE_APP_URL, then fallback.
  */
@@ -685,9 +750,16 @@ export function getAppBaseUrl(): string {
 
 /**
  * Encodes an invite payload into a compact, URL-safe Base64URL string.
+ * Supports both legacy InviteTokenPayload (v1) and compact format (v2).
  */
-export function encodeInviteToken(payload: InviteTokenPayload): string {
-  const json = JSON.stringify(payload);
+export function encodeInviteToken(
+  payload: InviteTokenPayload | CompactInviteTokenPayload
+): string {
+  let target: object = payload;
+  if ("book_id" in payload && payload.v === 2) {
+    target = toCompactInvitePayload(payload);
+  }
+  const json = JSON.stringify(target);
   const bytes = new TextEncoder().encode(json);
   let binary = "";
   for (let i = 0; i < bytes.byteLength; i++) {
@@ -703,7 +775,7 @@ export function encodeInviteToken(payload: InviteTokenPayload): string {
  * Decodes an invite from either:
  * 1. A full URL (e.g. `https://domain.com/#/invite?d=...` or `http://localhost:1420/#/invite?d=...`)
  * 2. A raw base64url token string
- * 3. A legacy raw JSON string (`{"v":1,"book_id":...}`)
+ * 3. A legacy raw JSON string (`{"v":1,"book_id":...}` or `{"v":2,"b":...}`)
  */
 export function decodeInviteToken(tokenOrUrlOrJson: string): InviteTokenPayload {
   let cleaned = tokenOrUrlOrJson.trim();
@@ -728,13 +800,68 @@ export function decodeInviteToken(tokenOrUrlOrJson: string): InviteTokenPayload 
     }
   }
 
+  const parseAndNormalize = (rawObj: unknown): InviteTokenPayload => {
+    if (!rawObj || typeof rawObj !== "object") {
+      throw new Error("Invalid payload object");
+    }
+    const anyObj = rawObj as Record<string, unknown>;
+
+    // Handle Format v2 (Compact)
+    if (anyObj.v === 2 && (anyObj.b || anyObj.book_id) && (anyObj.n || anyObj.book_name)) {
+      const bookId = String(anyObj.b || anyObj.book_id);
+      const bookName = String(anyObj.n || anyObj.book_name);
+      const bookKey = String(anyObj.k || anyObj.book_key || "");
+      const roomId = String(anyObj.r || "");
+      const expiresEpoch = typeof anyObj.e === "number" ? anyObj.e : null;
+      const expiresAt = expiresEpoch
+        ? new Date(expiresEpoch * 1000).toISOString()
+        : String(anyObj.expires_at || new Date(Date.now() + 600000).toISOString());
+
+      let relayUrl = anyObj.u ? String(anyObj.u) : null;
+      if (!relayUrl && roomId) {
+        if (
+          roomId.startsWith("ws://") ||
+          roomId.startsWith("wss://") ||
+          roomId.startsWith("http://") ||
+          roomId.startsWith("https://")
+        ) {
+          relayUrl = roomId;
+        } else {
+          const cfg = getWebRtcConfig();
+          relayUrl = buildSignalingRoomUrl(cfg.signalingUrl, "invite", roomId);
+        }
+      }
+
+      const inviterAddr = (anyObj.inviter_node_addr as Record<string, unknown> | undefined) || {};
+      const nodeId = String(anyObj.i || inviterAddr.node_id || anyObj.node_id || "");
+
+      return {
+        v: 1, // Normalized payload version
+        book_id: bookId,
+        book_name: bookName,
+        book_key: bookKey,
+        inviter_node_addr: {
+          node_id: nodeId,
+          relay_url: relayUrl || (inviterAddr.relay_url as string | null) || null,
+          direct_addrs: ["webrtc:v1"],
+        },
+        expires_at: expiresAt,
+      };
+    }
+
+    // Handle Format v1 (Legacy)
+    if (anyObj.v === 1 && anyObj.book_id && anyObj.book_name) {
+      return anyObj as unknown as InviteTokenPayload;
+    }
+
+    throw new Error("Payload missing required fields or unsupported version");
+  };
+
   // Check if it's a raw JSON string
   if (cleaned.startsWith("{") && cleaned.endsWith("}")) {
     try {
-      const parsed = JSON.parse(cleaned) as InviteTokenPayload;
-      if (parsed.v === 1 && parsed.book_id && parsed.book_name) {
-        return parsed;
-      }
+      const parsed = JSON.parse(cleaned);
+      return parseAndNormalize(parsed);
     } catch {
       throw new TauriCommandError("INVITE_INVALID", "Format JSON undangan tidak valid");
     }
@@ -752,11 +879,8 @@ export function decodeInviteToken(tokenOrUrlOrJson: string): InviteTokenPayload 
       bytes[i] = binary.charCodeAt(i);
     }
     const json = new TextDecoder().decode(bytes);
-    const parsed = JSON.parse(json) as InviteTokenPayload;
-    if (parsed.v === 1 && parsed.book_id && parsed.book_name) {
-      return parsed;
-    }
-    throw new Error("Payload missing required fields");
+    const parsed = JSON.parse(json);
+    return parseAndNormalize(parsed);
   } catch {
     throw new TauriCommandError("INVITE_INVALID", "Format kode atau link undangan tidak valid");
   }
@@ -766,7 +890,7 @@ export function decodeInviteToken(tokenOrUrlOrJson: string): InviteTokenPayload 
  * Builds the full shareable invite URL (e.g. `https://<domain>/#/invite?d=<token>`).
  */
 export function buildInviteShareUrl(
-  payload: InviteTokenPayload,
+  payload: InviteTokenPayload | CompactInviteTokenPayload,
   customBaseUrl?: string
 ): string {
   const token = encodeInviteToken(payload);

@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Link, useLocation } from "@tanstack/react-router";
+import { motion } from "motion/react";
 import {
   ArrowLeftRight,
   BarChart3,
@@ -112,14 +113,20 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
                   {item.label}
                 </span>
 
-                {/* Subtitle active pill indicator bar underneath label */}
-                <span
-                  className={`mt-0.5 h-[3px] rounded-full transition-all duration-200 ${
-                    active
-                      ? "w-4 scale-100 bg-gradient-to-r from-emerald-600 via-emerald-500 to-green-400 opacity-100"
-                      : "w-0 scale-75 opacity-0"
-                  }`}
-                />
+                {/* Subtitle active pill indicator bar underneath label with Motion layoutId spring */}
+                {active ? (
+                  <motion.span
+                    layoutId="floating-navbar-active-bar"
+                    className="mt-0.5 h-[3px] w-4 rounded-full bg-gradient-to-r from-emerald-600 via-emerald-500 to-green-400"
+                    transition={{
+                      type: "spring",
+                      stiffness: 450,
+                      damping: 35,
+                    }}
+                  />
+                ) : (
+                  <span className="mt-0.5 h-[3px] w-0 opacity-0" />
+                )}
               </Link>
             );
           })}

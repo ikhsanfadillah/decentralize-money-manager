@@ -122,7 +122,7 @@ export const BackupPage: React.FC<BackupPageProps> = ({ bookId }) => {
   };
 
   return (
-    <div className="page-transition-wrapper animate-page-in w-full space-y-3">
+    <div className="w-full space-y-3">
       {/* Header */}
       <div className="tabular-grid-container grid grid-cols-1">
         <div className="tabular-grid-cell flex flex-wrap items-center justify-between gap-2.5 px-3 py-3">

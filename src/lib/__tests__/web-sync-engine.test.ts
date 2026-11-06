@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { WebSyncEngine } from "../web-sync-engine";
 import { tauriApi } from "../tauri-api";
 import { listenAppEvent, EVENT_CRDT_SYNCED } from "../event-bus";
+import { buildSignalingRoomUrl, getWebRtcConfig } from "../webrtc-config";
 import {
   decodeInviteToken,
   encodeInviteToken,
+  toCompactInvitePayload,
   buildInviteShareUrl,
   newUuidV7,
   HlcTimestamp,
@@ -47,6 +49,70 @@ describe("WebSyncEngine (Main Thread WebRTC & CRDT Event Bus)", () => {
     // Decode from legacy raw JSON
     const decodedFromJson = decodeInviteToken(JSON.stringify(payload));
     expect(decodedFromJson.book_id).toBe("book-test-123");
+  });
+
+  it("encodes compact format v2 tokens, reducing payload size while preserving full compatibility", () => {
+    const expiresAt = new Date(Date.now() + 600_000).toISOString();
+    const defaultRelayUrl = buildSignalingRoomUrl(
+      getWebRtcConfig().signalingUrl,
+      "invite",
+      "inv-room12345678"
+    );
+    const payload = {
+      v: 2,
+      book_id: "book-compact-456",
+      book_name: "Kas Pribadi Minimalis",
+      book_key: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      inviter_node_addr: {
+        node_id: "node-inviter-compact-999",
+        relay_url: defaultRelayUrl,
+        direct_addrs: ["webrtc:v1"],
+      },
+      expires_at: expiresAt,
+    };
+
+    // Compact token encoding
+    const compactObj = toCompactInvitePayload(payload);
+    expect(compactObj.v).toBe(2);
+    expect(compactObj.b).toBe("book-compact-456");
+    expect(compactObj.r).toBe("inv-room12345678");
+    expect(compactObj.u).toBeUndefined(); // default signaling is omitted to save bytes!
+
+    const compactToken = encodeInviteToken(compactObj);
+    const legacyToken = encodeInviteToken({ ...payload, v: 1 });
+
+    // Verify significant payload reduction (>40% smaller token)
+    expect(compactToken.length).toBeLessThan(legacyToken.length * 0.7);
+
+    // Decode from compact URL
+    const compactUrl = buildInviteShareUrl(compactObj, "https://money-manager.decentsoft.workers.dev");
+    const decodedFromUrl = decodeInviteToken(compactUrl);
+    expect(decodedFromUrl.v).toBe(1);
+    expect(decodedFromUrl.book_id).toBe("book-compact-456");
+    expect(decodedFromUrl.book_name).toBe("Kas Pribadi Minimalis");
+    expect(decodedFromUrl.book_key).toBe(payload.book_key);
+    expect(decodedFromUrl.inviter_node_addr.relay_url).toContain("/ws/invite/inv-room12345678");
+    expect(decodedFromUrl.inviter_node_addr.node_id).toBe("node-inviter-compact-999");
+
+    // Also verify custom relay preserves its full URL in compact format
+    const customPayload = {
+      ...payload,
+      inviter_node_addr: {
+        ...payload.inviter_node_addr,
+        relay_url: "wss://my-custom-private-relay.org/ws/invite/inv-custom999",
+      },
+    };
+    const customCompact = toCompactInvitePayload(customPayload);
+    expect(customCompact.u).toBe("wss://my-custom-private-relay.org/ws/invite/inv-custom999");
+    const decodedCustom = decodeInviteToken(encodeInviteToken(customCompact));
+    expect(decodedCustom.inviter_node_addr.relay_url).toBe(
+      "wss://my-custom-private-relay.org/ws/invite/inv-custom999"
+    );
+
+    // Decode from compact raw JSON
+    const decodedFromCompactJson = decodeInviteToken(JSON.stringify(compactObj));
+    expect(decodedFromCompactJson.book_id).toBe("book-compact-456");
+    expect(decodedFromCompactJson.book_name).toBe("Kas Pribadi Minimalis");
   });
 
   it("generates invite URL and allows another tab/session to join book", async () => {

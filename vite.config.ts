@@ -53,7 +53,7 @@ export default defineConfig(() => ({
     dmmSignalingServerPlugin(),
     tanstackRouter({
       target: "react",
-      autoCodeSplitting: true,
+      autoCodeSplitting: false,
       routesDirectory: "./src/routes",
       generatedRouteTree: "./src/routeTree.gen.ts",
     }),

@@ -237,7 +237,7 @@ export class WebSyncEngine {
   async joinBookFromInvite(inviteQr: string, kind?: BookKind): Promise<BookMetadata> {
     const parsed = decodeInviteToken(inviteQr);
 
-    if (parsed.v !== 1) {
+    if (parsed.v !== 1 && parsed.v !== 2) {
       throw new TauriCommandError(
         "INVITE_INVALID",
         `Versi undangan QR (v=${parsed.v}) tidak didukung`,

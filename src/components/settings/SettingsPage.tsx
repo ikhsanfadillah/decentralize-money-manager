@@ -68,7 +68,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ bookId }) => {
   };
 
   return (
-    <div className="page-transition-wrapper animate-page-in w-full">
+    <div className="w-full">
       {/* Settings Hub Header */}
       <div className="tabular-grid-container grid grid-cols-1">
         <div className="tabular-grid-cell px-3 py-2.5">

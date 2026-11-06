@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { Moon, Sun } from "lucide-react";
 import { tauriApi, type BookMetadata } from "../../lib/tauri-api";
 import {
@@ -28,6 +29,11 @@ export const BookLayout: React.FC<BookLayoutProps> = ({ bookId, bookMeta }) => {
   const syncStatus = useBookSyncEvents(bookId);
 
   const [theme, setTheme] = React.useState<ThemeMode>(() => getStoredTheme());
+  const shouldReduceMotion = useReducedMotion();
+
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [location.pathname]);
 
   const isNewTransactionModalOpen = useUiStore(
     (s) => s.isNewTransactionModalOpen
@@ -210,12 +216,30 @@ export const BookLayout: React.FC<BookLayoutProps> = ({ bookId, bookMeta }) => {
             "calc(6.5rem + env(safe-area-inset-bottom, 24px))",
         }}
       >
-        <div
-          key={location.pathname}
-          className="page-transition-wrapper animate-page-in"
-        >
-          <Outlet />
-        </div>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={location.pathname}
+            initial={{
+              opacity: 0,
+              y: shouldReduceMotion ? 0 : 6,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            exit={{
+              opacity: 0,
+              y: shouldReduceMotion ? 0 : -4,
+            }}
+            transition={{
+              duration: shouldReduceMotion ? 0.08 : 0.16,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+            className="w-full"
+          >
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {/* Floating Bottom Navigation Bar (Home, Transactions, Reports, Settings + Add FAB) */}

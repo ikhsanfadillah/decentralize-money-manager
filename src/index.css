@@ -16,7 +16,7 @@
 
   .dark {
     --color-background: #09090b;
-    --color-card: #222222;
+    --color-card: #1d1d22;
     --color-border: #27272a;
     --color-foreground: #f4f4f5;
     --color-primary: #10b981;
@@ -72,29 +72,6 @@
   border-bottom: 1px solid var(--color-border);
   border-radius: 0;
   overflow: hidden;
-  animation: card-fade-up 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-/* Staggered bottom-to-top fade-in for cards inside a page */
-.page-transition-wrapper > *:nth-child(1),
-.page-transition-wrapper > div > .tabular-grid-container:nth-child(1) {
-  animation-delay: 0ms;
-}
-.page-transition-wrapper > *:nth-child(2),
-.page-transition-wrapper > div > .tabular-grid-container:nth-child(2) {
-  animation-delay: 45ms;
-}
-.page-transition-wrapper > *:nth-child(3),
-.page-transition-wrapper > div > .tabular-grid-container:nth-child(3) {
-  animation-delay: 90ms;
-}
-.page-transition-wrapper > *:nth-child(4),
-.page-transition-wrapper > div > .tabular-grid-container:nth-child(4) {
-  animation-delay: 135ms;
-}
-.page-transition-wrapper > *:nth-child(5),
-.page-transition-wrapper > div > .tabular-grid-container:nth-child(5) {
-  animation-delay: 180ms;
 }
 
 .tabular-grid-cell {
@@ -102,26 +79,22 @@
   border: 0 !important;
 }
 
-/* Page & Card Animations (Bottom-to-Top Fade In) */
+/* Page & Card Animations */
 @keyframes page-fade-in {
   0% {
     opacity: 0;
-    transform: translateY(10px);
   }
   100% {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
 @keyframes card-fade-up {
   0% {
     opacity: 0;
-    transform: translate3d(0, 14px, 0);
   }
   100% {
     opacity: 1;
-    transform: translate3d(0, 0, 0);
   }
 }
 
@@ -138,11 +111,11 @@
 }
 
 .animate-page-in {
-  animation: page-fade-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: page-fade-in 0.16s ease-out both;
 }
 
 .animate-card-up {
-  animation: card-fade-up 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: card-fade-up 0.16s ease-out both;
 }
 
 .nav-touch-item {

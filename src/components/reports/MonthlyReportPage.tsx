@@ -205,7 +205,6 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
               →
             </button>
           </div>
-mk
           <button
             type="button"
             onClick={handleExportCsv}

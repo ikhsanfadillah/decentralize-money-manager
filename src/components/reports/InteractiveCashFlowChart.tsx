@@ -213,13 +213,24 @@ export const InteractiveCashFlowChart: React.FC<
     [dayStep, yAxisSvgWidth]
   );
 
+  const isInitialMount = React.useRef(true);
+
   // Auto-scroll on mount/focus-change or timeScale toggle
   React.useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      const container = scrollContainerRef.current;
+      if (container) {
+        const dayCenterX = yAxisSvgWidth + (initialFocusDay - 0.5) * dayStep;
+        container.scrollLeft = Math.max(0, dayCenterX - container.clientWidth / 2);
+      }
+      return;
+    }
     const timer = setTimeout(() => {
       scrollToDay(initialFocusDay);
-    }, 60);
+    }, 50);
     return () => clearTimeout(timer);
-  }, [initialFocusDay, scrollToDay, timeScale]);
+  }, [initialFocusDay, scrollToDay, timeScale, dayStep, yAxisSvgWidth]);
 
   const handleTimeScaleChange = (mode: TimeScaleMode) => {
     setTimeScale(mode);
