@@ -1,9 +1,7 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   ArrowLeftRight,
-  LucideCalendarArrowRight,
   LucideCalendars,
-  LucideHandCoins,
   LucidePieChart,
   Plus,
   Settings

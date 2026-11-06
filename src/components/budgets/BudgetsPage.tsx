@@ -1,13 +1,3 @@
-import * as React from "react";
-import { Link } from "@tanstack/react-router";
-import { useBookFinance, useBookSyncEvents } from "../../hooks/useBookFinance";
-import { useUiStore } from "../../stores/ui-store";
-import {
-  currentYearMonth,
-  formatMonthLabel,
-  formatRupiah,
-  shiftYearMonth,
-} from "../../lib/utils";
 import {
   Calendar,
   ChevronLeft,
@@ -17,8 +7,18 @@ import {
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
-import { BudgetProgressBar } from "./BudgetProgressBar";
-import { BudgetDialog } from "./BudgetDialog";
+import * as React from "react";
+import { useBookFinance, useBookSyncEvents } from "../../hooks/useBookFinance";
+import type { BudgetProgressItem } from "../../lib/tauri-api";
+import { pushToast } from "../../lib/toast";
+import {
+  currentYearMonth,
+  formatMonthLabel,
+  formatRupiah,
+  shiftYearMonth,
+} from "../../lib/utils";
+import { useUiStore } from "../../stores/ui-store";
+import { DeleteTransactionIllustration } from "../transactions/TransactionTable";
 import { EmptyStateIllustration } from "../ui/EmptyStateIllustration";
 import {
   Drawer,
@@ -28,9 +28,8 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "../ui/drawer";
-import { DeleteTransactionIllustration } from "../transactions/TransactionTable";
-import type { BudgetProgressItem } from "../../lib/tauri-api";
-import { pushToast } from "../../lib/toast";
+import { BudgetDialog } from "./BudgetDialog";
+import { BudgetProgressBar } from "./BudgetProgressBar";
 
 export interface BudgetsPageProps {
   bookId: string;
