@@ -392,7 +392,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
             </div>
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 space-y-4">
+            <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 space-y-4">
               <div className="space-y-1.5">
                 <label
                   htmlFor="account-name-input"
@@ -513,7 +513,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
             </div>
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 space-y-4">
+            <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 space-y-4">
               <div className="space-y-1.5">
                 <label
                   htmlFor="merge-source-account"

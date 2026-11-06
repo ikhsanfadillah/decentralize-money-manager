@@ -25,6 +25,7 @@
     "@tauri-apps/plugin-opener": "^2.7.2",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.23",
+    "html5-qrcode": "^2.3.8",
     "lucide-react": "^1.65.0",
     "motion": "^14.8.0",
     "qrcode.react": "^4.2.0",
@@ -32,6 +33,7 @@
     "react-dom": "^19.3.1",
     "react-hook-form": "^7.91.0",
     "react-number-format": "5.4.5",
+    "sonner": "^2.0.8",
     "tailwind-merge": "^3.7.0",
     "vaul": "^1.1.2",
     "zustand": "^5.0.16"

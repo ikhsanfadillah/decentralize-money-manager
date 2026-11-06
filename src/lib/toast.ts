@@ -1,57 +1,38 @@
+import { toast, type ExternalToast } from "sonner";
+
 export type ToastVariant = "info" | "success" | "warning" | "error";
 
-export interface ToastItem {
-  id: string;
-  title: string;
+export interface ToastOptions {
   description?: string;
-  variant: ToastVariant;
-}
-
-type ToastListener = (toasts: ToastItem[]) => void;
-
-let currentToasts: ToastItem[] = [];
-const listeners = new Set<ToastListener>();
-
-function notify(): void {
-  const snapshot = [...currentToasts];
-  for (const listener of listeners) {
-    listener(snapshot);
-  }
+  variant?: ToastVariant;
+  durationMs?: number;
 }
 
 export function pushToast(
   title: string,
-  options?: { description?: string; variant?: ToastVariant; durationMs?: number }
-): string {
-  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const item: ToastItem = {
-    id,
-    title,
+  options?: ToastOptions
+): string | number {
+  const variant = options?.variant ?? "info";
+  const data: ExternalToast = {
     description: options?.description,
-    variant: options?.variant ?? "info",
+    duration: options?.durationMs ?? 4500,
   };
-  currentToasts = [...currentToasts, item];
-  notify();
 
-  const duration = options?.durationMs ?? 4500;
-  if (duration > 0 && typeof window !== "undefined") {
-    window.setTimeout(() => {
-      dismissToast(id);
-    }, duration);
+  switch (variant) {
+    case "success":
+      return toast.success(title, data);
+    case "error":
+      return toast.error(title, data);
+    case "warning":
+      return toast.warning(title, data);
+    case "info":
+    default:
+      return toast.info(title, data);
   }
-  return id;
 }
 
-export function dismissToast(id: string): void {
-  currentToasts = currentToasts.filter((t) => t.id !== id);
-  notify();
+export function dismissToast(id?: string | number): void {
+  toast.dismiss(id);
 }
 
-export function subscribeToasts(listener: ToastListener): () => void {
-  listeners.add(listener);
-  listener([...currentToasts]);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
+export { toast };

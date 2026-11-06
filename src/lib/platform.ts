@@ -11,3 +11,46 @@ export function isTauriRuntime(): boolean {
   return Boolean(win.__TAURI_INTERNALS__ || win.__TAURI__);
 }
 
+let persistentStoragePromise: Promise<boolean> | null = null;
+
+/**
+ * Requests persistent storage from the browser (StorageManager.persist) so
+ * OPFS / IndexedDB / Cache API data is protected from automatic eviction
+ * under storage pressure (especially important on iOS Safari / WebKit).
+ */
+export function ensurePersistentStorage(): Promise<boolean> {
+  if (isTauriRuntime()) {
+    return Promise.resolve(true);
+  }
+  if (persistentStoragePromise) {
+    return persistentStoragePromise;
+  }
+
+  persistentStoragePromise = (async () => {
+    try {
+      if (
+        typeof navigator === "undefined" ||
+        !navigator.storage ||
+        typeof navigator.storage.persisted !== "function"
+      ) {
+        return false;
+      }
+
+      const alreadyPersisted = await navigator.storage.persisted();
+      if (alreadyPersisted) {
+        return true;
+      }
+
+      if (typeof navigator.storage.persist === "function") {
+        return await navigator.storage.persist();
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  })();
+
+  return persistentStoragePromise;
+}
+
+

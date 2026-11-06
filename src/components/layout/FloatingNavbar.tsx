@@ -75,7 +75,7 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
       {/* Unified Rounded Pill Navbar (Clean, Flat Surface, No Protrusions) */}
       <nav
         aria-label="Navigasi Buku"
-        className="floating-navbar-pill pointer-events-auto flex w-full items-center justify-between rounded-3xl border border-zinc-200/80 bg-card p-1.5 pl-2 pr-1.5 backdrop-blur-md dark:border-zinc-800"
+        className="floating-navbar-pill pointer-events-auto flex w-full items-center justify-between rounded-3xl border border-zinc-200/80 bg-card p-1.5 pl-2 pr-1.5 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-900/95"
       >
         {/* Navigation Items (Home, Transactions, Reports, Settings) */}
         <div className="grid flex-1 grid-cols-4 items-center gap-0.5 sm:gap-1">

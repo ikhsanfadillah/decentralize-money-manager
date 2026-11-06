@@ -1,4 +1,5 @@
 import { TauriCommandError } from "./tauri-api";
+import { ensurePersistentStorage } from "./platform";
 import type {
   WorkerMessageToMain,
   WorkerRequestMessage,
@@ -148,6 +149,8 @@ export async function callWebWorkerCommand<T>(
   cmd: string,
   args?: Record<string, unknown>
 ): Promise<T> {
+  void ensurePersistentStorage();
+
   if (cmd === "export_book_encrypted") {
     const bookId = String(args?.bookId ?? args?.book_id ?? "");
     const passphrase = String(args?.passphrase ?? "");

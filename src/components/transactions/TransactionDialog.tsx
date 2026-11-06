@@ -414,7 +414,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
           </div>
 
           {/* Scrollable Content Body - Padding container hanya di content */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 space-y-4">
+          <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 space-y-4">
             {/* Transaction Mode Selector */}
             <div className="tabular-grid-container grid grid-cols-2 sm:grid-cols-4 -m-4 mb-4">
               {(

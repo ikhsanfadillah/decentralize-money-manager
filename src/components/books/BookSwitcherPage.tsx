@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { X } from "lucide-react";
+import { ScanLine, X } from "lucide-react";
 import {
   tauriApi,
   type BookKind,
@@ -19,6 +19,7 @@ import {
   DrawerDescription,
   DrawerTitle,
 } from "../ui/drawer";
+import { BarcodeScannerModal } from "./BarcodeScannerModal";
 import { pushToast } from "../../lib/toast";
 import { formatDateTime, formatRelativeTime } from "../../lib/date";
 
@@ -32,8 +33,9 @@ export const BookSwitcherPage: React.FC = () => {
 
   const [invitePayload, setInvitePayload] = React.useState("");
   const [isJoinModalOpen, setIsJoinModalOpen] = React.useState(false);
+  const [isScanModalOpen, setIsScanModalOpen] = React.useState(false);
 
-  const [renamingBookId, setRenamingBookId] = React.useState<string | null>(
+  const [renamingBook, setRenamingBook] = React.useState<BookMetadata | null>(
     null
   );
   const [renameDraft, setRenameDraft] = React.useState("");
@@ -63,7 +65,7 @@ export const BookSwitcherPage: React.FC = () => {
       tauriApi.renameBook(bookId, newName),
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({ queryKey: bookQueryKeys.allBooks });
-      setRenamingBookId(null);
+      setRenamingBook(null);
       setRenameDraft("");
       pushToast(`Nama buku diubah menjadi "${updated.name}"`, {
         variant: "success",
@@ -119,24 +121,32 @@ export const BookSwitcherPage: React.FC = () => {
   };
 
   const handleStartRename = (book: BookMetadata) => {
-    setRenamingBookId(book.id);
+    setRenamingBook(book);
     setRenameDraft(book.name);
   };
 
-  const handleSaveRename = async (bookId: string) => {
+  const handleSlideConfirmRename = async (): Promise<SlideConfirmResult> => {
+    if (!renamingBook) {
+      return { ok: false, message: "Buku tidak ditemukan" };
+    }
     const trimmed = renameDraft.trim();
     if (!trimmed) {
-      pushToast("Nama buku baru tidak boleh kosong", { variant: "warning" });
-      return;
+      pushToast("Nama buku tidak boleh kosong", { variant: "warning" });
+      return { ok: false, message: "Nama buku tidak boleh kosong" };
     }
     try {
-      await renameBookMutation.mutateAsync({ bookId, newName: trimmed });
+      await renameBookMutation.mutateAsync({
+        bookId: renamingBook.id,
+        newName: trimmed,
+      });
+      return { ok: true };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Gagal mengubah nama";
       pushToast("Gagal mengubah nama buku", {
         description: msg,
         variant: "error",
       });
+      return { ok: false, message: "Gagal Mengubah Nama" };
     }
   };
 
@@ -189,7 +199,7 @@ export const BookSwitcherPage: React.FC = () => {
                 Pilih buku untuk mulai mencatat keuangan
               </p>
             </div>
-            <div>
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setIsCreateBookDrawerOpen(true)}
@@ -197,14 +207,15 @@ export const BookSwitcherPage: React.FC = () => {
               >
                 + Buat Buku
               </button>
-
-              {/* <button
+              <button
                 type="button"
-                onClick={() => setIsJoinModalOpen(true)}
-                className="nav-touch-item rounded border border-border bg-background px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                onClick={() => setIsScanModalOpen(true)}
+                title="Scan Barcode / QR untuk Gabung Buku"
+                className="nav-touch-item inline-flex items-center gap-1 rounded border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
               >
-                + Gabung Buku Bersama
-              </button> */}
+                <ScanLine className="h-3.5 w-3.5 text-primary" />
+                <span className="hidden sm:inline">Scan QR</span>
+              </button>
             </div>
           </div>
 
@@ -227,16 +238,16 @@ export const BookSwitcherPage: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setIsJoinModalOpen(true)}
-                  className="nav-touch-item rounded border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
+                  onClick={() => setIsScanModalOpen(true)}
+                  className="nav-touch-item inline-flex items-center gap-1.5 rounded border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted"
                 >
-                  Gabung Buku Bersama
+                  <ScanLine className="h-3.5 w-3.5 text-primary" />
+                  <span>Scan QR untuk Gabung</span>
                 </button>
               </div>
             </div>
           ) : (
             books.map((book, idx) => {
-              const isRenaming = renamingBookId === book.id;
               const isConfirmingDelete = confirmDeleteBookId === book.id;
 
               return (
@@ -247,37 +258,11 @@ export const BookSwitcherPage: React.FC = () => {
                   className="tabular-grid-cell animate-card-up flex items-center justify-between gap-3 px-3 py-3"
                 >
                   <div className="min-w-0 flex-1 space-y-0.5">
-                    {isRenaming ? (
-                      <div className="flex items-center gap-1.5">
-                        <Input
-                          aria-label="Nama Buku Baru"
-                          value={renameDraft}
-                          onChange={(e) => setRenameDraft(e.target.value)}
-                          className="h-7 max-w-xs text-xs"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => void handleSaveRename(book.id)}
-                          disabled={renameBookMutation.isPending}
-                          className="rounded border border-border bg-primary px-2 py-1 text-[11px] font-semibold text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-                        >
-                          Simpan
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setRenamingBookId(null)}
-                          className="rounded border border-border bg-background px-2 py-1 text-[11px] text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-                        >
-                          Batal
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="truncate text-xs font-semibold text-foreground sm:text-sm">
-                          {book.name}
-                        </span>
-                      </div>
-                    )}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="truncate text-xs font-semibold text-foreground sm:text-sm">
+                        {book.name}
+                      </span>
+                    </div>
 
                     <p
                       className="truncate text-[11px] text-muted-foreground"
@@ -296,15 +281,13 @@ export const BookSwitcherPage: React.FC = () => {
                       Buka →
                     </Link>
 
-                    {!isRenaming && (
-                      <button
-                        type="button"
-                        onClick={() => handleStartRename(book)}
-                        className="nav-touch-item rounded border border-border bg-background px-2 py-1.5 text-[11px] font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-                      >
-                        Ubah Nama
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleStartRename(book)}
+                      className="nav-touch-item rounded border border-border bg-background px-2 py-1.5 text-[11px] font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                    >
+                      Ubah Nama
+                    </button>
 
                     {isConfirmingDelete ? (
                       <div className="flex items-center gap-1">
@@ -419,6 +402,92 @@ export const BookSwitcherPage: React.FC = () => {
         </DrawerContent>
       </Drawer>
 
+      {/* Rename Book Drawer with ButtonSlideToConfirm */}
+      <Drawer
+        open={Boolean(renamingBook)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRenamingBook(null);
+            setRenameDraft("");
+          }
+        }}
+        shouldScaleBackground={false}
+      >
+        <DrawerContent className="fixed inset-x-0 bottom-0 z-50 flex h-[100dvh] max-h-[100dvh] w-full flex-col rounded-none border-t border-border bg-card p-0 shadow-2xl focus:outline-none sm:mx-auto sm:h-auto sm:max-h-[90vh] sm:max-w-xl sm:rounded-t-2xl">
+          <form
+            onSubmit={(e) => e.preventDefault()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+              }
+            }}
+            className="flex h-full sm:h-auto flex-1 flex-col overflow-hidden"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6 shrink-0 bg-card">
+              <div>
+                <DrawerTitle
+                  id="rename-book-drawer-title"
+                  className="text-sm font-semibold text-foreground"
+                >
+                  Ubah Nama Buku Keuangan
+                </DrawerTitle>
+                <DrawerDescription className="mt-0.5 text-xs text-muted-foreground">
+                  Perbarui nama buku catatan keuangan Anda.
+                </DrawerDescription>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setRenamingBook(null);
+                  setRenameDraft("");
+                }}
+                aria-label="Tutup"
+                className="nav-touch-item inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 space-y-4">
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="rename-book-name"
+                  className="block text-xs font-medium text-foreground"
+                >
+                  Nama Buku Keuangan Baru
+                </label>
+                <Input
+                  id="rename-book-name"
+                  value={renameDraft}
+                  onChange={(e) => setRenameDraft(e.target.value)}
+                  placeholder="Contoh: Uang Rumah Tangga, Tabungan, Usaha..."
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            {/* Footer with ButtonSlideToConfirm */}
+            <div className="flex items-center justify-end gap-2 border-t border-border p-2.5 sm:px-6 bg-card/60 backdrop-blur-xs shrink-0">
+              <ButtonSlideToConfirm
+                key={renamingBook ? `rename-${renamingBook.id}` : "rename-closed"}
+                disabled={renameBookMutation.isPending}
+                label="Geser untuk Ubah Nama"
+                readyLabel="Lepas untuk Ubah Nama"
+                loadingLabel="Menyimpan..."
+                successLabel="Nama Berhasil Diubah!"
+                onConfirm={handleSlideConfirmRename}
+                onSuccessComplete={() => {
+                  setRenamingBook(null);
+                  setRenameDraft("");
+                }}
+              />
+            </div>
+          </form>
+        </DrawerContent>
+      </Drawer>
+
       {/* Join Shared Book Drawer with ButtonSlideToConfirm */}
       <Drawer
         open={isJoinModalOpen}
@@ -495,6 +564,15 @@ export const BookSwitcherPage: React.FC = () => {
           </form>
         </DrawerContent>
       </Drawer>
+      {/* Barcode & QR Scanner Modal */}
+      <BarcodeScannerModal
+        open={isScanModalOpen}
+        onOpenChange={setIsScanModalOpen}
+        onJoinBook={async (payload) => {
+          await joinBookMutation.mutateAsync({ qr: payload, kind: "PERSONAL" });
+        }}
+        isJoining={joinBookMutation.isPending}
+      />
     </div>
   );
 };
