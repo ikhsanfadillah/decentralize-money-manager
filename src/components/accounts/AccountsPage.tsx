@@ -14,7 +14,9 @@ import {
   X
 } from "lucide-react";
 import * as React from "react";
+import { motion, useReducedMotion } from "motion/react";
 import { useBookFinance } from "../../hooks/useBookFinance";
+import { useSmoothReady } from "../../hooks/useSmoothReady";
 import type { AccountType, AccountView } from "../../lib/tauri-api";
 import { pushToast } from "../../lib/toast";
 import { formatAccountTypeLabel, formatRupiah } from "../../lib/utils";
@@ -86,6 +88,11 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
   const [mergeSourceId, setMergeSourceId] = React.useState<string>("");
   const [mergeTargetId, setMergeTargetId] = React.useState<string>("");
   const [isMergeModalOpen, setIsMergeModalOpen] = React.useState(false);
+
+  const shouldReduceMotion = useReducedMotion();
+  const { isReady, showSkeleton, didWaitForData } = useSmoothReady(
+    accountsQuery.isPending || balancesQuery.isPending
+  );
 
   const accounts = accountsQuery.data ?? [];
   const balances = balancesQuery.data ?? [];
@@ -243,8 +250,36 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
     }
   };
 
+  if (!isReady) {
+    if (!showSkeleton) {
+      return <div className="w-full min-h-[45vh]" aria-busy="true" />;
+    }
+    return (
+      <div
+        className="animate-page-in w-full space-y-4"
+        aria-label="Memuat rekening"
+        aria-busy="true"
+      >
+        <div className="glass-card h-20 animate-pulse p-5" />
+        <div className="glass-card h-48 animate-pulse p-5" />
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full space-y-4">
+    <motion.div
+      initial={
+        didWaitForData
+          ? { opacity: 0, y: shouldReduceMotion ? 0 : 4 }
+          : false
+      }
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        duration: shouldReduceMotion ? 0.08 : 0.22,
+        ease: [0.22, 1, 0.36, 1],
+      }}
+      className="w-full space-y-4"
+    >
       {/* 1. Glass Header & Total Balance Summary */}
       <div className="glass-card flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
         <div className="flex min-w-0 items-center gap-3">
@@ -318,7 +353,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
               </button>
             </div>
           ) : (
-            activeRootAccounts.map((acc, idx) => {
+            activeRootAccounts.map((acc) => {
               const currentBal =
                 balanceMap.get(acc.id) ?? acc.initial_balance;
               const visual = getAccountVisual(acc.account_type);
@@ -339,8 +374,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
                       handleStartEdit(acc);
                     }
                   }}
-                  style={{ animationDelay: `${idx * 25}ms` }}
-                  className="group nav-touch-item animate-card-up flex cursor-pointer items-center justify-between px-4 py-3.5 text-sm transition-colors hover:bg-white/[0.05] active:bg-white/[0.08] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                  className="group nav-touch-item flex cursor-pointer items-center justify-between px-4 py-3.5 text-sm transition-colors hover:bg-white/[0.05] active:bg-white/[0.08] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                 >
                   {/* Left: Rounded Icon Container + Name + Type Badge */}
                   <div className="flex min-w-0 flex-1 items-center gap-3 pr-3">
@@ -792,6 +826,6 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
           </form>
         </DrawerContent>
       </Drawer>
-    </div>
+    </motion.div>
   );
 };

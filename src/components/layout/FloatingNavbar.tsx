@@ -1,12 +1,12 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   ArrowLeftRight,
+  DollarSign,
   Home,
-  Plus,
   Target,
   TrendingUp,
 } from "lucide-react";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import * as React from "react";
 
 export interface FloatingNavbarProps {
@@ -32,6 +32,7 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
   className = "",
 }) => {
   const location = useLocation();
+  const shouldReduceMotion = useReducedMotion();
 
   const leftNavItems: NavItemConfig[] = React.useMemo(
     () => [
@@ -121,7 +122,13 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
   };
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{
+        duration: shouldReduceMotion ? 0.08 : 0.22,
+        ease: [0.22, 1, 0.36, 1],
+      }}
       className={`pointer-events-none fixed inset-x-0 bottom-3.5 z-40 mx-auto flex w-[calc(100%-1.75rem)] max-w-md items-center justify-center sm:bottom-4 ${className}`}
     >
       {/* Floating Capsule Dock with Centered Neutral CTA FAB (+) */}
@@ -141,7 +148,7 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
             onClick={onAddTransaction}
             className="floating-navbar-fab group relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-cta-surface text-cta-foreground transition-transform duration-200 hover:scale-105 active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
-            <Plus
+            <DollarSign
               className="h-5 w-5 transition-transform duration-200 group-hover:rotate-90"
               strokeWidth={2.4}
             />
@@ -150,6 +157,6 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
 
         {rightNavItems.map(renderNavItem)}
       </nav>
-    </div>
+    </motion.div>
   );
 };

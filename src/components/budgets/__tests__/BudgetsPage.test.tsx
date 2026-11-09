@@ -150,29 +150,24 @@ describe("BudgetsPage (Section 8.2 & 10.2)", () => {
       expect(screen.getByText("Total Pengeluaran")).toBeInTheDocument();
     });
 
-    // Verify explicit text labels accompany each status color (OK kept Emerald, distinct from Amber WARNING)
+    // Verify icon-only status indicators keep accessible labels and distinct semantic colors
     const okLabel = screen.getByTestId("budget-status-label-OK");
-    expect(okLabel).toHaveTextContent("AMAN (OK)");
+    expect(okLabel).toHaveAttribute("aria-label", "Aman (Ok)");
+    expect(okLabel).toHaveTextContent("");
+    expect(okLabel.querySelector("svg")).toBeInTheDocument();
     expect(okLabel.className).toContain("text-emerald-600");
 
     const warningLabel = screen.getByTestId("budget-status-label-WARNING");
-    expect(warningLabel).toHaveTextContent("PERINGATAN (WARNING)");
+    expect(warningLabel).toHaveAttribute("aria-label", "Peringatan (Warning)");
+    expect(warningLabel).toHaveTextContent("");
+    expect(warningLabel.querySelector("svg")).toBeInTheDocument();
     expect(warningLabel.className).toContain("text-amber-600");
 
     const overLabel = screen.getByTestId("budget-status-label-OVER");
-    expect(overLabel).toHaveTextContent("MELEBIHI BATAS (OVER)");
+    expect(overLabel).toHaveAttribute("aria-label", "Melebihi Batas (Over)");
+    expect(overLabel).toHaveTextContent("");
+    expect(overLabel.querySelector("svg")).toBeInTheDocument();
     expect(overLabel.className).toContain("text-rose-500");
-
-    // Verify progress indicator dot fill colors
-    expect(screen.getByTestId("budget-progress-fill-OK").className).toContain(
-      "bg-emerald-500"
-    );
-    expect(
-      screen.getByTestId("budget-progress-fill-WARNING").className
-    ).toContain("bg-amber-500");
-    expect(screen.getByTestId("budget-progress-fill-OVER").className).toContain(
-      "bg-rose-500"
-    );
   });
 
   it("automatically refetches budget progress when crdt:synced arrives with transactions for active bookId", async () => {
@@ -204,8 +199,9 @@ describe("BudgetsPage (Section 8.2 & 10.2)", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("budget-status-label-OK")).toHaveTextContent(
-        "AMAN (OK)"
+      expect(screen.getByTestId("budget-status-label-OK")).toHaveAttribute(
+        "aria-label",
+        "Aman (Ok)"
       );
     });
     expect(getBudgetProgressSpy).toHaveBeenCalledTimes(1);
@@ -231,7 +227,34 @@ describe("BudgetsPage (Section 8.2 & 10.2)", () => {
       expect(getBudgetProgressSpy).toHaveBeenCalledTimes(2);
       expect(
         screen.getByTestId("budget-status-label-WARNING")
-      ).toHaveTextContent("PERINGATAN (WARNING)");
+      ).toHaveAttribute("aria-label", "Peringatan (Warning)");
+    });
+  });
+
+  it("does not flash empty budget illustration while initial query is pending", async () => {
+    let resolveBudgets!: (v: BudgetProgressItem[]) => void;
+    vi.spyOn(tauriApi, "getBudgetProgress").mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveBudgets = resolve;
+        })
+    );
+
+    const queryClient = createTestQueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <BudgetsPage bookId={bookId} />
+      </QueryClientProvider>
+    );
+
+    expect(
+      screen.queryByText("Belum ada anggaran aktif untuk periode ini")
+    ).not.toBeInTheDocument();
+
+    resolveBudgets(initialBudgets);
+
+    await waitFor(() => {
+      expect(screen.getByText("Total Pengeluaran")).toBeInTheDocument();
     });
   });
 });

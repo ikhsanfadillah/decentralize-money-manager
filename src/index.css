@@ -24,7 +24,7 @@
   .dark {
     color-scheme: dark;
     --color-background: #09090b;
-    --color-card: rgba(255, 255, 255, 0.055);
+    --color-card: rgba(30, 28, 28, 0.85);
     --color-card-contrast: rgba(20, 20, 24, 0.92);
     --color-border: rgba(255, 255, 255, 0.11);
     --color-foreground: #fafafa;
@@ -156,11 +156,18 @@
 }
 
 .animate-page-in {
-  animation: page-fade-in 0.16s ease-out both;
+  animation: page-fade-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .animate-card-up {
   animation: card-fade-up 0.16s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-page-in,
+  .animate-card-up {
+    animation-duration: 0.08s;
+  }
 }
 
 .nav-touch-item {

@@ -475,7 +475,9 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
           </div>
 
           {/* List of Connected Peers */}
-          {peers.length === 0 ? (
+          {peersQuery.isPending ? (
+            <div className="min-h-[112px]" aria-busy="true" />
+          ) : peers.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-black/[0.03] p-6 text-center dark:bg-white/[0.03]">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.05] text-muted-foreground dark:bg-white/[0.08]">
                 <Laptop className="h-4 w-4 opacity-75" />
@@ -486,11 +488,10 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
             </div>
           ) : (
             <div className="space-y-2.5">
-              {peers.map((peer, idx) => (
+              {peers.map((peer) => (
                 <div
                   key={peer.node_id}
-                  style={{ animationDelay: `${idx * 35}ms` }}
-                  className="animate-card-up flex items-center justify-between gap-3 rounded-2xl border border-border bg-black/[0.03] p-3 transition-colors hover:border-primary/40 dark:bg-white/[0.04]"
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-black/[0.03] p-3 transition-colors hover:border-primary/40 dark:bg-white/[0.04]"
                 >
                   <div className="flex min-w-0 items-center gap-2.5">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-black/[0.04] text-muted-foreground dark:bg-white/[0.06]">

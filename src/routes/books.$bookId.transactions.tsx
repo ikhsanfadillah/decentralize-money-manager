@@ -1,11 +1,12 @@
 import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  bookQueryKeys,
   useBookFinance,
   useInfiniteTransactions,
 } from "../hooks/useBookFinance";
 import { useUiStore } from "../stores/ui-store";
-import type { TransactionView } from "../lib/tauri-api";
+import { tauriApi, type PaginatedTransactions, type TransactionView } from "../lib/tauri-api";
 import { TransactionTable } from "../components/transactions/TransactionTable";
 import { TransactionDialog } from "../components/transactions/TransactionDialog";
 import { pushToast } from "../lib/toast";
@@ -102,6 +103,40 @@ const TransactionsRouteComponent: React.FC = () => {
 };
 
 export const Route = createFileRoute("/books/$bookId/transactions")({
+  loader: async ({ context, params }) => {
+    const filter = useUiStore.getState().activeFilterDraft;
+    const pageSize = Math.max(1, filter.limit ?? 25);
+    const { offset: _ignoredOffset, ...filterWithoutOffset } = filter;
+
+    await context.queryClient
+      .ensureInfiniteQueryData({
+        queryKey: bookQueryKeys.transactionsInfinite(
+          params.bookId,
+          filterWithoutOffset
+        ),
+        queryFn: ({ pageParam }) =>
+          tauriApi.listTransactions(params.bookId, {
+            ...filterWithoutOffset,
+            limit: pageSize,
+            offset: pageParam,
+          }),
+        initialPageParam: 0,
+        getNextPageParam: (
+          lastPage: PaginatedTransactions,
+          allPages: PaginatedTransactions[]
+        ) => {
+          const loadedCount = allPages.reduce(
+            (sum, page) => sum + page.items.length,
+            0
+          );
+          if (lastPage.items.length === 0 || loadedCount >= lastPage.total) {
+            return undefined;
+          }
+          return loadedCount;
+        },
+      })
+      .catch(() => {});
+  },
   component: TransactionsRouteComponent,
   pendingComponent: RoutePendingView,
   errorComponent: RouteErrorView,

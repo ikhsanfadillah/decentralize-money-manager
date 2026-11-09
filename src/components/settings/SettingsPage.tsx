@@ -2,25 +2,36 @@ import * as React from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowLeftRight,
   BookOpen,
+  Check,
   ChevronRight,
   Laptop,
+  Moon,
   Pencil,
   PieChart,
   RefreshCw,
   ShieldCheck,
+  Sun,
   Tags,
   Trash2,
   Wallet,
   X,
 } from "lucide-react";
-import { bookQueryKeys, useBookFinance } from "../../hooks/useBookFinance";
-import { tauriApi } from "../../lib/tauri-api";
-import { formatDateShort } from "../../lib/date";
 import {
+  bookQueryKeys,
+  useBookFinance,
+  useBookSyncEvents,
+} from "../../hooks/useBookFinance";
+import { tauriApi } from "../../lib/tauri-api";
+import { formatDateShort, formatRelativeTime } from "../../lib/date";
+import {
+  applyTheme,
   currentYearMonth,
   formatBookKindLabel,
   formatRupiah,
+  getStoredTheme,
+  type ThemeMode,
 } from "../../lib/utils";
 import { pushToast } from "../../lib/toast";
 import { Input } from "../ui/input";
@@ -220,6 +231,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ bookId }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const currentMonth = React.useMemo(() => currentYearMonth(), []);
+  const syncStatus = useBookSyncEvents(bookId);
   const {
     accountsQuery,
     balancesQuery,
@@ -234,10 +246,15 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ bookId }) => {
     queryFn: () => tauriApi.listBooks(),
   });
 
+  const allBooks = React.useMemo(() => booksQuery.data ?? [], [booksQuery.data]);
   const activeBook = React.useMemo(
-    () => (booksQuery.data ?? []).find((b) => b.id === bookId) ?? null,
-    [booksQuery.data, bookId]
+    () => allBooks.find((b) => b.id === bookId) ?? null,
+    [allBooks, bookId]
   );
+
+  const [theme, setTheme] = React.useState<ThemeMode>(() => getStoredTheme());
+  const [isSwitchBookDrawerOpen, setIsSwitchBookDrawerOpen] =
+    React.useState(false);
 
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
   const [deviceNameInput, setDeviceNameInput] = React.useState("");
@@ -342,6 +359,51 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ bookId }) => {
     }
   };
 
+  const handleToggleTheme = () => {
+    const next: ThemeMode = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    applyTheme(next);
+  };
+
+  const handleSwitchBook = async (targetBookId: string) => {
+    setIsSwitchBookDrawerOpen(false);
+    if (targetBookId === "__HOME__") {
+      await tauriApi.closeBook(bookId).catch(() => {});
+      void navigate({ to: "/" });
+      return;
+    }
+    if (targetBookId && targetBookId !== bookId) {
+      await tauriApi.closeBook(bookId).catch(() => {});
+      void navigate({
+        to: "/books/$bookId/dashboard",
+        params: { bookId: targetBookId },
+      });
+    }
+  };
+
+  const syncBadgeMeta = React.useMemo(() => {
+    switch (syncStatus.state) {
+      case "syncing":
+        return { dotClass: "bg-primary animate-pulse", label: "Sync" };
+      case "connecting":
+        return {
+          dotClass: "bg-amber-400 animate-pulse",
+          label: "Menghubungkan",
+        };
+      case "error":
+        return { dotClass: "bg-rose-400", label: "Kendala" };
+      case "idle":
+      default:
+        if (syncStatus.peers > 0) {
+          return {
+            dotClass: "bg-emerald-400",
+            label: `${syncStatus.peers} Peer`,
+          };
+        }
+        return { dotClass: "bg-emerald-400", label: "Lokal" };
+    }
+  }, [syncStatus]);
+
   const handleConfirmDeleteBook = async () => {
     try {
       await deleteBookMutation.mutateAsync();
@@ -362,51 +424,136 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ bookId }) => {
           Pengaturan
         </h1>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          Kelola identitas buku keuangan, perangkat lokal, data buku,
+          Kelola buku keuangan, tampilan aplikasi, perangkat lokal, data buku,
           sinkronisasi P2P, dan cadangan terenkripsi.
         </p>
       </div>
 
-      {/* Grup 0: Buku Keuangan Aktif */}
+      {/* Grup 0: Buku Keuangan Aktif & Switch Book */}
       <div className="space-y-2">
         <p className="px-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           Buku Keuangan Aktif
         </p>
+        <div className="glass-card overflow-hidden divide-y divide-border/70">
+          <div className="flex items-center justify-between gap-3 px-4 py-3.5 sm:px-5">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border bg-black/[0.04] text-primary dark:bg-white/[0.06]">
+                <BookOpen className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span
+                    data-testid="active-book-name"
+                    className="truncate text-xs font-semibold text-foreground sm:text-sm"
+                  >
+                    {activeBook?.name ?? (booksQuery.isPending ? "\u00A0" : "Buku Keuangan")}
+                  </span>
+                  {activeBook && (
+                    <span className="shrink-0 rounded-full border border-border bg-black/[0.04] px-2 py-0.5 text-[10px] font-semibold text-muted-foreground dark:bg-white/[0.06]">
+                      {formatBookKindLabel(activeBook.kind)}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                  {activeBook
+                    ? `Dibuat ${formatDateShort(activeBook.created_at)} · ${activeAccounts.length} akun · ${categories.length} kategori`
+                    : `ID: ${bookId}`}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              data-testid="btn-rename-book"
+              onClick={handleOpenRenameBookDrawer}
+              className="nav-touch-item inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-black/[0.04] px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted dark:bg-white/[0.06] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+            >
+              <Pencil className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+              <span>Ubah Nama</span>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            data-testid="btn-switch-book"
+            onClick={() => setIsSwitchBookDrawerOpen(true)}
+            className="nav-touch-item group flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.04] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary sm:px-5"
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-black/[0.04] text-primary dark:bg-white/[0.06]">
+                <ArrowLeftRight className="h-4 w-4" strokeWidth={2.2} />
+              </div>
+              <div className="min-w-0">
+                <span className="block truncate text-xs font-semibold text-foreground sm:text-sm">
+                  Ganti Buku Keuangan
+                </span>
+                <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                  {allBooks.length > 1
+                    ? "Beralih ke buku lain atau lihat semua buku lokal"
+                    : "Lihat daftar buku lokal atau buat buku baru"}
+                </p>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="rounded-full border border-border bg-black/[0.04] px-2 py-0.5 font-mono text-[10px] font-semibold text-foreground dark:bg-white/[0.06]">
+                {allBooks.length || 1} Buku
+              </span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* Grup Tampilan: Dark Mode Toggle */}
+      <div className="space-y-2">
+        <p className="px-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Tampilan
+        </p>
         <div className="glass-card flex items-center justify-between gap-3 px-4 py-3.5 sm:px-5">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border bg-black/[0.04] text-primary dark:bg-white/[0.06]">
-              <BookOpen className="h-5 w-5" aria-hidden="true" />
+              {theme === "dark" ? (
+                <Moon className="h-5 w-5" aria-hidden="true" />
+              ) : (
+                <Sun className="h-5 w-5 text-amber-500" aria-hidden="true" />
+              )}
             </div>
             <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span
-                  data-testid="active-book-name"
-                  className="truncate text-xs font-semibold text-foreground sm:text-sm"
-                >
-                  {activeBook?.name || "Memuat..."}
-                </span>
-                {activeBook && (
-                  <span className="shrink-0 rounded-full border border-border bg-black/[0.04] px-2 py-0.5 text-[10px] font-semibold text-muted-foreground dark:bg-white/[0.06]">
-                    {formatBookKindLabel(activeBook.kind)}
-                  </span>
-                )}
-              </div>
+              <span className="block truncate text-xs font-semibold text-foreground sm:text-sm">
+                Mode Gelap
+              </span>
               <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                {activeBook
-                  ? `Dibuat ${formatDateShort(activeBook.created_at)} · ${activeAccounts.length} akun · ${categories.length} kategori`
-                  : `ID: ${bookId}`}
+                {theme === "dark"
+                  ? "Aktif · Tema gelap sedang digunakan"
+                  : "Nonaktif · Tema terang sedang digunakan"}
               </p>
             </div>
           </div>
 
           <button
             type="button"
-            data-testid="btn-rename-book"
-            onClick={handleOpenRenameBookDrawer}
-            className="nav-touch-item inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-black/[0.04] px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted dark:bg-white/[0.06] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+            role="switch"
+            aria-checked={theme === "dark"}
+            aria-label={
+              theme === "dark"
+                ? "Nonaktifkan mode gelap"
+                : "Aktifkan mode gelap"
+            }
+            data-testid="settings-theme-toggle"
+            onClick={handleToggleTheme}
+            className={`nav-touch-item relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border p-0.5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+              theme === "dark"
+                ? "border-transparent bg-cta-surface"
+                : "border-border bg-black/15"
+            }`}
           >
-            <Pencil className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-            <span>Ubah Nama</span>
+            <span
+              className={`inline-block h-5 w-5 rounded-full transition-transform duration-200 ${
+                theme === "dark"
+                  ? "translate-x-5 bg-cta-foreground"
+                  : "translate-x-0 bg-white"
+              }`}
+            />
           </button>
         </div>
       </div>
@@ -427,14 +574,17 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ bookId }) => {
                   data-testid="local-device-name"
                   className="truncate text-xs font-semibold text-foreground sm:text-sm"
                 >
-                  {deviceIdentityQuery.data?.device_name || "Memuat..."}
+                  {deviceIdentityQuery.data?.device_name ||
+                    (deviceIdentityQuery.isPending ? "\u00A0" : "Perangkat Ini")}
                 </span>
                 <span className="shrink-0 rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
                   Perangkat Ini
                 </span>
               </div>
               <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">
-                ID: {deviceIdentityQuery.data?.device_id || "..."}
+                {deviceIdentityQuery.data?.device_id
+                  ? `ID: ${deviceIdentityQuery.data.device_id}`
+                  : "\u00A0"}
               </p>
             </div>
           </div>
@@ -555,6 +705,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ bookId }) => {
               </span>
             </div>
             <div className="flex shrink-0 items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-black/[0.04] px-2 py-0.5 font-mono text-[10px] text-muted-foreground dark:bg-white/[0.06]">
+                <span
+                  className={`inline-block h-1.5 w-1.5 rounded-full ${syncBadgeMeta.dotClass}`}
+                />
+                <span>{syncBadgeMeta.label}</span>
+              </span>
               <span className="rounded-full border border-border bg-black/[0.04] px-2 py-0.5 font-mono text-[10px] text-muted-foreground dark:bg-white/[0.06]">
                 P2P
               </span>
@@ -589,31 +745,27 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ bookId }) => {
         <p className="px-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-400">
           Zona Berbahaya
         </p>
-        <div className="glass-card flex flex-wrap items-center justify-between gap-3 border-rose-500/25 px-4 py-3.5 sm:px-5">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-500 dark:text-rose-400">
-              <Trash2 className="h-4 w-4" aria-hidden="true" />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-xs font-semibold text-foreground sm:text-sm">
-                Hapus Buku Keuangan Ini
-              </p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">
-                Hapus permanen buku ini beserta seluruh transaksi dan anggarannya
-                dari perangkat ini.
-              </p>
-            </div>
+        <div className="glass-card flex flex-col md:flex-row md:items-center flex-wrap  justify-between gap-3 border-rose-500/25 px-4 py-3.5 sm:px-5">
+          <div className="min-w-0">
+            <p className="truncate text-xs font-semibold text-foreground sm:text-sm">
+              Hapus Buku Keuangan Ini
+            </p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Hapus permanen buku ini beserta seluruh transaksi dan anggarannya
+              dari perangkat ini.
+            </p>
           </div>
-
-          <button
-            type="button"
-            data-testid="btn-delete-book"
-            onClick={() => setIsDeleteBookConfirmOpen(true)}
-            className="nav-touch-item inline-flex shrink-0 items-center gap-1.5 rounded-full border border-rose-500/35 bg-rose-500/10 px-3.5 py-2 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-500/20 dark:text-rose-400 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-rose-500"
-          >
-            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-            <span>Hapus Buku</span>
-          </button>
+          <div className="">
+            <button
+              type="button"
+              data-testid="btn-delete-book"
+              onClick={() => setIsDeleteBookConfirmOpen(true)}
+              className="nav-touch-item inline-flex shrink-0 items-center gap-1.5 rounded-full border border-rose-500/35 bg-rose-500/10 px-3.5 py-2 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-500/20 dark:text-rose-400 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-rose-500"
+            >
+              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>Hapus Buku</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -836,6 +988,108 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ bookId }) => {
               <span>
                 {deleteBookMutation.isPending ? "Menghapus..." : "Hapus Buku"}
               </span>
+            </button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+
+      {/* Switch Book Drawer (Vaul) */}
+      <Drawer
+        open={isSwitchBookDrawerOpen}
+        onOpenChange={setIsSwitchBookDrawerOpen}
+        shouldScaleBackground={false}
+      >
+        <DrawerContent className="max-h-[85vh] p-0 sm:mx-auto sm:max-w-md sm:rounded-t-3xl">
+          <div className="flex shrink-0 items-center justify-between border-b border-border/70 px-5 py-4">
+            <div>
+              <DrawerTitle
+                id="switch-book-drawer-title"
+                className="text-sm font-bold text-foreground"
+              >
+                Ganti Buku Keuangan
+              </DrawerTitle>
+              <DrawerDescription className="mt-0.5 text-xs text-muted-foreground">
+                Pilih buku lain di perangkat ini atau buka daftar semua buku.
+              </DrawerDescription>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsSwitchBookDrawerOpen(false)}
+              aria-label="Tutup"
+              className="nav-touch-item inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-muted text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="flex-1 space-y-2 overflow-y-auto px-5 py-4">
+            {allBooks.map((b) => {
+              const isCurrent = b.id === bookId;
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  data-testid={`switch-book-item-${b.id}`}
+                  onClick={() => void handleSwitchBook(b.id)}
+                  className={`nav-touch-item flex w-full items-center justify-between gap-3 rounded-2xl border p-3.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
+                    isCurrent
+                      ? "border-primary/40 bg-primary/10"
+                      : "border-border bg-black/[0.03] hover:bg-black/[0.06] dark:bg-white/[0.04] dark:hover:bg-white/[0.08]"
+                  }`}
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+                        isCurrent
+                          ? "bg-cta-surface text-cta-foreground"
+                          : "border border-border bg-black/[0.04] text-primary dark:bg-white/[0.06]"
+                      }`}
+                    >
+                      <BookOpen className="h-4 w-4" aria-hidden="true" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="truncate text-xs font-semibold text-foreground sm:text-sm">
+                          {b.name}
+                        </span>
+                        <span className="shrink-0 rounded-full border border-border bg-black/[0.04] px-2 py-0.5 text-[10px] font-semibold text-muted-foreground dark:bg-white/[0.06]">
+                          {formatBookKindLabel(b.kind)}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                        Dibuka {formatRelativeTime(b.last_opened_at)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {isCurrent ? (
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-cta-surface px-2.5 py-1 text-[10px] font-bold text-cta-foreground">
+                      <Check className="h-3 w-3" aria-hidden="true" />
+                      <span>Aktif</span>
+                    </span>
+                  ) : (
+                    <ChevronRight
+                      className="h-4 w-4 shrink-0 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <DrawerFooter className="border-t border-border/70 px-5 py-3.5">
+            <button
+              type="button"
+              data-testid="btn-view-all-books"
+              onClick={() => void handleSwitchBook("__HOME__")}
+              className="nav-touch-item inline-flex h-10 w-full items-center justify-center gap-2 rounded-full border border-border bg-black/[0.04] px-4 text-xs font-semibold text-foreground transition-colors hover:bg-muted dark:bg-white/[0.06] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+            >
+              <ArrowLeftRight
+                className="h-3.5 w-3.5 text-primary"
+                aria-hidden="true"
+              />
+              <span>Lihat Semua Buku &amp; Buat Baru</span>
             </button>
           </DrawerFooter>
         </DrawerContent>

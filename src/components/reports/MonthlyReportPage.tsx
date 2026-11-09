@@ -1,10 +1,12 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
+import { motion, useReducedMotion } from "motion/react";
 import {
   bookQueryKeys,
   useBookFinance,
   useBookSyncEvents,
 } from "../../hooks/useBookFinance";
+import { useSmoothReady } from "../../hooks/useSmoothReady";
 import { tauriApi } from "../../lib/tauri-api";
 import {
   currentYearMonth,
@@ -16,7 +18,7 @@ import {
   shiftYearMonth,
 } from "../../lib/utils";
 import { formatDateReadable, formatDateShort } from "../../lib/date";
-import { Download, TrendingDown, TrendingUp } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Download, TrendingDown, TrendingUp } from "lucide-react";
 import { pushToast } from "../../lib/toast";
 import { InteractiveCashFlowChart } from "./InteractiveCashFlowChart";
 import { InteractiveCategoryChart } from "./InteractiveCategoryChart";
@@ -89,7 +91,11 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
     enabled: Boolean(bookId) && hasDrilldownFilter,
   });
 
+  const shouldReduceMotion = useReducedMotion();
   const report = monthlyReportQuery.data;
+  const { isReady, showSkeleton, didWaitForData } = useSmoothReady(
+    monthlyReportQuery.isLoading || !report
+  );
 
   const handleExportCsv = () => {
     if (!report) return;
@@ -137,6 +143,17 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
     });
   };
 
+  if (!isReady) {
+    if (!showSkeleton) {
+      return <div className="w-full min-h-[50vh]" aria-busy="true" />;
+    }
+    return (
+      <div className="animate-page-in glass-card p-8 text-center font-mono text-xs text-muted-foreground">
+        Menyusun laporan analitik bulanan ({selectedMonth})...
+      </div>
+    );
+  }
+
   if (monthlyReportQuery.isLoading || !report) {
     return (
       <div className="glass-card p-8 text-center font-mono text-xs text-muted-foreground">
@@ -148,18 +165,18 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
   const incomeMoMPct =
     report.prev_operational_income > 0
       ? Math.round(
-          ((report.operational_income - report.prev_operational_income) * 100) /
-            report.prev_operational_income
-        )
+        ((report.operational_income - report.prev_operational_income) * 100) /
+        report.prev_operational_income
+      )
       : null;
 
   const expenseMoMPct =
     report.prev_operational_expense > 0
       ? Math.round(
-          ((report.operational_expense - report.prev_operational_expense) *
-            100) /
-            report.prev_operational_expense
-        )
+        ((report.operational_expense - report.prev_operational_expense) *
+          100) /
+        report.prev_operational_expense
+      )
       : null;
 
   const isProjectedOverBudget =
@@ -171,10 +188,30 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
     : report.top_expenses;
 
   return (
-    <div className="w-full space-y-4 sm:space-y-5">
+    <motion.div
+      initial={
+        didWaitForData
+          ? { opacity: 0, y: shouldReduceMotion ? 0 : 4 }
+          : false
+      }
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        duration: shouldReduceMotion ? 0.08 : 0.22,
+        ease: [0.22, 1, 0.36, 1],
+      }}
+      className="w-full space-y-4 sm:space-y-5"
+    >
       {/* Top Toolbar: Capsule Month Selector & Compact CSV Export */}
-      <div className="glass-card flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5">
-        <div className="flex items-center gap-1.5 rounded-full border border-border bg-black/[0.04] dark:bg-white/[0.05] p-1">
+      <div className="flex flex-wrap items-center justify-between gap-3 ">
+        <div>
+          <h1 className="text-xl font-extrabold tracking-tight text-foreground sm:text-2xl">
+            Laporan Bulanan
+          </h1>
+          <p className="text-xs text-muted-foreground">
+            Ringkasan dan analisis keuangan bulanan
+          </p>
+        </div>
+        <div className="flex flex-1 items-center justify-between gap-1.5 rounded-full border border-border bg-card p-1">
           <button
             type="button"
             aria-label="Bulan Laporan Sebelumnya"
@@ -183,14 +220,17 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
             }
             className="nav-touch-item inline-flex h-8 w-8 items-center justify-center rounded-full font-mono text-xs text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
           >
-            ←
+            <ChevronLeft className="h-3.5 w-3.5" />
           </button>
-          <span
-            data-testid="report-selected-month"
-            className="min-w-[116px] text-center text-xs font-bold tracking-tight text-foreground sm:min-w-[136px] sm:text-sm"
-          >
-            {formatMonthLabel(selectedMonth)}
-          </span>
+          <div className="flex items-center gap-1.5 px-2">
+            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+            <span
+              data-testid="selected-budget-month"
+              className="font-mono text-xs font-semibold text-foreground"
+            >
+              {formatMonthLabel(selectedMonth)}
+            </span>
+          </div>
           <button
             type="button"
             aria-label="Bulan Laporan Berikutnya"
@@ -199,17 +239,17 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
             }
             className="nav-touch-item inline-flex h-8 w-8 items-center justify-center rounded-full font-mono text-xs text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
           >
-            →
+            <ChevronRight className="h-3.5 w-3.5" />
           </button>
         </div>
 
         <button
           type="button"
           onClick={handleExportCsv}
-          className="nav-touch-item inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-border bg-black/[0.04] dark:bg-white/[0.06] px-4 text-xs font-semibold text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+          className="nav-touch-item inline-flex h-9 items-center gap-1.5 rounded-full bg-cta-surface px-2.5 text-xs font-bold text-cta-foreground hover:opacity-90 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
-          <Download className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-          <span>Ekspor CSV</span>
+          <Download className="h-4 w-4" aria-hidden="true" />
+          <span className="hidden md:inline-block">Ekspor CSV</span>
         </button>
       </div>
 
@@ -232,11 +272,10 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
             </p>
             {incomeMoMPct !== null && (
               <span
-                className={`inline-flex items-center gap-0.5 shrink-0 rounded-full border px-2 py-0.5 font-mono text-[10px] font-medium leading-none ${
-                  incomeMoMPct >= 0
-                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400"
-                    : "border-rose-500/30 bg-rose-500/10 text-rose-500 dark:text-rose-400"
-                }`}
+                className={`inline-flex items-center gap-0.5 shrink-0 rounded-full border px-2 py-0.5 font-mono text-[10px] font-medium leading-none ${incomeMoMPct >= 0
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400"
+                  : "border-rose-500/30 bg-rose-500/10 text-rose-500 dark:text-rose-400"
+                  }`}
               >
                 {incomeMoMPct >= 0 ? "▲" : "▼"}
                 {formatPercent(Math.abs(incomeMoMPct), 0)}
@@ -270,11 +309,10 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
             </p>
             {expenseMoMPct !== null && (
               <span
-                className={`inline-flex items-center gap-0.5 shrink-0 rounded-full border px-2 py-0.5 font-mono text-[10px] font-medium leading-none ${
-                  expenseMoMPct <= 0
-                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400"
-                    : "border-rose-500/30 bg-rose-500/10 text-rose-500 dark:text-rose-400"
-                }`}
+                className={`inline-flex items-center gap-0.5 shrink-0 rounded-full border px-2 py-0.5 font-mono text-[10px] font-medium leading-none ${expenseMoMPct <= 0
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400"
+                  : "border-rose-500/30 bg-rose-500/10 text-rose-500 dark:text-rose-400"
+                  }`}
               >
                 {expenseMoMPct >= 0 ? "▲" : "▼"}
                 {formatPercent(Math.abs(expenseMoMPct), 0)}
@@ -303,11 +341,10 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
           </div>
           <div className="flex flex-wrap items-baseline gap-2">
             <p
-              className={`font-mono text-base font-bold tabular-nums tracking-tight sm:text-lg ${
-                report.operational_net >= 0
-                  ? "text-emerald-500 dark:text-emerald-400"
-                  : "text-rose-500 dark:text-rose-400"
-              }`}
+              className={`font-mono text-base font-bold tabular-nums tracking-tight sm:text-lg ${report.operational_net >= 0
+                ? "text-emerald-500 dark:text-emerald-400"
+                : "text-rose-500 dark:text-rose-400"
+                }`}
             >
               {report.operational_net > 0
                 ? `+${formatRupiah(report.operational_net)}`
@@ -317,13 +354,12 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
             </p>
             <span
               data-testid="report-savings-rate-badge"
-              className={`shrink-0 rounded-full border px-2 py-0.5 font-mono text-[10px] font-medium leading-none ${
-                report.savings_rate_bps >= 2000
-                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400"
-                  : report.savings_rate_bps >= 0
-                    ? "border-amber-500/30 bg-amber-500/10 text-amber-500 dark:text-amber-400"
-                    : "border-rose-500/30 bg-rose-500/10 text-rose-500 dark:text-rose-400"
-              }`}
+              className={`shrink-0 rounded-full border px-2 py-0.5 font-mono text-[10px] font-medium leading-none ${report.savings_rate_bps >= 2000
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400"
+                : report.savings_rate_bps >= 0
+                  ? "border-amber-500/30 bg-amber-500/10 text-amber-500 dark:text-amber-400"
+                  : "border-rose-500/30 bg-rose-500/10 text-rose-500 dark:text-rose-400"
+                }`}
             >
               Tabungan {formatPercent(report.savings_rate_bps / 100, 1)}
             </span>
@@ -346,11 +382,10 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
               </span>
             </p>
             <span
-              className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold leading-none ${
-                isProjectedOverBudget
-                  ? "border-rose-500/30 bg-rose-500/10 text-rose-500 dark:text-rose-400"
-                  : "border-emerald-500/30 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400"
-              }`}
+              className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold leading-none ${isProjectedOverBudget
+                ? "border-rose-500/30 bg-rose-500/10 text-rose-500 dark:text-rose-400"
+                : "border-emerald-500/30 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400"
+                }`}
             >
               {isProjectedOverBudget ? "Melebihi Anggaran" : "Aman"}
             </span>
@@ -385,44 +420,44 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
         {(isBusinessBook ||
           report.capital_injection > 0 ||
           report.capital_withdrawal > 0) && (
-          <div className="glass-card flex flex-col justify-between gap-2 p-4">
-            <div className="flex items-center justify-between gap-1.5">
-              <span className="text-xs font-medium text-muted-foreground">
-                {isBusinessBook ? "Modal & Prive" : "Transfer Antar-Buku"}
-              </span>
-              <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] font-medium leading-none text-muted-foreground">
-                {isBusinessBook ? "Ekuitas Usaha" : "Antar-Buku"}
-              </span>
-            </div>
-            <div className="space-y-0.5 font-mono text-xs tabular-nums tracking-tight">
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-sans text-[11px] text-muted-foreground">
-                  Masuk
+            <div className="glass-card flex flex-col justify-between gap-2 p-4">
+              <div className="flex items-center justify-between gap-1.5">
+                <span className="text-xs font-medium text-muted-foreground">
+                  {isBusinessBook ? "Modal & Prive" : "Transfer Antar-Buku"}
                 </span>
-                <span className="font-semibold text-emerald-500 dark:text-emerald-400">
-                  {report.capital_injection > 0
-                    ? `+${formatRupiah(report.capital_injection)}`
-                    : "Rp 0"}
+                <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[10px] font-medium leading-none text-muted-foreground">
+                  {isBusinessBook ? "Ekuitas Usaha" : "Antar-Buku"}
                 </span>
               </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-sans text-[11px] text-muted-foreground">
-                  Keluar
-                </span>
-                <span className="font-semibold text-amber-500 dark:text-amber-400">
-                  {report.capital_withdrawal > 0
-                    ? `−${formatRupiah(report.capital_withdrawal)}`
-                    : "Rp 0"}
-                </span>
+              <div className="space-y-0.5 font-mono text-xs tabular-nums tracking-tight">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-sans text-[11px] text-muted-foreground">
+                    Masuk
+                  </span>
+                  <span className="font-semibold text-emerald-500 dark:text-emerald-400">
+                    {report.capital_injection > 0
+                      ? `+${formatRupiah(report.capital_injection)}`
+                      : "Rp 0"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-sans text-[11px] text-muted-foreground">
+                    Keluar
+                  </span>
+                  <span className="font-semibold text-amber-500 dark:text-amber-400">
+                    {report.capital_withdrawal > 0
+                      ? `−${formatRupiah(report.capital_withdrawal)}`
+                      : "Rp 0"}
+                  </span>
+                </div>
               </div>
+              <p className="truncate text-[11px] leading-normal text-muted-foreground">
+                {isBusinessBook
+                  ? "Mutasi modal & penarikan dana"
+                  : "Perpindahan dana antar-buku"}
+              </p>
             </div>
-            <p className="truncate text-[11px] leading-normal text-muted-foreground">
-              {isBusinessBook
-                ? "Mutasi modal & penarikan dana"
-                : "Perpindahan dana antar-buku"}
-            </p>
-          </div>
-        )}
+          )}
       </div>
 
       {/* Interactive Chart 1: Daily Cash Flow & Cumulative Burn Rate */}
@@ -510,11 +545,10 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
                   </p>
                 </div>
                 <span
-                  className={`shrink-0 font-mono text-xs font-bold tabular-nums tracking-tight sm:text-sm ${
-                    tx.tx_type === "INCOME"
-                      ? "text-emerald-500 dark:text-emerald-400"
-                      : "text-rose-500 dark:text-rose-400"
-                  }`}
+                  className={`shrink-0 font-mono text-xs font-bold tabular-nums tracking-tight sm:text-sm ${tx.tx_type === "INCOME"
+                    ? "text-emerald-500 dark:text-emerald-400"
+                    : "text-rose-500 dark:text-rose-400"
+                    }`}
                 >
                   {formatSignedRupiah(tx.amount, tx.tx_type)}
                 </span>
@@ -664,6 +698,6 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };

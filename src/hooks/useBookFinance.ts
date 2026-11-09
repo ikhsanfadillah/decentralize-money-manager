@@ -127,12 +127,7 @@ export function applyCrdtSyncedInvalidation(
  */
 export function useBookSyncEvents(bookId: string): SyncStatusPayload {
   const queryClient = useQueryClient();
-  const [liveStatus, setLiveStatus] = useState<SyncStatusPayload>({
-    book_id: bookId,
-    state: "idle",
-    peers: 0,
-    last_synced_at: null,
-  });
+  const [eventStatus, setEventStatus] = useState<SyncStatusPayload | null>(null);
 
   const initialStatusQuery = useQuery({
     queryKey: bookQueryKeys.syncStatus(bookId),
@@ -140,12 +135,6 @@ export function useBookSyncEvents(bookId: string): SyncStatusPayload {
     enabled: Boolean(bookId),
     staleTime: Infinity,
   });
-
-  useEffect(() => {
-    if (initialStatusQuery.data && initialStatusQuery.data.book_id === bookId) {
-      setLiveStatus(initialStatusQuery.data);
-    }
-  }, [bookId, initialStatusQuery.data]);
 
   useEffect(() => {
     if (!bookId) {
@@ -174,7 +163,7 @@ export function useBookSyncEvents(bookId: string): SyncStatusPayload {
 
     listenAppEvent<SyncStatusPayload>("sync:status", (event) => {
       if (!disposed && event.payload.book_id === bookId) {
-        setLiveStatus(event.payload);
+        setEventStatus(event.payload);
         queryClient.setQueryData(
           bookQueryKeys.syncStatus(bookId),
           event.payload
@@ -207,7 +196,17 @@ export function useBookSyncEvents(bookId: string): SyncStatusPayload {
     };
   }, [bookId, queryClient]);
 
-  return liveStatus;
+  return (
+    (eventStatus && eventStatus.book_id === bookId ? eventStatus : null) ??
+    (initialStatusQuery.data && initialStatusQuery.data.book_id === bookId
+      ? initialStatusQuery.data
+      : null) ?? {
+      book_id: bookId,
+      state: "idle",
+      peers: 0,
+      last_synced_at: null,
+    }
+  );
 }
 
 export interface UseBookFinanceOptions {

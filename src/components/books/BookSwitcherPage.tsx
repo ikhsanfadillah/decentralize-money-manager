@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { tauriApi, type BookKind } from "../../lib/tauri-api";
 import { bookQueryKeys } from "../../hooks/useBookFinance";
+import { useSmoothReady } from "../../hooks/useSmoothReady";
 import { Input } from "../ui/input";
 import {
   ButtonSlideToConfirm,
@@ -109,7 +110,41 @@ export const BookSwitcherPage: React.FC = () => {
   };
 
   const shouldReduceMotion = useReducedMotion();
+  const { isReady, showSkeleton } = useSmoothReady(booksQuery.isPending);
   const books = booksQuery.data ?? [];
+
+  if (!isReady) {
+    return (
+      <div className="min-h-screen text-foreground" aria-busy="true">
+        {showSkeleton && (
+          <div className="animate-page-in mx-auto w-full max-w-3xl space-y-6 px-4 py-6 sm:px-6 sm:py-9">
+            <div className="space-y-3 px-1">
+              <div className="h-6 w-44 rounded-full bg-muted animate-pulse" />
+              <div className="h-8 w-64 rounded-full bg-muted animate-pulse" />
+              <div className="h-4 w-80 max-w-full rounded-full bg-muted/70 animate-pulse" />
+            </div>
+            <div className="space-y-3" aria-label="Memuat daftar buku">
+              {[0, 1].map((idx) => (
+                <div
+                  key={idx}
+                  className="glass-card flex items-center justify-between gap-3.5 p-4 sm:p-5 animate-pulse"
+                >
+                  <div className="flex min-w-0 flex-1 items-center gap-3.5">
+                    <div className="h-12 w-12 shrink-0 rounded-2xl bg-muted" />
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="h-4 w-44 max-w-full rounded-full bg-muted" />
+                      <div className="h-3 w-56 max-w-full rounded-full bg-muted/70" />
+                    </div>
+                  </div>
+                  <div className="h-8 w-16 shrink-0 rounded-full bg-muted" />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen text-foreground">
@@ -117,7 +152,7 @@ export const BookSwitcherPage: React.FC = () => {
         initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{
-          duration: shouldReduceMotion ? 0.08 : 0.16,
+          duration: shouldReduceMotion ? 0.08 : 0.22,
           ease: [0.22, 1, 0.36, 1],
         }}
         className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 sm:px-6 sm:py-9"
@@ -280,8 +315,7 @@ export const BookSwitcherPage: React.FC = () => {
                   to="/books/$bookId/dashboard"
                   params={{ bookId: book.id }}
                   data-testid={`book-item-${book.id}`}
-                  style={{ animationDelay: `${idx * 35}ms` }}
-                  className="group glass-card animate-card-up flex items-center justify-between gap-3.5 p-4 transition-colors hover:bg-white/95 dark:hover:bg-white/[0.13] active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:p-5"
+                  className="group glass-card flex items-center justify-between gap-3.5 p-4 transition-colors hover:bg-white/95 dark:hover:bg-white/[0.13] active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:p-5"
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-3.5">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-cta-surface text-cta-foreground transition-transform group-hover:scale-[1.03]">

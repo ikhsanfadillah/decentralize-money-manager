@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Link } from "@tanstack/react-router";
+import { motion, useReducedMotion } from "motion/react";
 import {
   AlertTriangle,
   ChevronRight,
@@ -14,6 +15,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { useBookFinance } from "../../hooks/useBookFinance";
+import { useSmoothReady } from "../../hooks/useSmoothReady";
 import {
   currentYearMonth,
   formatAccountTypeLabel,
@@ -53,6 +55,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
       sort_dir: "desc",
     },
   });
+
+  const shouldReduceMotion = useReducedMotion();
+  const isInitialLoading =
+    balancesQuery.isPending ||
+    summaryQuery.isPending ||
+    budgetProgressQuery.isPending ||
+    transactionsQuery.isPending;
+  const { isReady, showSkeleton, didWaitForData } =
+    useSmoothReady(isInitialLoading);
 
   const balances = balancesQuery.data ?? [];
   const cashFlowSummary = summaryQuery.data ?? [];
@@ -125,15 +136,85 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
         body: "Saldo bersih bulan ini sedang minus. Kondisi ini wajar saat ada belanja besar di awal bulan—pantau pos terbesar di menu Laporan.",
       };
     }
+    if (transactionsQuery.isSuccess && recentTransactions.length === 0) {
+      return {
+        isAlert: false,
+        title: "Yuk, catat transaksi pertamamu",
+        body: "Tekan tombol + di bawah untuk mencatat pemasukan atau pengeluaran hari ini agar kondisi keuangan bulan ini langsung terpantau.",
+      };
+    }
+    if (budgetProgressQuery.isSuccess && allBudgets.length === 0) {
+      return {
+        isAlert: false,
+        title: "Atur batas belanja biar lebih tenang",
+        body: "Pasang target pengeluaran di menu Anggaran supaya kamu mendapat pengingat otomatis sebelum belanja bulanan melewati batas.",
+      };
+    }
+    if (currentMonthSummary.net > 0) {
+      return {
+        isAlert: false,
+        title: "Keuangan bulan ini dalam kondisi sehat",
+        body: "Pemasukanmu masih lebih besar dari pengeluaran. Cek rincian kategori di menu Laporan untuk melihat pos mana yang paling hemat.",
+      };
+    }
     return {
       isAlert: false,
-      title: "Data tersimpan privat di perangkatmu",
-      body: "Seluruh transaksi disimpan lokal di SQLite perangkat ini. Hubungkan perangkat lain lewat Sync P2P kapan saja tanpa server pihak ketiga.",
+      title: "Catatanmu hanya tersimpan di perangkat ini",
+      body: "Data keuanganmu tidak dikirim atau disimpan di server luar. Jika ingin mencatat bersama dari HP atau laptop lain, cukup sambungkan langsung lewat menu Sinkronisasi.",
     };
-  }, [overBudgetCount, warningBudgetCount, currentMonthSummary.net]);
+  }, [
+    overBudgetCount,
+    warningBudgetCount,
+    currentMonthSummary.net,
+    transactionsQuery.isSuccess,
+    recentTransactions.length,
+    budgetProgressQuery.isSuccess,
+    allBudgets.length,
+  ]);
+
+  if (!isReady) {
+    if (!showSkeleton) {
+      return <div className="w-full min-h-[50vh]" aria-busy="true" />;
+    }
+    return (
+      <div
+        className="animate-page-in w-full space-y-5"
+        aria-label="Memuat ringkasan buku"
+        aria-busy="true"
+      >
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 lg:items-start">
+          <div className="space-y-5 lg:col-span-7">
+            <div className="space-y-3 px-1 pt-1 animate-pulse">
+              <div className="h-4 w-36 rounded-full bg-muted" />
+              <div className="h-10 w-56 rounded-full bg-muted" />
+              <div className="h-4 w-44 rounded-full bg-muted/70" />
+            </div>
+            <div className="glass-card h-44 animate-pulse p-5" />
+            <div className="contrast-card h-24 animate-pulse p-5" />
+          </div>
+          <div className="space-y-5 lg:col-span-5">
+            <div className="glass-card h-56 animate-pulse p-5" />
+            <div className="glass-card h-64 animate-pulse p-5" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full space-y-5">
+    <motion.div
+      initial={
+        didWaitForData
+          ? { opacity: 0, y: shouldReduceMotion ? 0 : 4 }
+          : false
+      }
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        duration: shouldReduceMotion ? 0.08 : 0.22,
+        ease: [0.22, 1, 0.36, 1],
+      }}
+      className="w-full space-y-5"
+    >
       {/* Responsive Bento Glass Grid: Mobile Single Column, Desktop 12-Col Bento */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 lg:items-start">
         {/* LEFT COLUMN (Hero Focus, Segmented Budget Target, Insight Card) */}
@@ -546,6 +627,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ bookId }) => {
           </section>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };

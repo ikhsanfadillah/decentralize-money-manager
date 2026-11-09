@@ -5,6 +5,7 @@ import { SettingsPage } from "../SettingsPage";
 import { SyncPage } from "../../sync/SyncPage";
 import { BackupPage } from "../../backup/BackupPage";
 import { tauriApi, type BookMetadata } from "../../../lib/tauri-api";
+import { applyTheme } from "../../../lib/utils";
 
 const mockNavigate = vi.fn();
 
@@ -100,6 +101,8 @@ describe("Settings, Sync, and Backup Pages", () => {
       "Kas Pribadi"
     );
     expect(screen.getByTestId("btn-rename-book")).toBeInTheDocument();
+    expect(screen.getByTestId("btn-switch-book")).toBeInTheDocument();
+    expect(screen.getByTestId("settings-theme-toggle")).toBeInTheDocument();
     expect(screen.getByTestId("btn-delete-book")).toBeInTheDocument();
     expect(screen.getByTestId("settings-cta-sync")).toBeInTheDocument();
     expect(screen.getByTestId("settings-cta-backup")).toBeInTheDocument();
@@ -182,6 +185,87 @@ describe("Settings, Sync, and Backup Pages", () => {
       expect(deleteSpy).toHaveBeenCalledWith(bookId);
       expect(mockNavigate).toHaveBeenCalledWith({ to: "/" });
     });
+  });
+
+  it("relocates Switch Book to Settings drawer and allows switching books or opening all books list", async () => {
+    const secondBook: BookMetadata = {
+      id: "book-456",
+      name: "Kas Usaha",
+      kind: "BUSINESS",
+      created_at: "2026-11-02T08:00:00.000Z",
+      last_opened_at: "2026-11-08T09:00:00.000Z",
+      file_exists: true,
+    };
+    vi.spyOn(tauriApi, "listBooks").mockResolvedValue([mockBook, secondBook]);
+    const closeSpy = vi
+      .spyOn(tauriApi, "closeBook")
+      .mockResolvedValue(undefined);
+
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <SettingsPage bookId={bookId} />
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText("Kas Pribadi")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("btn-switch-book"));
+
+    expect(
+      await screen.findByRole("heading", { name: "Ganti Buku Keuangan" })
+    ).toBeInTheDocument();
+    expect(screen.getByTestId(`switch-book-item-${bookId}`)).toBeInTheDocument();
+    expect(
+      screen.getByTestId(`switch-book-item-${secondBook.id}`)
+    ).toBeInTheDocument();
+
+    // Switch to second book
+    fireEvent.click(screen.getByTestId(`switch-book-item-${secondBook.id}`));
+
+    await waitFor(() => {
+      expect(closeSpy).toHaveBeenCalledWith(bookId);
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: "/books/$bookId/dashboard",
+        params: { bookId: secondBook.id },
+      });
+    });
+
+    // Re-open drawer and navigate to all books list ("/")
+    fireEvent.click(screen.getByTestId("btn-switch-book"));
+    const allBooksBtn = await screen.findByTestId("btn-view-all-books");
+    fireEvent.click(allBooksBtn);
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith({ to: "/" });
+    });
+  });
+
+  it("relocates Dark Mode toggle to Settings and persists theme changes", () => {
+    window.localStorage.removeItem("dmm-theme-mode");
+    applyTheme("dark");
+
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <SettingsPage bookId={bookId} />
+      </QueryClientProvider>
+    );
+
+    const toggle = screen.getByTestId("settings-theme-toggle");
+    expect(toggle).toHaveAttribute("role", "switch");
+    expect(toggle).toHaveAttribute("aria-checked", "true");
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+
+    fireEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+    expect(document.documentElement.classList.contains("dark")).toBe(false);
+    expect(window.localStorage.getItem("dmm-theme-mode")).toBe("light");
+
+    fireEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-checked", "true");
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(window.localStorage.getItem("dmm-theme-mode")).toBe("dark");
   });
 
   it("renders SyncPage with connected peer label and opens edit alias dialog", async () => {

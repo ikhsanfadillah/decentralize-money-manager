@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Link } from "@tanstack/react-router";
+import { motion, useReducedMotion } from "motion/react";
 import {
   ChevronRight,
   Plus,
@@ -9,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { useBookFinance } from "../../hooks/useBookFinance";
+import { useSmoothReady } from "../../hooks/useSmoothReady";
 import type { CategoryKind, CategoryView } from "../../lib/tauri-api";
 import { EmptyStateIllustration } from "../ui/EmptyStateIllustration";
 import { Input } from "../ui/input";
@@ -44,6 +46,11 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({ bookId }) => {
   const [kind, setKind] = React.useState<CategoryKind>("EXPENSE");
   const [filterKind, setFilterKind] = React.useState<"ALL" | CategoryKind>(
     "ALL"
+  );
+
+  const shouldReduceMotion = useReducedMotion();
+  const { isReady, showSkeleton, didWaitForData } = useSmoothReady(
+    categoriesQuery.isPending
   );
 
   const categories = categoriesQuery.data ?? [];
@@ -126,8 +133,36 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({ bookId }) => {
   const isSystemCategory = (normalizedName: string) =>
     normalizedName === "prive/penarikan" || normalizedName === "suntikan modal";
 
+  if (!isReady) {
+    if (!showSkeleton) {
+      return <div className="w-full min-h-[45vh]" aria-busy="true" />;
+    }
+    return (
+      <div
+        className="animate-page-in w-full space-y-4"
+        aria-label="Memuat kategori"
+        aria-busy="true"
+      >
+        <div className="glass-card h-28 animate-pulse p-5" />
+        <div className="glass-card h-48 animate-pulse p-5" />
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full space-y-4">
+    <motion.div
+      initial={
+        didWaitForData
+          ? { opacity: 0, y: shouldReduceMotion ? 0 : 4 }
+          : false
+      }
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        duration: shouldReduceMotion ? 0.08 : 0.22,
+        ease: [0.22, 1, 0.36, 1],
+      }}
+      className="w-full space-y-4"
+    >
       {/* 1. Header with Inline Plus Action */}
       <div className="glass-card p-4 sm:p-5 space-y-3">
         <div className="flex items-center justify-between gap-2">
@@ -226,7 +261,7 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({ bookId }) => {
               </button>
             </div>
           ) : (
-            filteredCategories.map((cat, idx) => {
+            filteredCategories.map((cat) => {
               const isSys = isSystemCategory(cat.normalized_name);
               return (
                 <div
@@ -241,8 +276,7 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({ bookId }) => {
                       handleStartEdit(cat);
                     }
                   }}
-                  style={{ animationDelay: `${idx * 25}ms` }}
-                  className="group nav-touch-item animate-card-up flex cursor-pointer items-center justify-between px-4 py-3 text-xs transition-colors hover:bg-white/[0.05] active:bg-white/[0.08] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                  className="group nav-touch-item flex cursor-pointer items-center justify-between px-4 py-3 text-xs transition-colors hover:bg-white/[0.05] active:bg-white/[0.08] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                 >
                   {/* Left: Category Name + Badges */}
                   <div className="flex min-w-0 flex-1 items-center gap-2 pr-3">
@@ -507,6 +541,6 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({ bookId }) => {
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
-    </div>
+    </motion.div>
   );
 };

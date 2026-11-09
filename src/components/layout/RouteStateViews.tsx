@@ -3,7 +3,7 @@ import type { ErrorComponentProps } from "@tanstack/react-router";
 
 export const RoutePendingView: React.FC = () => {
   return (
-    <div className="flex min-h-[240px] w-full items-center justify-center p-4">
+    <div className="animate-page-in flex min-h-[240px] w-full items-center justify-center p-4">
       <div className="glass-card flex items-center gap-2.5 px-5 py-3 text-xs text-muted-foreground">
         <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary" />
         <span>Menyiapkan halaman...</span>
@@ -22,7 +22,7 @@ export const RouteErrorView: React.FC<ErrorComponentProps> = ({
       : "Terjadi kendala saat membuka halaman ini.";
 
   return (
-    <div className="mx-auto max-w-lg p-4">
+    <div className="animate-page-in mx-auto max-w-lg p-4">
       <div className="contrast-card space-y-3 p-5">
         <div className="flex items-center gap-2 text-rose-400">
           <span className="rounded-full border border-rose-400/40 px-2 py-0.5 text-[10px] font-semibold uppercase">

@@ -399,6 +399,20 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
 }) => {
   const [txPendingDelete, setTxPendingDelete] =
     React.useState<TransactionView | null>(null);
+  const [showDelayedLoading, setShowDelayedLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isLoading) {
+      setShowDelayedLoading(false);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setShowDelayedLoading(true);
+    }, 180);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [isLoading]);
 
   const loadMoreSentinelRef = React.useRef<HTMLDivElement | null>(null);
   const inFlightScrollTriggerRef = React.useRef(false);
@@ -1309,9 +1323,13 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
         {/* Mobile View: Clickable transaction card list */}
         <div className="divide-y divide-border/70 md:hidden">
           {isLoading ? (
-            <div className="p-6 text-center text-xs text-muted-foreground">
-              Memuat daftar transaksi...
-            </div>
+            showDelayedLoading ? (
+              <div className="animate-page-in p-6 text-center text-xs text-muted-foreground">
+                Memuat daftar transaksi...
+              </div>
+            ) : (
+              <div className="min-h-[160px]" aria-busy="true" />
+            )
           ) : items.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-6 text-center text-xs text-muted-foreground">
               <EmptyStateIllustration variant="transaction-filter" />
@@ -1360,7 +1378,13 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                     colSpan={columns.length}
                     className="px-4 py-8 text-center text-xs text-muted-foreground"
                   >
-                    Memuat daftar transaksi...
+                    {showDelayedLoading ? (
+                      <span className="animate-page-in">
+                        Memuat daftar transaksi...
+                      </span>
+                    ) : (
+                      <span className="inline-block h-24" aria-busy="true" />
+                    )}
                   </td>
                 </tr>
               ) : table.getRowModel().rows.length === 0 ? (

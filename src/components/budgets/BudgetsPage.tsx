@@ -4,11 +4,12 @@ import {
   ChevronRight,
   Plus,
   Trash2,
-  TrendingDown,
-  TrendingUp,
+  TriangleAlert,
 } from "lucide-react";
 import * as React from "react";
+import { motion, useReducedMotion } from "motion/react";
 import { useBookFinance, useBookSyncEvents } from "../../hooks/useBookFinance";
+import { useSmoothReady } from "../../hooks/useSmoothReady";
 import type { BudgetProgressItem } from "../../lib/tauri-api";
 import { pushToast } from "../../lib/toast";
 import {
@@ -57,6 +58,11 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ bookId }) => {
     budgetMonth: selectedMonth,
   });
 
+  const shouldReduceMotion = useReducedMotion();
+  const { isReady, showSkeleton, didWaitForData } = useSmoothReady(
+    budgetProgressQuery.isPending
+  );
+
   const budgets = budgetProgressQuery.data ?? [];
   const categories = categoriesQuery.data ?? [];
 
@@ -98,8 +104,43 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ bookId }) => {
     }
   };
 
+  if (!isReady) {
+    if (!showSkeleton) {
+      return <div className="w-full min-h-[45vh]" aria-busy="true" />;
+    }
+    return (
+      <div
+        className="animate-page-in w-full space-y-5"
+        aria-label="Memuat anggaran bulanan"
+        aria-busy="true"
+      >
+        <div className="space-y-3 px-1 animate-pulse">
+          <div className="h-6 w-48 rounded-full bg-muted" />
+          <div className="h-9 w-full rounded-full bg-muted/70" />
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {[0, 1].map((idx) => (
+            <div key={idx} className="glass-card h-28 animate-pulse p-5" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full space-y-5">
+    <motion.div
+      initial={
+        didWaitForData
+          ? { opacity: 0, y: shouldReduceMotion ? 0 : 4 }
+          : false
+      }
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        duration: shouldReduceMotion ? 0.08 : 0.22,
+        ease: [0.22, 1, 0.36, 1],
+      }}
+      className="w-full space-y-5"
+    >
       {/* 1. Page Header & Month Capsule Selector */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-1">
         <div>
@@ -154,8 +195,10 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ bookId }) => {
       </div>
 
       {/* 2. Budget Glass Cards List */}
-      {budgets.length === 0 ? (
-        <div className="glass-card flex flex-col items-center justify-center p-8 text-center">
+      {budgetProgressQuery.isPending ? (
+        <div className="min-h-[200px]" aria-busy="true" />
+      ) : budgets.length === 0 ? (
+        <div className="animate-page-in glass-card flex flex-col items-center justify-center p-8 text-center">
           <EmptyStateIllustration variant="active-budget-period" />
           <p className="mt-2 text-sm font-semibold text-foreground">
             Belum ada anggaran aktif untuk periode ini
@@ -175,7 +218,7 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ bookId }) => {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {budgets.map((item, idx) => {
+          {budgets.map((item) => {
             const isOver = item.remaining < 0;
             return (
               <div
@@ -190,8 +233,7 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ bookId }) => {
                     setActiveDrawerId(`budget:${item.id}`);
                   }
                 }}
-                style={{ animationDelay: `${idx * 30}ms` }}
-                className="glass-card group nav-touch-item animate-card-up flex cursor-pointer flex-col justify-between gap-3.5 p-4 sm:p-5 transition-colors hover:bg-white/[0.13] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                className="glass-card group nav-touch-item flex cursor-pointer flex-col justify-between gap-3.5 p-4 sm:p-5 transition-colors hover:bg-white/[0.13] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 {/* Top: Category Name + Realization & Remaining + Chevron */}
                 <div className="flex items-start justify-between gap-3">
@@ -226,7 +268,7 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ bookId }) => {
                     >
                       {isOver ? (
                         <>
-                          <TrendingDown
+                          <TriangleAlert
                             className="h-3 w-3 shrink-0"
                             aria-hidden="true"
                           />
@@ -234,10 +276,6 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ bookId }) => {
                         </>
                       ) : (
                         <>
-                          <TrendingUp
-                            className="h-3 w-3 shrink-0"
-                            aria-hidden="true"
-                          />
                           <span>Sisa {formatRupiah(item.remaining)}</span>
                         </>
                       )}
@@ -345,6 +383,6 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ bookId }) => {
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
-    </div>
+    </motion.div>
   );
 };

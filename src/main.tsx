@@ -3,6 +3,9 @@ import ReactDOM from "react-dom/client";
 import "./index.css";
 import { App } from "./App";
 import { ensurePersistentStorage, isTauriRuntime } from "./lib/platform";
+import { applyTheme, getStoredTheme } from "./lib/utils";
+
+applyTheme(getStoredTheme());
 
 // Request persistent storage & register PWA Service Worker in web browser environment
 if (typeof window !== "undefined" && !isTauriRuntime()) {

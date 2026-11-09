@@ -1,4 +1,10 @@
 import * as React from "react";
+import {
+  CircleCheck,
+  OctagonAlert,
+  TriangleAlert,
+  type LucideIcon,
+} from "lucide-react";
 import type { BudgetStatus } from "../../lib/tauri-api";
 import { cn } from "../../lib/utils";
 
@@ -12,38 +18,35 @@ export interface BudgetProgressBarProps {
   className?: string;
 }
 
-const SEGMENT_COUNT = 24;
+const BUDGET_SPECTRUM_GRADIENT =
+  "linear-gradient(90deg, #22c55e 0%, #eab308 35%, #f97316 62%, #ef4444 84%, #7f1d1d 100%)";
 
 export function getBudgetStatusMeta(status: BudgetStatus): {
   label: string;
-  barClass: string;
-  segmentClass: string;
+  icon: LucideIcon;
   textClass: string;
   badgeClass: string;
 } {
   switch (status) {
     case "OVER":
       return {
-        label: "MELEBIHI BATAS (OVER)",
-        barClass: "bg-rose-500",
-        segmentClass: "bg-rose-400",
+        label: "Melebihi Batas (Over)",
+        icon: OctagonAlert,
         textClass: "text-rose-500 dark:text-rose-400",
         badgeClass: "border-rose-500/35 bg-rose-500/10",
       };
     case "WARNING":
       return {
-        label: "PERINGATAN (WARNING)",
-        barClass: "bg-amber-500",
-        segmentClass: "bg-amber-400",
+        label: "Peringatan (Warning)",
+        icon: TriangleAlert,
         textClass: "text-amber-600 dark:text-amber-400",
         badgeClass: "border-amber-500/35 bg-amber-500/10",
       };
     case "OK":
     default:
       return {
-        label: "AMAN (OK)",
-        barClass: "bg-emerald-500",
-        segmentClass: "bg-emerald-500 dark:bg-emerald-400",
+        label: "Aman (Ok)",
+        icon: CircleCheck,
         textClass: "text-emerald-600 dark:text-emerald-400",
         badgeClass: "border-emerald-500/35 bg-emerald-500/10",
       };
@@ -53,100 +56,93 @@ export function getBudgetStatusMeta(status: BudgetStatus): {
 export const BudgetProgressBar: React.FC<BudgetProgressBarProps> = ({
   pct,
   status,
-  alertThresholdPct: _alertThresholdPct,
+  alertThresholdPct,
   variant = "segmented",
   tone = "default",
   showStatusLabel = true,
   className,
 }) => {
   const meta = getBudgetStatusMeta(status);
+  const StatusIcon = meta.icon;
   const clampedPct = Math.max(0, Math.min(100, pct));
-  const filledSegments =
-    clampedPct === 0
-      ? 0
-      : Math.min(
-          SEGMENT_COUNT,
-          Math.max(1, Math.round((clampedPct / 100) * SEGMENT_COUNT))
-        );
+  const hasThresholdMarker = alertThresholdPct > 0 && alertThresholdPct < 100;
 
-  const activeSegmentClass =
-    tone === "hero" && status === "OK"
-      ? "bg-foreground dark:bg-white"
-      : meta.segmentClass;
-
-  const emptySegmentClass =
+  const trackSizeClass =
     tone === "hero"
-      ? "bg-black/15 dark:bg-white/20"
-      : "bg-black/10 dark:bg-white/15";
+      ? "h-4 sm:h-4.5 p-[2px]"
+      : variant === "linear"
+        ? "h-2.5 p-[1.5px]"
+        : "h-3 sm:h-3.5 p-[2px]";
 
   return (
-    <div className={cn("space-y-2 shadow-none", className)}>
-      {showStatusLabel && (
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-          <span
-            data-testid={`budget-status-label-${status}`}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 font-mono text-[10px] font-semibold tracking-tight",
-              meta.badgeClass,
-              meta.textClass
-            )}
-          >
-            <span
-              data-testid={`budget-progress-fill-${status}`}
-              className={cn("inline-block h-1.5 w-1.5 rounded-full", meta.barClass)}
-            />
-            <span>{meta.label}</span>
-          </span>
+    <div className={cn("flex items-center gap-2 shadow-none", className)}>
+      {/* Modern Full-Spectrum Gradient Progress Track (Green -> Yellow -> Orange -> Red -> Dark Red) */}
+      <div
+        role="progressbar"
+        aria-valuenow={clampedPct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuetext={`${pct}%`}
+        aria-label={`Realisasi anggaran ${pct}% (${meta.label})`}
+        className={cn(
+          "relative w-full overflow-hidden rounded-full border border-border/75 bg-black/[0.06] dark:bg-white/[0.07]",
+          trackSizeClass
+        )}
+      >
+        <div
+          className="relative h-full w-full overflow-hidden rounded-full"
+          style={{ containerType: "inline-size" }}
+        >
+          {/* Active clipped spectrum gradient */}
+          {clampedPct > 0 && (
+            <div
+              data-testid="budget-gradient-clip"
+              className="relative h-full overflow-hidden rounded-full transition-[width] duration-500 ease-out"
+              style={{ width: `${clampedPct}%` }}
+            >
+              <div
+                data-testid="budget-gradient-fill"
+                className="h-full w-[100cqw] rounded-full"
+                style={{ backgroundImage: BUDGET_SPECTRUM_GRADIENT }}
+              />
+              {/* Subtle top sheen for modern depth without heavy drop shadows */}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-b from-white/25 via-transparent to-black/10"
+              />
+            </div>
+          )}
 
+          {/* Subtle warning threshold marker */}
+          {hasThresholdMarker && (
+            <span
+              data-testid="budget-threshold-marker"
+              aria-hidden="true"
+              title={`Ambang peringatan ${alertThresholdPct}%`}
+              className="pointer-events-none absolute top-0 bottom-0 z-10 w-[1.5px] -translate-x-1/2 bg-foreground/30 dark:bg-white/40"
+              style={{ left: `${alertThresholdPct}%` }}
+            />
+          )}
+        </div>
+      </div>
+      {showStatusLabel && (
+        <div className="flex items-center justify-end text-xs">
           <span className="font-mono text-xs font-semibold tabular-nums tracking-tight text-muted-foreground">
             {pct}%
           </span>
-        </div>
-      )}
-
-      {variant === "segmented" ? (
-        <div
-          role="progressbar"
-          aria-valuenow={pct}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label={`Realisasi anggaran ${pct}% (${meta.label})`}
-          className={cn(
-            "flex w-full items-stretch gap-1 sm:gap-1.5",
-            tone === "hero" ? "h-8 sm:h-9" : "h-5 sm:h-6"
-          )}
-        >
-          {Array.from({ length: SEGMENT_COUNT }, (_, idx) => {
-            const isFilled = idx < filledSegments;
-            return (
-              <span
-                key={idx}
-                aria-hidden="true"
-                className={cn(
-                  "flex-1 rounded-[3px] transition-colors duration-200",
-                  isFilled ? activeSegmentClass : emptySegmentClass
-                )}
-              />
-            );
-          })}
-        </div>
-      ) : (
-        <div className="flex items-center gap-2">
-          <div
-            role="progressbar"
-            aria-valuenow={pct}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            className="relative h-2.5 w-full overflow-hidden rounded-full border border-border bg-muted"
+          <span
+            data-testid={`budget-status-label-${status}`}
+            role="img"
+            aria-label={meta.label}
+            title={meta.label}
+            className={cn(
+              "inline-flex h-6 w-6 items-center justify-center ",
+              meta.textClass
+            )}
           >
-            <div
-              className={cn(
-                "h-full rounded-full transition-all duration-200",
-                meta.barClass
-              )}
-              style={{ width: `${clampedPct}%` }}
-            />
-          </div>
+            <StatusIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          </span>
+
         </div>
       )}
     </div>

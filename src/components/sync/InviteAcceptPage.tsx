@@ -144,7 +144,7 @@ export const InviteAcceptPage: React.FC = () => {
   }
 
   return (
-    <div className="mx-auto flex min-h-[75vh] w-full max-w-lg items-center justify-center p-4">
+    <div className="animate-page-in mx-auto flex min-h-[75vh] w-full max-w-lg items-center justify-center p-4">
       <div className="glass-card w-full p-6 sm:p-8">
         {existingBook ? (
           /* State 1: Buku sudah ada di perangkat ini */

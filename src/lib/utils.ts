@@ -138,6 +138,10 @@ export function applyTheme(theme: ThemeMode): void {
   if (metaTheme) {
     metaTheme.setAttribute("content", theme === "dark" ? "#09090b" : "#fafafa");
   }
+  const metaScheme = document.querySelector('meta[name="color-scheme"]');
+  if (metaScheme) {
+    metaScheme.setAttribute("content", theme);
+  }
   if (typeof window !== "undefined") {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
   }
