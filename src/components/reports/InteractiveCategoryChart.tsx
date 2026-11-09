@@ -17,14 +17,14 @@ export interface InteractiveCategoryChartProps {
 }
 
 const SLICE_PALETTE = [
-  "#10b981", // Emerald 500
-  "#0ea5e9", // Sky 500
-  "#f59e0b", // Amber 500
-  "#f43f5e", // Rose 500
-  "#8b5cf6", // Violet 500
-  "#14b8a6", // Teal 500
-  "#ec4899", // Pink 500
-  "#64748b", // Slate 500
+  "#F59E0B", // Amber 500
+  "#34D399", // Emerald 400
+  "#38BDF8", // Sky 400
+  "#FB7185", // Rose 400
+  "#FDE68A", // Warm Cream 200
+  "#A78BFA", // Violet 400
+  "#2DD4BF", // Teal 400
+  "#94A3B8", // Slate 400
 ];
 
 export const InteractiveCategoryChart: React.FC<
@@ -104,12 +104,12 @@ export const InteractiveCategoryChart: React.FC<
   return (
     <div
       data-testid="interactive-category-chart"
-      className="tabular-grid-container grid grid-cols-1 border-t border-border"
+      className="glass-card overflow-hidden"
     >
       {/* Header & Controls */}
-      <div className="tabular-grid-cell flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/70 px-4 py-3.5 sm:px-5">
         <div className="space-y-0.5">
-          <h2 className="text-xs font-semibold text-foreground sm:text-sm">
+          <h2 className="text-sm font-semibold tracking-tight text-foreground sm:text-base">
             Distribusi Kategori
           </h2>
           <p className="text-xs leading-relaxed text-muted-foreground">
@@ -117,18 +117,18 @@ export const InteractiveCategoryChart: React.FC<
           </p>
         </div>
 
-        <div className="flex flex-nowrap items-center gap-2">
-          {/* Segmented Control 1: Jenis Kategori */}
-          <div className="inline-flex items-center rounded-lg border border-border bg-muted/40 p-0.5">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Segmented Control 1: Jenis Kategori (Capsule Pill) */}
+          <div className="inline-flex items-center rounded-full border border-border bg-muted/60 p-0.5">
             <button
               type="button"
               onClick={() => {
                 setActiveKind("EXPENSE");
                 onSelectCategoryId(null);
               }}
-              className={`nav-touch-item inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs transition-all ${
+              className={`nav-touch-item inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all ${
                 activeKind === "EXPENSE"
-                  ? "bg-background text-foreground font-semibold shadow-xs border border-border/50"
+                  ? "bg-cta-surface text-cta-foreground font-semibold"
                   : "text-muted-foreground hover:text-foreground font-medium"
               }`}
             >
@@ -144,9 +144,9 @@ export const InteractiveCategoryChart: React.FC<
                 setActiveKind("INCOME");
                 onSelectCategoryId(null);
               }}
-              className={`nav-touch-item inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs transition-all ${
+              className={`nav-touch-item inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition-all ${
                 activeKind === "INCOME"
-                  ? "bg-background text-foreground font-semibold shadow-xs border border-border/50"
+                  ? "bg-cta-surface text-cta-foreground font-semibold"
                   : "text-muted-foreground hover:text-foreground font-medium"
               }`}
             >
@@ -158,44 +158,48 @@ export const InteractiveCategoryChart: React.FC<
             </button>
           </div>
 
-          {/* Segmented Control 2: Mode Tampilan Visual */}
-          <div className="inline-flex items-center rounded-lg border border-border bg-muted/40 p-0.5">
+          {/* Segmented Control 2: Mode Tampilan Visual (Capsule Pill) */}
+          <div className="inline-flex items-center rounded-full border border-border bg-muted/60 p-0.5">
             <button
               type="button"
               onClick={() => setViewMode("DONUT_PARETO")}
-              className={`nav-touch-item rounded-md px-2.5 py-1 text-xs transition-all ${
+              aria-label="Tampilan Donut & Pareto"
+              title="Tampilan Donut & Pareto"
+              className={`nav-touch-item rounded-full px-3 py-1 text-xs transition-all ${
                 viewMode === "DONUT_PARETO"
-                  ? "bg-background text-foreground font-semibold shadow-xs border border-border/50"
+                  ? "bg-cta-surface text-cta-foreground font-semibold"
                   : "text-muted-foreground hover:text-foreground font-medium"
               }`}
             >
-              <LucideChartPie size={16}/>
+              <LucideChartPie size={15} />
             </button>
             <button
               type="button"
               onClick={() => setViewMode("MOM_DELTA")}
-              className={`nav-touch-item rounded-md px-2.5 py-1 text-xs transition-all ${
+              aria-label="Tampilan Perbandingan Bulan"
+              title="Tampilan Perbandingan Bulan"
+              className={`nav-touch-item rounded-full px-3 py-1 text-xs transition-all ${
                 viewMode === "MOM_DELTA"
-                  ? "bg-background text-foreground font-semibold shadow-xs border border-border/50"
+                  ? "bg-cta-surface text-cta-foreground font-semibold"
                   : "text-muted-foreground hover:text-foreground font-medium"
               }`}
             >
-              <LucideChartBarStacked size={16}/>
+              <LucideChartBarStacked size={15} />
             </button>
           </div>
         </div>
       </div>
 
       {enrichedItems.length === 0 ? (
-        <div className="tabular-grid-cell p-6 text-center text-xs text-muted-foreground">
+        <div className="p-6 text-center text-xs text-muted-foreground">
           Belum ada data kategori{" "}
           {activeKind === "EXPENSE" ? "pengeluaran" : "pemasukan"} pada periode{" "}
           {month} maupun {prevMonth}.
         </div>
       ) : viewMode === "DONUT_PARETO" ? (
-        <div className="grid grid-cols-1 gap-px bg-border lg:grid-cols-12">
+        <div className="grid grid-cols-1 divide-y divide-border/70 lg:grid-cols-12 lg:divide-x lg:divide-y-0">
           {/* Interactive SVG Donut Ring + Center Readout (5 cols) */}
-          <div className="tabular-grid-cell flex flex-col items-center justify-center p-5 lg:col-span-5">
+          <div className="flex flex-col items-center justify-center p-5 lg:col-span-5">
             <div className="relative flex items-center justify-center">
               <svg
                 viewBox="0 0 180 180"
@@ -208,7 +212,7 @@ export const InteractiveCategoryChart: React.FC<
                   cy="90"
                   r="64"
                   fill="transparent"
-                  className="stroke-muted/50"
+                  className="stroke-black/10 dark:stroke-white/10"
                   strokeWidth="20"
                 />
                 {enrichedItems.map((slice) => {
@@ -265,7 +269,7 @@ export const InteractiveCategoryChart: React.FC<
               <button
                 type="button"
                 onClick={() => onSelectCategoryId(null)}
-                className="mt-3 rounded border border-primary/50 bg-background px-2.5 py-1 text-xs font-medium text-primary shadow-none hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                className="mt-3 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/20 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
               >
                 Reset Filter Kategori ×
               </button>
@@ -273,15 +277,15 @@ export const InteractiveCategoryChart: React.FC<
           </div>
 
           {/* Pareto 80/20 Interactive Breakdown List */}
-          <div className="tabular-grid-cell divide-y divide-border lg:col-span-7">
+          <div className="divide-y divide-border/70 lg:col-span-7">
             {/* Header */}
-            <div className="flex items-center justify-between bg-muted/40 px-3.5 py-2 text-[11px] font-medium text-muted-foreground sm:px-4">
+            <div className="flex items-center justify-between bg-black/[0.03] px-4 py-2 text-[11px] font-medium text-muted-foreground dark:bg-white/[0.04]">
               <span>Kategori & Porsi</span>
               <span>Nominal & Tren</span>
             </div>
 
             {/* List Rows */}
-            <div className="divide-y divide-border">
+            <div className="divide-y divide-border/70">
               {enrichedItems.map((item) => {
                 const isSelected = selectedCategoryId === item.category_id;
                 const isHovered = hoveredCatId === item.category_id;
@@ -296,26 +300,26 @@ export const InteractiveCategoryChart: React.FC<
                     onClick={() =>
                       onSelectCategoryId(isSelected ? null : item.category_id)
                     }
-                    className={`cursor-pointer px-3.5 py-2.5 transition-colors sm:px-4 sm:py-3 ${
+                    className={`cursor-pointer px-4 py-3 transition-colors ${
                       isSelected
                         ? "bg-primary/10"
                         : isHovered
-                          ? "bg-muted/50"
-                          : "hover:bg-muted/30"
+                          ? "bg-black/[0.04] dark:bg-white/[0.06]"
+                          : "hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
                     }`}
                   >
                     {/* Baris 1: Kategori & Porsi (Kiri) + Nominal (Kanan) */}
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
                         <span
-                          className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm"
+                          className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
                           style={{ backgroundColor: item.color }}
                         />
-                        <span className="truncate font-semibold text-foreground text-xs sm:text-sm">
+                        <span className="truncate text-xs font-semibold text-foreground sm:text-sm">
                           {item.category_name}
                         </span>
                         {item.is_system && (
-                          <span className="shrink-0 rounded border border-primary/40 px-1 py-0.2 text-[9px] font-medium text-primary">
+                          <span className="shrink-0 rounded-full border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary">
                             Khusus
                           </span>
                         )}
@@ -324,13 +328,13 @@ export const InteractiveCategoryChart: React.FC<
                         </span>
                       </div>
 
-                      <div className="shrink-0 font-mono text-xs sm:text-sm font-semibold tabular-nums tracking-tight text-foreground">
+                      <div className="shrink-0 font-mono text-xs font-semibold tabular-nums tracking-tight text-foreground sm:text-sm">
                         {formatRupiah(item.current_amount)}
                       </div>
                     </div>
 
                     {/* Baris 2: Visual Progress Bar */}
-                    <div className="my-1.5 h-1.5 w-full overflow-hidden rounded-full border border-border/40 bg-muted/50">
+                    <div className="my-1.5 h-1.5 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
                       <div
                         className="h-full rounded-full transition-all duration-300"
                         style={{
@@ -342,12 +346,12 @@ export const InteractiveCategoryChart: React.FC<
 
                     {/* Baris 3: Detail Transaksi & Akumulasi (Kiri) + Badge Tren MoM (Kanan) */}
                     <div className="flex items-center justify-between gap-2 text-[10px] sm:text-[11px]">
-                      <div className="flex min-w-0 items-center gap-1.5 text-muted-foreground truncate">
+                      <div className="flex min-w-0 items-center gap-1.5 truncate text-muted-foreground">
                         <span>{item.tx_count} transaksi</span>
-                        <span>•</span>
+                        <span>·</span>
                         <span>Akumulasi {formatPercent(item.cumulativePct, 0)}</span>
                         {isParetoCore && (
-                          <span className="shrink-0 rounded border border-amber-500/40 bg-amber-500/10 px-1 py-0.2 text-[9px] font-medium text-amber-600 dark:text-amber-400">
+                          <span className="shrink-0 rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-medium text-amber-600 dark:text-amber-400">
                             Inti 80%
                           </span>
                         )}
@@ -356,15 +360,15 @@ export const InteractiveCategoryChart: React.FC<
                       <div className="flex shrink-0 items-center gap-1 font-mono">
                         {item.delta_pct !== null ? (
                           <span
-                            className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 font-medium ${
+                            className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 font-medium ${
                               item.delta_amount > 0
                                 ? activeKind === "EXPENSE"
-                                  ? "bg-rose-500/10 text-rose-500"
-                                  : "bg-emerald-500/10 text-emerald-500"
+                                  ? "bg-rose-500/10 text-rose-500 dark:text-rose-400"
+                                  : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                                 : item.delta_amount < 0
                                   ? activeKind === "EXPENSE"
-                                    ? "bg-emerald-500/10 text-emerald-500"
-                                    : "bg-rose-500/10 text-rose-500"
+                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                    : "bg-rose-500/10 text-rose-500 dark:text-rose-400"
                                   : "bg-muted text-muted-foreground"
                             }`}
                           >
@@ -378,7 +382,7 @@ export const InteractiveCategoryChart: React.FC<
                             <span>{formatPercent(Math.abs(item.delta_pct), 0)}</span>
                           </span>
                         ) : (
-                          <span className="rounded bg-primary/10 px-1.5 py-0.5 font-medium text-primary">
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
                             Baru
                           </span>
                         )}
@@ -392,16 +396,16 @@ export const InteractiveCategoryChart: React.FC<
         </div>
       ) : (
         /* Diverging Month-over-Month Delta Bar View (Clean & Responsive) */
-        <div className="tabular-grid-cell divide-y divide-border">
+        <div className="divide-y divide-border/70">
           {selectedCategoryId && (
-            <div className="flex items-center justify-between border-b border-border bg-primary/5 px-4 py-2">
+            <div className="flex items-center justify-between bg-primary/10 px-4 py-2">
               <span className="text-[11px] font-medium text-primary">
                 Memfilter kategori terpilih untuk drill-down transaksi
               </span>
               <button
                 type="button"
                 onClick={() => onSelectCategoryId(null)}
-                className="nav-touch-item inline-flex items-center gap-1 rounded border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary hover:bg-primary/20"
+                className="nav-touch-item inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold text-primary hover:bg-primary/20"
               >
                 Reset Filter ×
               </button>
@@ -411,8 +415,8 @@ export const InteractiveCategoryChart: React.FC<
           {/* Tampilan Mobile (< md): Card List tanpa tabrakan kolom */}
           <div className="md:hidden">
             {/* Legend / Petunjuk Arah Mobile */}
-            <div className="flex items-center justify-between border-b border-border bg-muted/40 px-3.5 py-2 text-[10px] font-mono text-muted-foreground">
-              <span className="font-sans font-medium text-[11px]">
+            <div className="flex items-center justify-between border-b border-border/70 bg-black/[0.03] px-3.5 py-2 font-mono text-[10px] text-muted-foreground dark:bg-white/[0.04]">
+              <span className="font-sans text-[11px] font-medium">
                 {formatMonthLabel(prevMonth)} → {formatMonthLabel(month)}
               </span>
               <div className="flex items-center gap-2">
@@ -426,7 +430,7 @@ export const InteractiveCategoryChart: React.FC<
               </div>
             </div>
 
-            <div className="divide-y divide-border">
+            <div className="divide-y divide-border/70">
               {enrichedItems.map((item) => {
                 const ratio = Math.min(
                   1,
@@ -444,22 +448,24 @@ export const InteractiveCategoryChart: React.FC<
                         isSelected ? null : item.category_id
                       )
                     }
-                    className={`cursor-pointer px-3.5 py-3 transition-colors ${
-                      isSelected ? "bg-primary/10" : "hover:bg-muted/30"
+                    className={`cursor-pointer px-4 py-3 transition-colors ${
+                      isSelected
+                        ? "bg-primary/10"
+                        : "hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
                     }`}
                   >
                     {/* Baris 1: Kategori & Badge Selisih */}
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-1.5">
                         <span
-                          className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm"
+                          className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
                           style={{ backgroundColor: item.color }}
                         />
                         <span className="truncate text-xs font-semibold text-foreground">
                           {item.category_name}
                         </span>
                         {item.is_system && (
-                          <span className="shrink-0 rounded border border-primary/40 px-1 py-0.2 text-[9px] font-medium text-primary">
+                          <span className="shrink-0 rounded-full border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary">
                             Khusus
                           </span>
                         )}
@@ -467,15 +473,15 @@ export const InteractiveCategoryChart: React.FC<
 
                       <div className="flex shrink-0 items-center gap-1">
                         <span
-                          className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 font-mono text-[11px] font-medium ${
+                          className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 font-mono text-[11px] font-medium ${
                             item.delta_amount > 0
                               ? activeKind === "EXPENSE"
-                                ? "bg-rose-500/10 text-rose-500"
-                                : "bg-emerald-500/10 text-emerald-500"
+                                ? "bg-rose-500/10 text-rose-500 dark:text-rose-400"
+                                : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                               : item.delta_amount < 0
                                 ? activeKind === "EXPENSE"
-                                ? "bg-emerald-500/10 text-emerald-500"
-                                : "bg-rose-500/10 text-rose-500"
+                                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                  : "bg-rose-500/10 text-rose-500 dark:text-rose-400"
                                 : "bg-muted text-muted-foreground"
                           }`}
                         >
@@ -498,7 +504,7 @@ export const InteractiveCategoryChart: React.FC<
                             ({item.delta_amount > 0 ? "+" : ""}{formatPercent(item.delta_pct, 0)})
                           </span>
                         ) : (
-                          <span className="rounded bg-primary/10 px-1 py-0.2 text-[9px] font-medium text-primary">
+                          <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary">
                             Baru
                           </span>
                         )}
@@ -507,8 +513,8 @@ export const InteractiveCategoryChart: React.FC<
 
                     {/* Baris 2: Batang Selisih (Diverging MoM Bar) */}
                     <div className="my-2">
-                      <div className="relative h-2.5 w-full rounded-sm border border-border bg-background overflow-hidden">
-                        <div className="absolute left-1/2 top-0 h-full w-px bg-border/80 z-10" />
+                      <div className="relative h-2.5 w-full overflow-hidden rounded-full border border-border/70 bg-black/5 dark:bg-white/5">
+                        <div className="absolute left-1/2 top-0 z-10 h-full w-px bg-border" />
                         {item.delta_amount !== 0 && (
                           <div
                             className={`absolute top-0 h-full transition-all duration-200 ${
@@ -535,7 +541,7 @@ export const InteractiveCategoryChart: React.FC<
                         <span>Lalu: </span>
                         <span className="text-foreground/80">{formatRupiah(item.prev_amount)}</span>
                       </div>
-                      <div className="truncate text-right ml-2">
+                      <div className="ml-2 truncate text-right">
                         <span className="text-muted-foreground">Kini: </span>
                         <span className="font-semibold text-foreground">{formatRupiah(item.current_amount)}</span>
                       </div>
@@ -547,18 +553,18 @@ export const InteractiveCategoryChart: React.FC<
           </div>
 
           {/* Tampilan Desktop (>= md): Tabel Rapi dengan Lebar Kolom Lega */}
-          <div className="hidden md:block overflow-x-auto scrollbar-thin">
-            <div className="min-w-[620px]">
-              <div className="grid grid-cols-12 items-center bg-muted/40 px-4 py-2 text-[11px] font-medium text-muted-foreground">
+          <div className="hidden overflow-x-auto scrollbar-thin md:block">
+            <div className="min-w-[620px] divide-y divide-border/70">
+              <div className="grid grid-cols-12 items-center bg-black/[0.03] px-4 py-2.5 text-[11px] font-medium text-muted-foreground dark:bg-white/[0.04]">
                 <div className="col-span-3">Kategori</div>
                 <div className="col-span-2 text-right">{formatMonthLabel(prevMonth)}</div>
                 <div className="col-span-2 text-right">{formatMonthLabel(month)}</div>
                 <div className="col-span-5 px-3">
-                  <div className="flex items-center justify-between text-[10px] font-mono">
+                  <div className="flex items-center justify-between font-mono text-[10px]">
                     <span className={activeKind === "EXPENSE" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
                       ◄ {activeKind === "EXPENSE" ? "Lebih Hemat" : "Turun"}
                     </span>
-                    <span className="text-muted-foreground font-sans">Selisih vs Bulan Lalu</span>
+                    <span className="font-sans text-muted-foreground">Selisih vs Bulan Lalu</span>
                     <span className={activeKind === "EXPENSE" ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}>
                       {activeKind === "EXPENSE" ? "Lebih Boros" : "Naik"} ►
                     </span>
@@ -584,19 +590,21 @@ export const InteractiveCategoryChart: React.FC<
                       )
                     }
                     className={`grid cursor-pointer grid-cols-12 items-center gap-2 px-4 py-3 text-xs transition-colors ${
-                      isSelected ? "bg-primary/10" : "hover:bg-muted/40"
+                      isSelected
+                        ? "bg-primary/10"
+                        : "hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
                     }`}
                   >
-                    <div className="col-span-3 flex items-center gap-2 min-w-0">
+                    <div className="col-span-3 flex min-w-0 items-center gap-2">
                       <span
-                        className="inline-block h-2.5 w-2.5 shrink-0 rounded-sm"
+                        className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
                         style={{ backgroundColor: item.color }}
                       />
                       <span className="truncate font-semibold text-foreground">
                         {item.category_name}
                       </span>
                       {item.is_system && (
-                        <span className="shrink-0 rounded border border-primary/40 px-1 py-0.2 text-[9px] font-medium text-primary">
+                        <span className="shrink-0 rounded-full border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary">
                           Khusus
                         </span>
                       )}
@@ -608,7 +616,7 @@ export const InteractiveCategoryChart: React.FC<
                       {formatRupiah(item.current_amount)}
                     </div>
                     <div className="col-span-5 space-y-1.5 px-3">
-                      <div className="relative h-2.5 w-full rounded-sm border border-border bg-background">
+                      <div className="relative h-2.5 w-full overflow-hidden rounded-full border border-border/70 bg-black/5 dark:bg-white/5">
                         <div className="absolute left-1/2 top-0 h-full w-px bg-border" />
                         {item.delta_amount !== 0 && (
                           <div

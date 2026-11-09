@@ -19,6 +19,29 @@ export function formatRupiah(amount: number): string {
   return idrFormatter.format(Math.trunc(amount));
 }
 
+export function formatCompactRupiah(amount: number): string {
+  if (!Number.isFinite(amount)) {
+    return "Rp 0";
+  }
+  const abs = Math.abs(Math.trunc(amount));
+  const sign = amount < 0 ? "−" : "";
+  if (abs >= 1_000_000_000) {
+    const val = new Intl.NumberFormat("id-ID", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(abs / 1_000_000_000);
+    return `${sign}Rp ${val} M`;
+  }
+  if (abs >= 1_000_000) {
+    const val = new Intl.NumberFormat("id-ID", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(abs / 1_000_000);
+    return `${sign}Rp ${val} jt`;
+  }
+  return `${sign}${formatRupiah(abs)}`;
+}
+
 export function formatPercent(val: number, decimals: number = 1): string {
   if (!Number.isFinite(val)) {
     return "0%";
@@ -110,6 +133,10 @@ export function applyTheme(theme: ThemeMode): void {
     root.classList.add("dark");
   } else {
     root.classList.remove("dark");
+  }
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+  if (metaTheme) {
+    metaTheme.setAttribute("content", theme === "dark" ? "#09090b" : "#fafafa");
   }
   if (typeof window !== "undefined") {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);

@@ -1,23 +1,69 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SettingsPage } from "../SettingsPage";
 import { SyncPage } from "../../sync/SyncPage";
 import { BackupPage } from "../../backup/BackupPage";
-import { tauriApi } from "../../../lib/tauri-api";
+import { tauriApi, type BookMetadata } from "../../../lib/tauri-api";
+
+const mockNavigate = vi.fn();
+
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ children, to, ...props }: any) => (
+    <a href={typeof to === "string" ? to : "#"} {...props}>
+      {children}
+    </a>
+  ),
+  useNavigate: () => mockNavigate,
+  useRouter: () => ({
+    state: { location: { pathname: "/" } },
+    navigate: mockNavigate,
+  }),
+}));
 
 describe("Settings, Sync, and Backup Pages", () => {
   const bookId = "test-book-123";
+  const mockBook: BookMetadata = {
+    id: bookId,
+    name: "Kas Pribadi",
+    kind: "PERSONAL",
+    created_at: "2026-11-01T08:00:00.000Z",
+    last_opened_at: "2026-11-09T09:00:00.000Z",
+    file_exists: true,
+  };
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    mockNavigate.mockReset();
+
+    vi.spyOn(tauriApi, "listBooks").mockResolvedValue([mockBook]);
     vi.spyOn(tauriApi, "listPeers").mockResolvedValue([]);
     vi.spyOn(tauriApi, "getDeviceIdentity").mockResolvedValue({
       device_id: "dev-01",
       device_name: "Windows PC",
     });
-    vi.spyOn(tauriApi, "listAccounts").mockResolvedValue([]);
-    vi.spyOn(tauriApi, "getAccountBalances").mockResolvedValue([]);
+    vi.spyOn(tauriApi, "listAccounts").mockResolvedValue([
+      {
+        id: "acc-1",
+        name: "Kas Tunai",
+        account_type: "CASH",
+        initial_balance: 500000,
+        merged_into_id: null,
+        root_id: "acc-1",
+        is_deleted: 0,
+        updated_hlc: "1:1:1",
+      },
+    ]);
+    vi.spyOn(tauriApi, "getAccountBalances").mockResolvedValue([
+      {
+        account_id: "acc-1",
+        name: "Kas Tunai",
+        account_type: "CASH",
+        initial_balance: 500000,
+        current_balance: 1250000,
+        merged_member_ids: [],
+      },
+    ]);
     vi.spyOn(tauriApi, "listCategories").mockResolvedValue([]);
     vi.spyOn(tauriApi, "getBudgetProgress").mockResolvedValue([]);
     vi.spyOn(tauriApi, "getSyncTopology").mockResolvedValue({
@@ -39,21 +85,103 @@ describe("Settings, Sync, and Backup Pages", () => {
       defaultOptions: { queries: { retry: false } },
     });
 
-  it("renders Settings Hub cards with Links for Accounts, Categories, Budgets, Sync, and Backup", () => {
+  it("renders Settings Hub cards with active book section, Accounts, Categories, Budgets, Sync, and Backup", async () => {
     render(
       <QueryClientProvider client={createQueryClient()}>
         <SettingsPage bookId={bookId} />
       </QueryClientProvider>
     );
 
-    expect(screen.getByRole("heading", { name: "Pengaturan" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Pengaturan" })
+    ).toBeInTheDocument();
+    expect(await screen.findByText("Kas Pribadi")).toBeInTheDocument();
+    expect(screen.getByTestId("active-book-name")).toHaveTextContent(
+      "Kas Pribadi"
+    );
+    expect(screen.getByTestId("btn-rename-book")).toBeInTheDocument();
+    expect(screen.getByTestId("btn-delete-book")).toBeInTheDocument();
     expect(screen.getByTestId("settings-cta-sync")).toBeInTheDocument();
     expect(screen.getByTestId("settings-cta-backup")).toBeInTheDocument();
-    expect(screen.getByText("Account")).toBeInTheDocument();
+    expect(screen.getByText("Accounts")).toBeInTheDocument();
     expect(screen.getByText("Categories")).toBeInTheDocument();
     expect(screen.getByText("Budgets")).toBeInTheDocument();
     expect(screen.getByTestId("local-device-name")).toBeInTheDocument();
     expect(screen.getByTestId("btn-edit-device-name")).toBeInTheDocument();
+  });
+
+  it("allows renaming the active book from Settings via bottom drawer", async () => {
+    const renameSpy = vi.spyOn(tauriApi, "renameBook").mockResolvedValue({
+      ...mockBook,
+      name: "Kas Keluarga",
+    });
+
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <SettingsPage bookId={bookId} />
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText("Kas Pribadi")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("btn-rename-book"));
+
+    const input = await screen.findByLabelText("Nama Buku Keuangan Baru");
+    expect(input).toHaveValue("Kas Pribadi");
+
+    // Submitting blank name does not call renameBook
+    fireEvent.change(input, { target: { value: "   " } });
+    fireEvent.click(screen.getByRole("button", { name: "Simpan Perubahan" }));
+    expect(renameSpy).not.toHaveBeenCalled();
+
+    // Valid name calls renameBook with trimmed value and closes drawer
+    fireEvent.change(input, { target: { value: "  Kas Keluarga  " } });
+    fireEvent.click(screen.getByRole("button", { name: "Simpan Perubahan" }));
+
+    await waitFor(() => {
+      expect(renameSpy).toHaveBeenCalledWith(bookId, "Kas Keluarga");
+      expect(
+        screen.queryByRole("heading", { name: "Ubah Nama Buku Keuangan" })
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("opens Delete Book confirmation drawer matching app pattern and cancels or confirms deleteBook", async () => {
+    const deleteSpy = vi
+      .spyOn(tauriApi, "deleteBook")
+      .mockResolvedValue(undefined);
+
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <SettingsPage bookId={bookId} />
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText("Kas Pribadi")).toBeInTheDocument();
+
+    // Open Delete Book confirmation dialog
+    fireEvent.click(screen.getByTestId("btn-delete-book"));
+
+    expect(await screen.findByText("Hapus Buku Ini?")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Konfirmasi Hapus Buku" })).toBeInTheDocument();
+    expect(screen.getByTestId("confirm-delete-book-button")).toBeInTheDocument();
+
+    // Cancel closes confirmation drawer without deleting
+    fireEvent.click(screen.getByRole("button", { name: "Batal" }));
+    await waitFor(() => {
+      expect(screen.queryByText("Hapus Buku Ini?")).not.toBeInTheDocument();
+    });
+    expect(deleteSpy).not.toHaveBeenCalled();
+
+    // Re-open and confirm delete
+    fireEvent.click(screen.getByTestId("btn-delete-book"));
+    const confirmBtn = await screen.findByTestId("confirm-delete-book-button");
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(deleteSpy).toHaveBeenCalledWith(bookId);
+      expect(mockNavigate).toHaveBeenCalledWith({ to: "/" });
+    });
   });
 
   it("renders SyncPage with connected peer label and opens edit alias dialog", async () => {
@@ -89,7 +217,7 @@ describe("Settings, Sync, and Backup Pages", () => {
       </QueryClientProvider>
     );
 
-    expect(screen.getByText("Syncronization")).toBeInTheDocument();
+    expect(screen.getByText("Sinkronisasi Antar-Perangkat")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /Buat Kode Undangan/i })
     ).toBeInTheDocument();

@@ -156,28 +156,26 @@ export const ButtonSlideToConfirm: React.FC<ButtonSlideToConfirmProps> = ({
     }
   );
 
-  // Light-to-darker emerald color interpolation from 0% -> 45% -> 85% -> 100%
-  const baseEmeraldColor = useTransform(
-    progress,
-    [0, 0.45, 0.85, 1],
-    ["#6ee7b7", "#34d399", "#10b981", "#15803d"]
-  );
-
+  // Neutral adaptive CTA fill (Black in Light Mode, White in Dark Mode), Emerald on Success, Red on Error
   const fillBackgroundColor = useTransform(
-    [baseEmeraldColor, statusStrMv],
-    ([emerald, currentStatus]: string[]) => {
+    statusStrMv,
+    (currentStatus: string) => {
       if (currentStatus === "error") {
         return "#e11d48";
       }
-      if (currentStatus === "success" || currentStatus === "loading") {
+      if (currentStatus === "success") {
         return "#15803d";
       }
-      return emerald ?? "#10b981";
+      return "var(--color-cta-surface)";
     }
   );
 
-  // Subtle opacity ramp so at 0% the track is clean and as the knob moves it fills smoothly to 100%
-  const baseFillOpacity = useTransform(progress, [0, 0.03, 1], [0, 0.85, 1]);
+  // Smooth opacity ramp so at 0% the track is crisp glass and reaches near-solid by confirmThreshold
+  const baseFillOpacity = useTransform(
+    progress,
+    [0, 0.03, 0.85, 1],
+    [0, 0.16, 0.96, 1]
+  );
   const fillOpacity = useTransform(
     [baseFillOpacity, statusCodeMv],
     ([op, code]: number[]) => {
@@ -384,14 +382,15 @@ export const ButtonSlideToConfirm: React.FC<ButtonSlideToConfirmProps> = ({
       }
       transition={{ duration: 0.42, ease: "easeInOut" }}
       className={cn(
-        "relative flex h-12 w-full select-none items-center overflow-hidden rounded-lg border border-border bg-emerald-500/10 p-1 touch-none transition-colors duration-200",
+        "relative flex h-12 w-full select-none items-center overflow-hidden rounded-2xl border border-border bg-black/[0.04] dark:bg-white/[0.06] p-1 touch-none transition-colors duration-200",
         disabled && "opacity-50 pointer-events-none",
         status === "error" && "border-rose-600! bg-rose-500/15!",
-        status === "success" && "border-primary bg-primary",
+        status === "loading" && "border-cta-surface bg-cta-surface",
+        status === "success" && "border-emerald-700 bg-emerald-700",
         className
       )}
     >
-      {/* Dynamic Progress Fill Bar (0% Light Emerald -> 100% Dark Emerald, Red on Error) */}
+      {/* Dynamic Progress Fill Bar (Neutral Adaptive CTA Surface, Emerald on Success, Red on Error) */}
       <motion.div
         data-testid={`${testId}-progress`}
         style={{
@@ -400,10 +399,10 @@ export const ButtonSlideToConfirm: React.FC<ButtonSlideToConfirmProps> = ({
           opacity: fillOpacity,
         }}
         className={cn(
-          "pointer-events-none absolute inset-y-0 left-0 z-0 rounded-md transition-colors duration-150",
+          "pointer-events-none absolute inset-y-0 left-0 z-0 rounded-xl bg-cta-surface transition-colors duration-150",
           status === "error" && "bg-rose-600!",
-          (status === "success" || status === "loading") &&
-            "w-full! bg-primary! opacity-100!"
+          status === "loading" && "w-full! bg-cta-surface! opacity-100!",
+          status === "success" && "w-full! bg-emerald-700! opacity-100!"
         )}
       />
 
@@ -424,7 +423,7 @@ export const ButtonSlideToConfirm: React.FC<ButtonSlideToConfirmProps> = ({
                   key="ready"
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="font-semibold text-white"
+                  className="font-semibold text-cta-foreground"
                 >
                   {readyLabel}
                 </motion.span>
@@ -436,7 +435,7 @@ export const ButtonSlideToConfirm: React.FC<ButtonSlideToConfirmProps> = ({
                   <span>{label}</span>
                   <span
                     aria-hidden="true"
-                    className="inline-flex items-center text-primary/80 font-mono text-[11px]"
+                    className="inline-flex items-center text-muted-foreground font-mono text-[11px]"
                   >
                     <LucideMoveRight size={16}/>
                   </span>
@@ -452,7 +451,7 @@ export const ButtonSlideToConfirm: React.FC<ButtonSlideToConfirmProps> = ({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.92 }}
               transition={{ duration: 0.18 }}
-              className="flex items-center gap-2 text-xs font-semibold text-white"
+              className="flex items-center gap-2 text-xs font-semibold text-cta-foreground"
             >
               <motion.span
                 animate={{ rotate: 360 }}
@@ -461,7 +460,7 @@ export const ButtonSlideToConfirm: React.FC<ButtonSlideToConfirmProps> = ({
                   duration: 0.75,
                   ease: "linear",
                 }}
-                className="inline-block h-4 w-4 rounded-full border-2 border-white/30 border-t-white"
+                className="inline-block h-4 w-4 rounded-full border-2 border-cta-foreground/30 border-t-cta-foreground"
               />
               <span>{loadingLabel}</span>
             </motion.div>
@@ -642,10 +641,10 @@ export const ButtonSlideToConfirm: React.FC<ButtonSlideToConfirmProps> = ({
             onPointerCancel={handlePointerCancel}
             onKeyDown={handleKeyDown}
             className={cn(
-              "relative z-20 flex h-10 w-10 shrink-0 cursor-grab items-center justify-center rounded-md border border-primary/30 bg-primary text-primary-foreground transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary active:cursor-grabbing",
+              "relative z-20 flex h-10 w-10 shrink-0 cursor-grab items-center justify-center rounded-xl border border-border bg-cta-surface text-cta-foreground transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary active:cursor-grabbing",
               isReadyToRelease &&
                 status !== "error" &&
-                "bg-white text-emerald-700 border-white",
+                "bg-cta-foreground text-cta-surface border-cta-foreground/20",
               status === "error" &&
                 "bg-rose-700! text-white! border-white/60! cursor-default"
             )}
@@ -667,7 +666,7 @@ export const ButtonSlideToConfirm: React.FC<ButtonSlideToConfirmProps> = ({
                     repeat: Infinity,
                     ease: "easeOut",
                   }}
-                  className="pointer-events-none absolute inset-0 rounded-md border-2 border-primary bg-primary/25"
+                  className="pointer-events-none absolute inset-0 rounded-md border-2 border-cta-surface/60 bg-cta-surface/20"
                 />
               )}
             </AnimatePresence>

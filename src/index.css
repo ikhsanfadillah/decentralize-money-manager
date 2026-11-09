@@ -4,28 +4,47 @@
 
 @layer base {
   :root {
-    --color-background: #ffffff;
-    --color-card: #fafafa;
-    --color-border: #e4e4e7;
+    color-scheme: light;
+    --color-background: #fafafa;
+    --color-card: rgba(255, 255, 255, 0.85);
+    --color-card-contrast: #18181b;
+    --color-border: rgba(24, 24, 27, 0.1);
     --color-foreground: #09090b;
-    --color-primary: #15803d;
+    --color-primary: #27272a;
     --color-primary-foreground: #ffffff;
-    --color-muted: #f4f4f5;
+    --color-cta-surface: #09090b;
+    --color-cta-foreground: #ffffff;
+    --color-dock: rgba(255, 255, 255, 0.9);
+    --color-muted: rgba(24, 24, 27, 0.06);
     --color-muted-foreground: #52525b;
+    --color-floating-surface: #ffffff;
+    --canvas-gradient: linear-gradient(180deg, #fafafa 0%, #f5f5f7 52%, #f1f1f3 100%);
   }
 
   .dark {
+    color-scheme: dark;
     --color-background: #09090b;
-    --color-card: #1d1d22;
-    --color-border: #27272a;
-    --color-foreground: #f4f4f5;
-    --color-primary: #10b981;
-    --color-primary-foreground: #022c22;
-    --color-muted: #27272a;
-    --color-muted-foreground: #d4d4d5;
+    --color-card: rgba(255, 255, 255, 0.055);
+    --color-card-contrast: rgba(20, 20, 24, 0.92);
+    --color-border: rgba(255, 255, 255, 0.11);
+    --color-foreground: #fafafa;
+    --color-primary: #e4e4e7;
+    --color-primary-foreground: #09090b;
+    --color-cta-surface: #ffffff;
+    --color-cta-foreground: #09090b;
+    --color-dock: rgba(15, 15, 18, 0.88);
+    --color-muted: rgba(255, 255, 255, 0.06);
+    --color-muted-foreground: rgba(255, 255, 255, 0.68);
+    --color-floating-surface: #121216;
+    --canvas-gradient: linear-gradient(180deg, #09090b 0%, #111114 50%, #16161a 100%);
   }
 
-  /* Global Zero-Shadow & Zero-Ring Guard (Section 8.1) */
+  select option {
+    background-color: var(--color-floating-surface);
+    color: var(--color-foreground);
+  }
+
+  /* Global Zero-Shadow & Zero-Ring Guard for flat cards/inputs (Neutral Zinc Glass) */
   *,
   ::before,
   ::after {
@@ -47,6 +66,8 @@
     margin: 0;
     min-height: 100vh;
     background-color: var(--color-background);
+    background-image: var(--canvas-gradient);
+    background-attachment: fixed;
     color: var(--color-foreground);
   }
 }
@@ -54,24 +75,48 @@
 @theme {
   --color-background: var(--color-background);
   --color-card: var(--color-card);
+  --color-card-contrast: var(--color-card-contrast);
   --color-border: var(--color-border);
   --color-foreground: var(--color-foreground);
   --color-primary: var(--color-primary);
   --color-primary-foreground: var(--color-primary-foreground);
+  --color-cta-surface: var(--color-cta-surface);
+  --color-cta-foreground: var(--color-cta-foreground);
+  --color-dock: var(--color-dock);
   --color-muted: var(--color-muted);
   --color-muted-foreground: var(--color-muted-foreground);
   --font-sans: "Geist", "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
-/* Reusable Enterprise Emerald Tabular Grid Helper (Section 8.2) — Mobile-First Compact & Zero Double-Border */
+/* Neutral Zinc Glass Surfaces */
+.glass-card {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 22px;
+  backdrop-filter: blur(12px);
+}
+
+.contrast-card {
+  background-color: var(--color-card-contrast);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 22px;
+  backdrop-filter: blur(12px);
+}
+
+.floating-surface {
+  background-color: var(--color-floating-surface);
+  border-color: var(--color-border);
+}
+
+/* Legacy tabular grid helper bridged to rounded glass surfaces for dense tables */
 .tabular-grid-container {
   background-color: var(--color-border);
   gap: 1px;
-  border: 0;
-  border-bottom: 1px solid var(--color-border);
-  border-radius: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
   overflow: hidden;
+  backdrop-filter: blur(12px);
 }
 
 .tabular-grid-cell {
@@ -127,7 +172,7 @@
 }
 
 .nav-touch-item:active {
-  transform: scale(0.9);
+  transform: scale(0.92);
 }
 
 .nav-touch-item.active {
@@ -142,30 +187,44 @@
 }
 
 .fab-touch:active {
-  transform: scale(0.88) rotate(45deg);
+  transform: scale(0.9) rotate(45deg);
 }
 
-/* Floating Pill Navbar Soft Shadows & Interactions */
+/* Controlled Floating Layer Elevation (Dock, Center FAB, Drawers & Dialogs) */
 .floating-navbar-pill {
-  box-shadow: 0 10px 28px -4px rgba(0, 0, 0, 0.08),
-              0 4px 12px -2px rgba(0, 0, 0, 0.04),
-              0 0 0 1px rgba(0, 0, 0, 0.03) !important;
+  box-shadow: 0 12px 32px -4px rgba(9, 9, 11, 0.14),
+              0 4px 12px -2px rgba(9, 9, 11, 0.07),
+              0 0 0 1px rgba(24, 24, 27, 0.06) !important;
 }
 
 .dark .floating-navbar-pill {
-  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.5),
-              0 4px 12px -2px rgba(0, 0, 0, 0.3),
-              0 0 0 1px rgba(255, 255, 255, 0.06) !important;
+  box-shadow: 0 16px 38px -6px rgba(0, 0, 0, 0.68),
+              0 4px 14px -2px rgba(0, 0, 0, 0.42),
+              0 0 0 1px rgba(255, 255, 255, 0.08) !important;
 }
 
 .floating-navbar-fab {
-  box-shadow: 0 6px 18px -2px rgba(16, 185, 129, 0.42),
-              0 2px 6px -1px rgba(5, 150, 105, 0.28) !important;
+  box-shadow: 0 8px 20px -4px rgba(9, 9, 11, 0.34),
+              0 2px 8px -1px rgba(9, 9, 11, 0.2) !important;
 }
 
 .floating-navbar-fab:hover {
-  box-shadow: 0 8px 24px -2px rgba(16, 185, 129, 0.52),
-              0 3px 8px -1px rgba(5, 150, 105, 0.35) !important;
+  box-shadow: 0 10px 24px -4px rgba(9, 9, 11, 0.44),
+              0 4px 10px -1px rgba(9, 9, 11, 0.26) !important;
+}
+
+.dark .floating-navbar-fab {
+  box-shadow: 0 8px 22px -4px rgba(255, 255, 255, 0.22),
+              0 4px 12px -2px rgba(0, 0, 0, 0.48) !important;
+}
+
+.dark .floating-navbar-fab:hover {
+  box-shadow: 0 10px 26px -4px rgba(255, 255, 255, 0.3),
+              0 6px 14px -2px rgba(0, 0, 0, 0.58) !important;
+}
+
+[data-floating-surface="true"] {
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.55) !important;
 }
 
 .money-mono {
@@ -201,4 +260,3 @@
   background-color: var(--color-border);
   border-radius: 9999px;
 }
-

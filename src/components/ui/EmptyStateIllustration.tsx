@@ -15,7 +15,7 @@ export interface EmptyStateIllustrationProps {
 
 /**
  * Adaptive SVG Illustrations for Empty States.
- * Automatically adapts to Light & Dark mode via CSS variables and Tailwind `dark:` classes.
+ * Automatically adapts to Light & Dark mode via Neutral Zinc Tailwind `dark:` classes.
  */
 export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
   variant,
@@ -38,7 +38,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             cy="52"
             rx="44"
             ry="30"
-            className="fill-emerald-500/8 dark:fill-emerald-500/12"
+            className="fill-zinc-500/10 dark:fill-zinc-300/10"
           />
 
           {/* Main Chart Card */}
@@ -47,8 +47,8 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             y="16"
             width="84"
             height="62"
-            rx="8"
-            className="fill-background stroke-border dark:fill-zinc-950/90 dark:stroke-zinc-800"
+            rx="10"
+            className="fill-white stroke-zinc-300 dark:fill-zinc-900/95 dark:stroke-white/15"
             strokeWidth="1.5"
           />
 
@@ -58,20 +58,20 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             y1="30"
             x2="102"
             y2="30"
-            className="stroke-border dark:stroke-zinc-800"
+            className="stroke-zinc-200 dark:stroke-white/10"
             strokeWidth="1"
           />
           <circle
             cx="26"
             cy="23"
             r="2"
-            className="fill-zinc-300 dark:fill-zinc-700"
+            className="fill-zinc-300 dark:fill-zinc-600"
           />
           <circle
             cx="33"
             cy="23"
             r="2"
-            className="fill-zinc-300 dark:fill-zinc-700"
+            className="fill-zinc-300 dark:fill-zinc-600"
           />
           <rect
             x="40"
@@ -79,7 +79,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             width="24"
             height="3"
             rx="1.5"
-            className="fill-zinc-200 dark:fill-zinc-800"
+            className="fill-zinc-200 dark:fill-zinc-700"
           />
 
           {/* Dashed Grid Lines */}
@@ -88,7 +88,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             y1="44"
             x2="94"
             y2="44"
-            className="stroke-zinc-200 dark:stroke-zinc-800/80"
+            className="stroke-zinc-200 dark:stroke-white/10"
             strokeWidth="1"
             strokeDasharray="2 2"
           />
@@ -97,12 +97,12 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             y1="56"
             x2="94"
             y2="56"
-            className="stroke-zinc-200 dark:stroke-zinc-800/80"
+            className="stroke-zinc-200 dark:stroke-white/10"
             strokeWidth="1"
             strokeDasharray="2 2"
           />
 
-          {/* Monthly Bars (Placeholder & Emerald Accent) */}
+          {/* Monthly Bars (Neutral Zinc Contrast) */}
           <rect
             x="30"
             y="54"
@@ -117,7 +117,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             width="8"
             height="22"
             rx="2"
-            className="fill-emerald-500/25 dark:fill-emerald-500/30"
+            className="fill-zinc-500/30 dark:fill-zinc-400/35"
           />
           <rect
             x="60"
@@ -133,13 +133,13 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             width="8"
             height="29"
             rx="2"
-            className="fill-emerald-500/60 dark:fill-emerald-400/60"
+            className="fill-zinc-700/75 dark:fill-zinc-200/70"
           />
 
           {/* Trend Line */}
           <path
             d="M34 50 L49 42 L64 46 L79 35"
-            className="stroke-emerald-600 dark:stroke-emerald-400"
+            className="stroke-zinc-800 dark:stroke-zinc-200"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -148,7 +148,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             cx="79"
             cy="35"
             r="3"
-            className="fill-background stroke-emerald-600 dark:fill-zinc-900 dark:stroke-emerald-400"
+            className="fill-white stroke-zinc-800 dark:fill-zinc-900 dark:stroke-zinc-200"
             strokeWidth="2"
           />
 
@@ -160,12 +160,12 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
               width="26"
               height="24"
               rx="6"
-              className="fill-card stroke-border dark:fill-zinc-900 dark:stroke-zinc-700"
+              className="fill-white stroke-zinc-300 dark:fill-zinc-800 dark:stroke-white/20"
               strokeWidth="1.5"
             />
             <path
               d="M7 9H19M7 14H14"
-              className="stroke-emerald-600 dark:stroke-emerald-400"
+              className="stroke-zinc-800 dark:stroke-zinc-200"
               strokeWidth="1.8"
               strokeLinecap="round"
             />
@@ -189,7 +189,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             cy="52"
             rx="44"
             ry="30"
-            className="fill-emerald-500/8 dark:fill-emerald-500/12"
+            className="fill-zinc-500/10 dark:fill-zinc-300/10"
           />
 
           {/* Back Ledger Card */}
@@ -198,8 +198,8 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             y="12"
             width="72"
             height="58"
-            rx="7"
-            className="fill-zinc-100 stroke-zinc-200 dark:fill-zinc-900/60 dark:stroke-zinc-800"
+            rx="9"
+            className="fill-zinc-100 stroke-zinc-300 dark:fill-zinc-800/80 dark:stroke-white/10"
             strokeWidth="1.2"
           />
 
@@ -209,8 +209,8 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             y="20"
             width="76"
             height="60"
-            rx="8"
-            className="fill-background stroke-border dark:fill-zinc-950/95 dark:stroke-zinc-800"
+            rx="10"
+            className="fill-white stroke-zinc-300 dark:fill-zinc-900/95 dark:stroke-white/15"
             strokeWidth="1.5"
           />
 
@@ -219,7 +219,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             cx="30"
             cy="35"
             r="5"
-            className="fill-emerald-500/20 dark:fill-emerald-500/25"
+            className="fill-zinc-500/20 dark:fill-zinc-300/20"
           />
           <rect
             x="40"
@@ -227,7 +227,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             width="28"
             height="3.5"
             rx="1.75"
-            className="fill-zinc-300 dark:fill-zinc-700"
+            className="fill-zinc-300 dark:fill-zinc-600"
           />
           <rect
             x="40"
@@ -243,7 +243,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             width="12"
             height="4"
             rx="2"
-            className="fill-emerald-500/40 dark:fill-emerald-400/40"
+            className="fill-zinc-600/45 dark:fill-zinc-300/45"
           />
 
           {/* Divider */}
@@ -252,7 +252,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             y1="46"
             x2="86"
             y2="46"
-            className="stroke-zinc-100 dark:stroke-zinc-800/80"
+            className="stroke-zinc-200 dark:stroke-white/10"
             strokeWidth="1"
           />
 
@@ -269,7 +269,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             width="32"
             height="3.5"
             rx="1.75"
-            className="fill-zinc-300 dark:fill-zinc-700"
+            className="fill-zinc-300 dark:fill-zinc-600"
           />
           <rect
             x="40"
@@ -295,7 +295,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             width="42"
             height="3"
             rx="1.5"
-            className="fill-zinc-200/80 dark:fill-zinc-800/70"
+            className="fill-zinc-200/80 dark:fill-zinc-800/80"
           />
 
           {/* Plus Badge */}
@@ -304,11 +304,11 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
               cx="13"
               cy="13"
               r="13"
-              className="fill-emerald-600 dark:fill-emerald-500"
+              className="fill-zinc-900 dark:fill-zinc-100"
             />
             <path
               d="M13 8V18M8 13H18"
-              stroke="white"
+              className="stroke-white dark:stroke-zinc-950"
               strokeWidth="2.2"
               strokeLinecap="round"
             />
@@ -332,7 +332,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             cy="50"
             rx="44"
             ry="30"
-            className="fill-emerald-500/8 dark:fill-emerald-500/12"
+            className="fill-zinc-500/10 dark:fill-zinc-300/10"
           />
 
           {/* Budget Card Container */}
@@ -341,8 +341,8 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             y="18"
             width="88"
             height="60"
-            rx="8"
-            className="fill-background stroke-border dark:fill-zinc-950/90 dark:stroke-zinc-800"
+            rx="10"
+            className="fill-white stroke-zinc-300 dark:fill-zinc-900/95 dark:stroke-white/15"
             strokeWidth="1.5"
           />
 
@@ -353,7 +353,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             width="30"
             height="3.5"
             rx="1.75"
-            className="fill-zinc-300 dark:fill-zinc-700"
+            className="fill-zinc-300 dark:fill-zinc-600"
           />
           <rect
             x="76"
@@ -361,7 +361,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             width="18"
             height="3.5"
             rx="1.75"
-            className="fill-emerald-500/50 dark:fill-emerald-400/50"
+            className="fill-zinc-600/50 dark:fill-zinc-300/50"
           />
           {/* Progress Track 1 */}
           <rect
@@ -370,7 +370,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             width="68"
             height="6"
             rx="3"
-            className="fill-zinc-100 dark:fill-zinc-800"
+            className="fill-zinc-200 dark:fill-zinc-800"
           />
           <rect
             x="26"
@@ -378,7 +378,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             width="42"
             height="6"
             rx="3"
-            className="fill-emerald-500 dark:fill-emerald-400"
+            className="fill-zinc-800 dark:fill-zinc-200"
           />
 
           {/* Budget Row 2 */}
@@ -388,7 +388,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             width="24"
             height="3.5"
             rx="1.75"
-            className="fill-zinc-300 dark:fill-zinc-700"
+            className="fill-zinc-300 dark:fill-zinc-600"
           />
           <rect
             x="78"
@@ -405,7 +405,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             width="68"
             height="6"
             rx="3"
-            className="fill-zinc-100 dark:fill-zinc-800"
+            className="fill-zinc-200 dark:fill-zinc-800"
           />
           <rect
             x="26"
@@ -413,7 +413,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             width="24"
             height="6"
             rx="3"
-            className="fill-emerald-500/40 dark:fill-emerald-400/40"
+            className="fill-zinc-600/45 dark:fill-zinc-300/45"
           />
 
           {/* Target / Gauge Badge */}
@@ -422,14 +422,14 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
               cx="14"
               cy="14"
               r="13"
-              className="fill-card stroke-border dark:fill-zinc-900 dark:stroke-zinc-700"
+              className="fill-white stroke-zinc-300 dark:fill-zinc-800 dark:stroke-white/20"
               strokeWidth="1.5"
             />
             <circle
               cx="14"
               cy="14"
               r="7.5"
-              className="stroke-emerald-600 dark:stroke-emerald-400"
+              className="stroke-zinc-800 dark:stroke-zinc-200"
               strokeWidth="1.8"
               strokeDasharray="32 14"
             />
@@ -437,7 +437,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
               cx="14"
               cy="14"
               r="2.5"
-              className="fill-emerald-600 dark:fill-emerald-400"
+              className="fill-zinc-800 dark:fill-zinc-200"
             />
           </g>
         </svg>
@@ -459,7 +459,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             cy="50"
             rx="44"
             ry="30"
-            className="fill-emerald-500/8 dark:fill-emerald-500/12"
+            className="fill-zinc-500/10 dark:fill-zinc-300/10"
           />
 
           {/* List Card */}
@@ -468,8 +468,8 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             y="16"
             width="74"
             height="60"
-            rx="8"
-            className="fill-background stroke-border dark:fill-zinc-950/90 dark:stroke-zinc-800"
+            rx="10"
+            className="fill-white stroke-zinc-300 dark:fill-zinc-900/95 dark:stroke-white/15"
             strokeWidth="1.5"
           />
 
@@ -480,7 +480,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             width="20"
             height="6"
             rx="3"
-            className="fill-emerald-500/20 dark:fill-emerald-500/30"
+            className="fill-zinc-600/30 dark:fill-zinc-300/30"
           />
           <rect
             x="50"
@@ -505,8 +505,8 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             y="38"
             width="58"
             height="10"
-            rx="3"
-            className="fill-zinc-100/80 stroke-zinc-200 dark:fill-zinc-900/70 dark:stroke-zinc-800"
+            rx="4"
+            className="fill-zinc-100/90 stroke-zinc-300 dark:fill-zinc-800/75 dark:stroke-white/10"
             strokeWidth="1"
             strokeDasharray="3 2"
           />
@@ -515,8 +515,8 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             y="54"
             width="46"
             height="10"
-            rx="3"
-            className="fill-zinc-100/80 stroke-zinc-200 dark:fill-zinc-900/70 dark:stroke-zinc-800"
+            rx="4"
+            className="fill-zinc-100/90 stroke-zinc-300 dark:fill-zinc-800/75 dark:stroke-white/10"
             strokeWidth="1"
             strokeDasharray="3 2"
           />
@@ -527,19 +527,19 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
               cx="16"
               cy="16"
               r="14"
-              className="fill-card stroke-emerald-600 dark:fill-zinc-900 dark:stroke-emerald-400"
+              className="fill-white stroke-zinc-800 dark:fill-zinc-800 dark:stroke-zinc-200"
               strokeWidth="2.2"
             />
             <circle
               cx="16"
               cy="16"
               r="9"
-              className="fill-emerald-500/10 dark:fill-emerald-400/15"
+              className="fill-zinc-500/12 dark:fill-zinc-300/15"
             />
             {/* Funnel inside lens */}
             <path
               d="M11 13H21L17.5 17V20L14.5 18.5V17L11 13Z"
-              className="fill-emerald-600 dark:fill-emerald-400"
+              className="fill-zinc-800 dark:fill-zinc-200"
             />
             {/* Handle */}
             <line
@@ -547,7 +547,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
               y1="26.5"
               x2="34"
               y2="34"
-              className="stroke-emerald-600 dark:stroke-emerald-400"
+              className="stroke-zinc-800 dark:stroke-zinc-200"
               strokeWidth="3"
               strokeLinecap="round"
             />
@@ -571,7 +571,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             cy="50"
             rx="44"
             ry="30"
-            className="fill-emerald-500/8 dark:fill-emerald-500/12"
+            className="fill-zinc-500/10 dark:fill-zinc-300/10"
           />
 
           {/* Category Grid Cards */}
@@ -580,15 +580,15 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             y="18"
             width="36"
             height="24"
-            rx="6"
-            className="fill-background stroke-border dark:fill-zinc-950/90 dark:stroke-zinc-800"
+            rx="7"
+            className="fill-white stroke-zinc-300 dark:fill-zinc-900/95 dark:stroke-white/15"
             strokeWidth="1.5"
           />
           <circle
             cx="30"
             cy="30"
             r="4"
-            className="fill-emerald-500/30 dark:fill-emerald-400/30"
+            className="fill-zinc-600/35 dark:fill-zinc-300/35"
           />
           <rect
             x="38"
@@ -596,7 +596,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             width="12"
             height="4"
             rx="2"
-            className="fill-zinc-300 dark:fill-zinc-700"
+            className="fill-zinc-300 dark:fill-zinc-600"
           />
 
           <rect
@@ -604,8 +604,8 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             y="18"
             width="36"
             height="24"
-            rx="6"
-            className="fill-background stroke-border dark:fill-zinc-950/90 dark:stroke-zinc-800"
+            rx="7"
+            className="fill-white stroke-zinc-300 dark:fill-zinc-900/95 dark:stroke-white/15"
             strokeWidth="1.5"
             strokeDasharray="3 2"
           />
@@ -629,8 +629,8 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             y="48"
             width="36"
             height="24"
-            rx="6"
-            className="fill-background stroke-border dark:fill-zinc-950/90 dark:stroke-zinc-800"
+            rx="7"
+            className="fill-white stroke-zinc-300 dark:fill-zinc-900/95 dark:stroke-white/15"
             strokeWidth="1.5"
             strokeDasharray="3 2"
           />
@@ -657,12 +657,12 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
               width="38"
               height="30"
               rx="8"
-              className="fill-card stroke-emerald-500/60 dark:fill-zinc-900 dark:stroke-emerald-400/60"
+              className="fill-white stroke-zinc-500/60 dark:fill-zinc-800 dark:stroke-zinc-300/60"
               strokeWidth="1.5"
             />
             <path
               d="M12 10H20L27 17L20 24L12 16V10Z"
-              className="fill-emerald-500/20 stroke-emerald-600 dark:fill-emerald-400/20 dark:stroke-emerald-400"
+              className="fill-zinc-500/20 stroke-zinc-800 dark:fill-zinc-300/20 dark:stroke-zinc-200"
               strokeWidth="1.6"
               strokeLinejoin="round"
             />
@@ -670,7 +670,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
               cx="16"
               cy="14"
               r="1.5"
-              className="fill-emerald-600 dark:fill-emerald-400"
+              className="fill-zinc-800 dark:fill-zinc-200"
             />
           </g>
         </svg>
@@ -692,7 +692,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             cy="52"
             rx="44"
             ry="30"
-            className="fill-emerald-500/8 dark:fill-emerald-500/12"
+            className="fill-zinc-500/10 dark:fill-zinc-300/10"
           />
 
           {/* Calendar Period Card */}
@@ -701,8 +701,8 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             y="18"
             width="78"
             height="60"
-            rx="8"
-            className="fill-background stroke-border dark:fill-zinc-950/90 dark:stroke-zinc-800"
+            rx="10"
+            className="fill-white stroke-zinc-300 dark:fill-zinc-900/95 dark:stroke-white/15"
             strokeWidth="1.5"
           />
 
@@ -713,7 +713,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             width="4"
             height="10"
             rx="2"
-            className="fill-zinc-400 dark:fill-zinc-600"
+            className="fill-zinc-400 dark:fill-zinc-500"
           />
           <rect
             x="76"
@@ -721,7 +721,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             width="4"
             height="10"
             rx="2"
-            className="fill-zinc-400 dark:fill-zinc-600"
+            className="fill-zinc-400 dark:fill-zinc-500"
           />
 
           {/* Calendar Header */}
@@ -730,7 +730,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             y1="31"
             x2="96"
             y2="31"
-            className="stroke-border dark:stroke-zinc-800"
+            className="stroke-zinc-200 dark:stroke-white/10"
             strokeWidth="1"
           />
 
@@ -749,7 +749,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             y1="44"
             x2="54"
             y2="44"
-            className="stroke-emerald-500 dark:stroke-emerald-400"
+            className="stroke-zinc-800 dark:stroke-zinc-200"
             strokeWidth="4"
             strokeLinecap="round"
           />
@@ -757,7 +757,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             cx="54"
             cy="44"
             r="4"
-            className="fill-background stroke-emerald-600 dark:fill-zinc-900 dark:stroke-emerald-400"
+            className="fill-white stroke-zinc-800 dark:fill-zinc-800 dark:stroke-zinc-200"
             strokeWidth="2"
           />
 
@@ -775,7 +775,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             y1="58"
             x2="42"
             y2="58"
-            className="stroke-emerald-500/45 dark:stroke-emerald-400/45"
+            className="stroke-zinc-600/45 dark:stroke-zinc-300/45"
             strokeWidth="4"
             strokeLinecap="round"
           />
@@ -783,7 +783,7 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
             cx="42"
             cy="58"
             r="4"
-            className="fill-background stroke-emerald-500/70 dark:fill-zinc-900 dark:stroke-emerald-400/70"
+            className="fill-white stroke-zinc-700/75 dark:fill-zinc-800 dark:stroke-zinc-300/75"
             strokeWidth="2"
           />
 
@@ -793,18 +793,18 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
               cx="15"
               cy="15"
               r="14"
-              className="fill-card stroke-border dark:fill-zinc-900 dark:stroke-zinc-700"
+              className="fill-white stroke-zinc-300 dark:fill-zinc-800 dark:stroke-white/20"
               strokeWidth="1.5"
             />
             <path
               d="M15 7V15H23A8 8 0 0 0 15 7Z"
-              className="fill-emerald-500 dark:fill-emerald-400"
+              className="fill-zinc-800 dark:fill-zinc-200"
             />
             <circle
               cx="15"
               cy="15"
               r="8"
-              className="stroke-emerald-600 dark:stroke-emerald-400"
+              className="stroke-zinc-800 dark:stroke-zinc-200"
               strokeWidth="1.6"
             />
           </g>
@@ -812,4 +812,3 @@ export const EmptyStateIllustration: React.FC<EmptyStateIllustrationProps> = ({
       );
   }
 };
-

@@ -30,7 +30,7 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 describe("FloatingNavbar", () => {
-  it("renders the 4 navigation items and action button with correct labels and accessibility attributes", () => {
+  it("renders the 4 navigation items and center neutral CTA FAB button with correct labels and accessibility attributes", () => {
     const onAdd = vi.fn();
     render(<FloatingNavbar bookId="book-123" onAddTransaction={onAdd} />);
 
@@ -38,38 +38,43 @@ describe("FloatingNavbar", () => {
     const nav = screen.getByRole("navigation", { name: "Navigasi Buku" });
     expect(nav).toBeInTheDocument();
 
-    // Verify 4 navigation items are present
-    expect(screen.getByText("Dashboard")).toBeInTheDocument();
-    expect(screen.getByText("Transactions")).toBeInTheDocument();
-    expect(screen.getByText("Budgets")).toBeInTheDocument();
-    expect(screen.getByText("Settings")).toBeInTheDocument();
+    // Verify 4 symmetric navigation items around the center FAB
+    expect(screen.getByText("Home")).toBeInTheDocument();
+    expect(screen.getByText("Transaksi")).toBeInTheDocument();
+    expect(screen.getByText("Laporan")).toBeInTheDocument();
+    expect(screen.getByText("Anggaran")).toBeInTheDocument();
 
     // Verify the + FAB button
     const fabButton = screen.getByTestId("fab-add-transaction");
     expect(fabButton).toBeInTheDocument();
     expect(fabButton).toHaveAttribute("aria-label", "Tambah Transaksi Baru");
+    expect(fabButton.className).toContain("floating-navbar-fab");
+    expect(fabButton.className).toContain("bg-cta-surface");
+    expect(fabButton.className).toContain("text-cta-foreground");
 
     // Click FAB button
     fireEvent.click(fabButton);
     expect(onAdd).toHaveBeenCalledTimes(1);
   });
 
-  it("applies active styles and indicator to the active route item", () => {
+  it("applies active styles and aria-current indicator to the active route item", () => {
     mockUseLocation.mockReturnValue({
       pathname: "/books/book-123/transactions",
     });
 
     render(<FloatingNavbar bookId="book-123" onAddTransaction={vi.fn()} />);
 
-    const txLink = screen.getByText("Transactions").closest("a");
+    const txLink = screen.getByText("Transaksi").closest("a");
     expect(txLink).toHaveAttribute("href", "/books/book-123/transactions");
-    expect(txLink?.className).toContain("bg-emerald-50/80");
+    expect(txLink).toHaveAttribute("aria-current", "page");
+    expect(txLink?.className).toContain("text-foreground");
 
-    const dashboardLink = screen.getByText("Dashboard").closest("a");
-    expect(dashboardLink?.className).not.toContain("bg-emerald-50/80");
+    const homeLink = screen.getByText("Home").closest("a");
+    expect(homeLink).not.toHaveAttribute("aria-current");
+    expect(homeLink?.className).toContain("text-muted-foreground");
   });
 
-  it("contains dark mode styling classes on navigation container and links", () => {
+  it("uses Neutral Zinc capsule dock tokens on navigation container and links", () => {
     mockUseLocation.mockReturnValue({
       pathname: "/books/book-123/transactions",
     });
@@ -77,15 +82,16 @@ describe("FloatingNavbar", () => {
     render(<FloatingNavbar bookId="book-123" onAddTransaction={vi.fn()} />);
 
     const nav = screen.getByRole("navigation", { name: "Navigasi Buku" });
-    expect(nav.className).toContain("dark:border-zinc-800");
-    expect(nav.className).toContain("dark:bg-zinc-900/95");
+    expect(nav.className).toContain("floating-navbar-pill");
+    expect(nav.className).toContain("bg-dock");
+    expect(nav.className).toContain("border-border");
+    expect(nav.className).toContain("rounded-full");
 
-    const txLink = screen.getByText("Transactions").closest("a");
-    expect(txLink?.className).toContain("dark:bg-emerald-950/40");
-    expect(txLink?.className).toContain("dark:text-emerald-300");
+    const txLink = screen.getByText("Transaksi").closest("a");
+    expect(txLink?.className).toContain("text-foreground");
 
-    const dashboardLink = screen.getByText("Dashboard").closest("a");
-    expect(dashboardLink?.className).toContain("dark:text-zinc-400");
+    const homeLink = screen.getByText("Home").closest("a");
+    expect(homeLink?.className).toContain("text-muted-foreground");
   });
 });
 

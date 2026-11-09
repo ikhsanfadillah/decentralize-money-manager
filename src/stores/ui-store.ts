@@ -16,10 +16,38 @@ export const DEFAULT_FILTER_DRAFT: TransactionFilter = {
   offset: 0,
 };
 
+const BALANCE_HIDDEN_STORAGE_KEY = "dmm-balance-hidden";
+
+function getStoredBalanceHidden(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  try {
+    return window.localStorage.getItem(BALANCE_HIDDEN_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function persistBalanceHidden(hidden: boolean): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    window.localStorage.setItem(
+      BALANCE_HIDDEN_STORAGE_KEY,
+      hidden ? "true" : "false"
+    );
+  } catch {
+    // Ignore storage restriction errors in sandboxed/private modes
+  }
+}
+
 export interface UiStoreState {
   isNewTransactionModalOpen: boolean;
   activeFilterDraft: TransactionFilter;
   activeDrawerId: string | null;
+  isBalanceHidden: boolean;
   setNewTransactionModalOpen: (open: boolean) => void;
   setActiveFilterDraft: (
     updater:
@@ -28,12 +56,15 @@ export interface UiStoreState {
   ) => void;
   resetActiveFilterDraft: () => void;
   setActiveDrawerId: (drawerId: string | null) => void;
+  setBalanceHidden: (hidden: boolean) => void;
+  toggleBalanceHidden: () => void;
 }
 
 export const useUiStore = create<UiStoreState>((set) => ({
   isNewTransactionModalOpen: false,
   activeFilterDraft: { ...DEFAULT_FILTER_DRAFT },
   activeDrawerId: null,
+  isBalanceHidden: getStoredBalanceHidden(),
 
   setNewTransactionModalOpen: (open) =>
     set({ isNewTransactionModalOpen: open }),
@@ -50,5 +81,16 @@ export const useUiStore = create<UiStoreState>((set) => ({
     set({ activeFilterDraft: { ...DEFAULT_FILTER_DRAFT } }),
 
   setActiveDrawerId: (drawerId) => set({ activeDrawerId: drawerId }),
-}));
 
+  setBalanceHidden: (hidden) => {
+    persistBalanceHidden(hidden);
+    set({ isBalanceHidden: hidden });
+  },
+
+  toggleBalanceHidden: () =>
+    set((state) => {
+      const next = !state.isBalanceHidden;
+      persistBalanceHidden(next);
+      return { isBalanceHidden: next };
+    }),
+}));

@@ -68,8 +68,9 @@ const DialogContent = React.forwardRef<
           }
           onFocusOutside?.(e);
         }}
+        data-floating-surface="true"
         className={cn(
-          "fixed left-[50%] top-[50%] z-50 flex max-h-[90vh] w-full max-w-2xl translate-x-[-50%] translate-y-[-50%] flex-col overflow-hidden rounded-lg border border-border bg-card shadow-2xl duration-200 focus:outline-none",
+          "floating-surface fixed left-[50%] top-[50%] z-50 flex max-h-[90vh] w-full max-w-2xl translate-x-[-50%] translate-y-[-50%] flex-col overflow-hidden rounded-3xl border border-border text-foreground duration-200 focus:outline-none",
           className
         )}
         {...props}

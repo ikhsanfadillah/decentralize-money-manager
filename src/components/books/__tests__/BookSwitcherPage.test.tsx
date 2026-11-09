@@ -5,13 +5,33 @@ import { BookSwitcherPage } from "../BookSwitcherPage";
 import { tauriApi, type BookMetadata } from "../../../lib/tauri-api";
 
 vi.mock("@tanstack/react-router", () => ({
-  Link: ({ children, ...props }: { children: React.ReactNode }) => (
-    <a {...props}>{children}</a>
-  ),
+  Link: ({
+    children,
+    to,
+    params,
+    ...props
+  }: {
+    children: React.ReactNode;
+    to?: string;
+    params?: Record<string, string>;
+    [key: string]: unknown;
+  }) => {
+    let href = typeof to === "string" ? to : "#";
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        href = href.replace(`$${k}`, v);
+      }
+    }
+    return (
+      <a href={href} {...props}>
+        {children}
+      </a>
+    );
+  },
   useNavigate: () => vi.fn(),
 }));
 
-describe("BookSwitcherPage - Rename Book in Drawer", () => {
+describe("BookSwitcherPage - Clean Book List View", () => {
   const mockBooks: BookMetadata[] = [
     {
       id: "book-001",
@@ -20,6 +40,14 @@ describe("BookSwitcherPage - Rename Book in Drawer", () => {
       file_exists: true,
       last_opened_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
+    },
+    {
+      id: "book-002",
+      name: "Kas Usaha Warung",
+      kind: "BUSINESS",
+      file_exists: true,
+      last_opened_at: new Date(Date.now() - 86400_000).toISOString(),
+      created_at: new Date(Date.now() - 172800_000).toISOString(),
     },
   ];
 
@@ -33,36 +61,50 @@ describe("BookSwitcherPage - Rename Book in Drawer", () => {
       defaultOptions: { queries: { retry: false } },
     });
 
-  it("renders books list without inline input and opens drawer on Ubah Nama click", async () => {
+  it("renders clean clickable book cards without inline Ubah Nama or Hapus buttons", async () => {
     render(
       <QueryClientProvider client={createQueryClient()}>
         <BookSwitcherPage />
       </QueryClientProvider>
     );
 
-    // Book name rendered cleanly in list
     expect(await screen.findByText("Uang Pribadi")).toBeInTheDocument();
+    expect(screen.getByText("Kas Usaha Warung")).toBeInTheDocument();
+    expect(screen.getByText("Pribadi")).toBeInTheDocument();
+    expect(screen.getByText("Usaha")).toBeInTheDocument();
 
-    // Verify there is NO inline input in the row
-    expect(screen.queryByLabelText("Nama Buku Baru")).not.toBeInTheDocument();
+    // Whole card links directly to book dashboard
+    const primaryCard = screen.getByTestId("book-item-book-001");
+    expect(primaryCard.tagName.toLowerCase()).toBe("a");
+    expect(primaryCard).toHaveAttribute("href", "/books/book-001/dashboard");
 
-    // Click "Ubah Nama"
-    const renameButton = screen.getByRole("button", { name: "Ubah Nama" });
-    fireEvent.click(renameButton);
-
-    // Verify the drawer is opened
-    await waitFor(() => {
-      expect(
-        screen.getByRole("heading", { name: "Ubah Nama Buku Keuangan" })
-      ).toBeInTheDocument();
-      const input = screen.getByLabelText("Nama Buku Keuangan Baru");
-      expect(input).toBeInTheDocument();
-      expect(input).toHaveValue("Uang Pribadi");
-      expect(screen.getByText("Geser untuk Ubah Nama")).toBeInTheDocument();
-    });
+    // Rename & Delete actions were moved to Book -> Settings
+    expect(
+      screen.queryByRole("button", { name: "Ubah Nama" })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Hapus" })
+    ).not.toBeInTheDocument();
   });
 
-  it("closes rename drawer when close button is clicked", async () => {
+  it("renders empty state when there are no books", async () => {
+    vi.spyOn(tauriApi, "listBooks").mockResolvedValue([]);
+
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <BookSwitcherPage />
+      </QueryClientProvider>
+    );
+
+    expect(
+      await screen.findByText("Belum ada buku keuangan")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "+ Buat Buku Baru" })
+    ).toBeInTheDocument();
+  });
+
+  it("opens Create Book drawer when Buat Buku button is clicked and closes cleanly", async () => {
     render(
       <QueryClientProvider client={createQueryClient()}>
         <BookSwitcherPage />
@@ -71,20 +113,21 @@ describe("BookSwitcherPage - Rename Book in Drawer", () => {
 
     expect(await screen.findByText("Uang Pribadi")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Ubah Nama" }));
+    fireEvent.click(screen.getByRole("button", { name: "Buat Buku" }));
 
     await waitFor(() => {
       expect(
-        screen.getByRole("heading", { name: "Ubah Nama Buku Keuangan" })
+        screen.getByRole("heading", { name: "Buat Buku Keuangan Baru" })
       ).toBeInTheDocument();
+      expect(screen.getByLabelText("Nama Buku Keuangan")).toBeInTheDocument();
+      expect(screen.getByText("Geser untuk Buat Buku")).toBeInTheDocument();
     });
 
-    const closeButton = screen.getByRole("button", { name: "Tutup" });
-    fireEvent.click(closeButton);
+    fireEvent.click(screen.getByRole("button", { name: "Tutup" }));
 
     await waitFor(() => {
       expect(
-        screen.queryByRole("heading", { name: "Ubah Nama Buku Keuangan" })
+        screen.queryByRole("heading", { name: "Buat Buku Keuangan Baru" })
       ).not.toBeInTheDocument();
     });
   });

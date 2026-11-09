@@ -2,7 +2,7 @@ import * as React from "react";
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
-import { Moon, Sun } from "lucide-react";
+import { ArrowLeft, ChevronDown, Moon, Settings, Sun } from "lucide-react";
 import { tauriApi, type BookMetadata } from "../../lib/tauri-api";
 import {
   bookQueryKeys,
@@ -50,6 +50,7 @@ export const BookLayout: React.FC<BookLayoutProps> = ({ bookId, bookMeta }) => {
   const {
     accountsQuery,
     categoriesQuery,
+    deviceIdentityQuery,
     addTransactionMutation,
     updateTransactionMutation,
     transferBetweenBooksMutation,
@@ -91,101 +92,123 @@ export const BookLayout: React.FC<BookLayoutProps> = ({ bookId, bookMeta }) => {
     return "Ringkasan";
   }, [location.pathname]);
 
-  // Friendly sync status with compact mobile summary
+  const deviceInitial = React.useMemo(() => {
+    const raw =
+      deviceIdentityQuery.data?.device_name?.trim() ||
+      bookMeta.name.trim() ||
+      "P";
+    return raw.charAt(0).toUpperCase();
+  }, [deviceIdentityQuery.data?.device_name, bookMeta.name]);
+
   const syncPillMeta = React.useMemo(() => {
     switch (syncStatus.state) {
       case "syncing":
         return {
           dotClass: "bg-primary animate-pulse",
           text: `Menyinkronkan (${syncStatus.peers} perangkat)`,
-          shortText: "Menyinkronkan",
-          borderClass: "border-primary/40 text-primary",
+          shortText: "Sync",
+          borderClass: "border-primary/40 text-foreground",
         };
       case "connecting":
         return {
-          dotClass: "bg-amber-500 animate-pulse",
+          dotClass: "bg-amber-400 animate-pulse",
           text: "Menghubungkan perangkat...",
-          shortText: "Menghubungkan...",
-          borderClass: "border-amber-500/40 text-amber-500",
+          shortText: "Menghubungkan",
+          borderClass: "border-amber-400/40 text-amber-400",
         };
       case "error":
         return {
-          dotClass: "bg-rose-500",
+          dotClass: "bg-rose-400",
           text: "Sinkronisasi terkendala",
-          shortText: "Kendala Sinkron",
-          borderClass: "border-rose-500/40 text-rose-500",
+          shortText: "Kendala",
+          borderClass: "border-rose-400/40 text-rose-400",
         };
       case "idle":
       default:
         if (syncStatus.peers > 0) {
           return {
-            dotClass: "bg-emerald-500",
+            dotClass: "bg-emerald-400",
             text: `Terhubung (${syncStatus.peers} perangkat)`,
-            shortText: `${syncStatus.peers} Terhubung`,
+            shortText: `${syncStatus.peers} Peer`,
             borderClass: "border-border text-foreground",
           };
         }
         return {
-          dotClass: "bg-emerald-500",
-          text: "Tersimpan di perangkat ini",
-          shortText: "Tersimpan",
+          dotClass: "bg-emerald-400",
+          text: "Tersimpan lokal",
+          shortText: "Lokal",
           borderClass: "border-border text-muted-foreground",
         };
     }
   }, [syncStatus]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
-      {/* Compact Mobile-First Top Bar (Zero Double Border) */}
-      <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-sm">
-        <div className="flex items-center justify-between gap-1.5 px-2.5 py-2">
-          {/* Left: Back Button + Active Book Switcher + Section */}
-          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+    <div className="flex min-h-screen flex-col text-foreground">
+      {/* Warm Glass Top App Bar */}
+      <header className="sticky top-0 z-30 border-b border-border/70 bg-background/75 backdrop-blur-md">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-2.5 sm:px-6">
+          {/* Left: Back to Books + Book Title Switcher + Section */}
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             <Link
               to="/"
               title="Kembali ke Daftar Buku Lokal"
+              aria-label="Kembali ke Daftar Buku"
               onClick={() => {
                 void tauriApi.closeBook(bookId).catch(() => {});
               }}
-              className="nav-touch-item inline-flex h-7 shrink-0 items-center justify-center rounded border border-border bg-background px-2 font-mono text-[11px] font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+              className="nav-touch-item inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-card text-foreground backdrop-blur-sm hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
             >
-              ← Buku
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             </Link>
 
-            <select
-              aria-label="Pemilih Buku Aktif"
-              value={bookId}
-              onChange={(e) => void handleSwitchBook(e.target.value)}
-              className="h-7 min-w-0 flex-1 truncate rounded border border-border bg-background px-2 text-xs font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary sm:max-w-[220px] sm:flex-initial"
-            >
-              {allBooks.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
+            <div className="relative min-w-0 flex-1 sm:max-w-[240px] sm:flex-initial">
+              <select
+                aria-label="Pemilih Buku Aktif"
+                value={bookId}
+                onChange={(e) => void handleSwitchBook(e.target.value)}
+                className="h-9 w-full appearance-none truncate rounded-full border border-border bg-card pl-3.5 pr-8 text-sm font-bold tracking-tight text-foreground backdrop-blur-sm transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+              >
+                {allBooks.map((b) => (
+                  <option
+                    key={b.id}
+                    value={b.id}
+                    className="bg-zinc-900 text-white"
+                  >
+                    {b.name}
+                  </option>
+                ))}
+                <option value="__HOME__" className="bg-zinc-900 text-white">
+                  ── Lihat Semua Buku ──
                 </option>
-              ))}
-              <option value="__HOME__">── Lihat Semua Buku ──</option>
-            </select>
+              </select>
+              <ChevronDown
+                className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+                aria-hidden="true"
+              />
+            </div>
 
-            <span className="hidden truncate font-mono text-[11px] text-muted-foreground md:inline">
+            <span className="hidden truncate text-xs font-medium text-muted-foreground md:inline">
               / {currentSectionLabel}
             </span>
           </div>
 
-          {/* Right: Sync Pill + Theme Toggle */}
-          <div className="flex shrink-0 items-center gap-1.5">
-            <div
+          {/* Right: Sync Status Pill + Theme Toggle + Settings/Device Avatar */}
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <Link
+              to="/books/$bookId/sync"
+              params={{ bookId }}
               data-testid="sync-status-pill"
-              title={syncPillMeta.text}
-              className={`inline-flex h-7 items-center gap-1.5 rounded border bg-background px-2 font-mono text-[10px] ${syncPillMeta.borderClass}`}
+              title={`${syncPillMeta.text} — Buka Sinkronisasi`}
+              className={`nav-touch-item inline-flex h-9 items-center gap-1.5 rounded-full border bg-card px-2.5 text-[11px] font-medium backdrop-blur-sm hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${syncPillMeta.borderClass}`}
             >
               <span
-                className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${syncPillMeta.dotClass}`}
+                className={`inline-block h-2 w-2 shrink-0 rounded-full ${syncPillMeta.dotClass}`}
               />
               <span className="truncate sm:hidden">{syncPillMeta.shortText}</span>
               <span className="hidden truncate sm:inline">
                 {syncPillMeta.text}
               </span>
-            </div>
+            </Link>
 
             <button
               type="button"
@@ -196,21 +219,34 @@ export const BookLayout: React.FC<BookLayoutProps> = ({ bookId, bookMeta }) => {
                   : "Ganti ke mode gelap"
               }
               title={theme === "dark" ? "Mode Terang" : "Mode Gelap"}
-              className="nav-touch-item inline-flex h-7 w-7 items-center justify-center rounded border border-border bg-background text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+              className="nav-touch-item inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-foreground backdrop-blur-sm hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
             >
               {theme === "dark" ? (
-                <Sun className="h-3.5 w-3.5 text-amber-500" aria-hidden="true" />
+                <Sun className="h-4 w-4 text-amber-400" aria-hidden="true" />
               ) : (
-                <Moon className="h-3.5 w-3.5 text-slate-700" aria-hidden="true" />
+                <Moon className="h-4 w-4 text-zinc-700" aria-hidden="true" />
               )}
             </button>
+
+            <Link
+              to="/books/$bookId/settings"
+              params={{ bookId }}
+              aria-label="Pengaturan & Perangkat"
+              title="Pengaturan, Rekening, Kategori & Perangkat"
+              className="nav-touch-item relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-primary text-xs font-extrabold text-primary-foreground transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              <span>{deviceInitial}</span>
+              <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full border border-border bg-background text-foreground">
+                <Settings className="h-2.5 w-2.5" aria-hidden="true" />
+              </span>
+            </Link>
           </div>
         </div>
       </header>
 
-      {/* Main Content Container: Safe padding to avoid floating navbar overlap */}
+      {/* Main Content Container: Centered Responsive Shell with Safe Dock Clearance */}
       <main
-        className="w-full flex-1 p-0 pb-36 sm:pb-40"
+        className="mx-auto w-full max-w-5xl flex-1 px-4 pt-4 sm:px-6 sm:pt-5"
         style={{
           paddingBottom:
             "calc(6.5rem + env(safe-area-inset-bottom, 24px))",
@@ -242,7 +278,7 @@ export const BookLayout: React.FC<BookLayoutProps> = ({ bookId, bookMeta }) => {
         </AnimatePresence>
       </main>
 
-      {/* Floating Bottom Navigation Bar (Home, Transactions, Reports, Settings + Add FAB) */}
+      {/* Floating Pill Bottom Navigation Bar (Home, Transaksi, [+], Laporan, Anggaran) */}
       <FloatingNavbar
         bookId={bookId}
         onAddTransaction={() => setNewTransactionModalOpen(true)}

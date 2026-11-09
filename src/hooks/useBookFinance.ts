@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
@@ -13,6 +14,7 @@ import {
   type CrdtSyncedPayload,
   type SyncStatusPayload,
   type TransactionFilter,
+  type TransactionView,
   type TransferBetweenBooksInput,
   type UpdateTransactionInput,
   type UpsertAccountInput,
@@ -30,6 +32,10 @@ export const bookQueryKeys = {
     ["books", bookId, "transactions"] as const,
   transactions: (bookId: string, filters: TransactionFilter) =>
     ["books", bookId, "transactions", filters] as const,
+  transactionsInfinite: (
+    bookId: string,
+    filters: Omit<TransactionFilter, "offset">
+  ) => ["books", bookId, "transactions", "infinite", filters] as const,
   balances: (bookId: string) => ["books", bookId, "balances"] as const,
   summary: (bookId: string) => ["books", bookId, "summary"] as const,
   budgetsAll: (bookId: string) => ["books", bookId, "budgets"] as const,
@@ -208,12 +214,14 @@ export interface UseBookFinanceOptions {
   bookId: string;
   transactionFilter?: TransactionFilter;
   budgetMonth?: string;
+  enableTransactionsQuery?: boolean;
 }
 
 export function useBookFinance({
   bookId,
   transactionFilter = { limit: 25, offset: 0, sort_by: "tx_date", sort_dir: "desc" },
   budgetMonth = currentYearMonth(),
+  enableTransactionsQuery = true,
 }: UseBookFinanceOptions) {
   const queryClient = useQueryClient();
 
@@ -232,7 +240,7 @@ export function useBookFinance({
   const transactionsQuery = useQuery({
     queryKey: bookQueryKeys.transactions(bookId, transactionFilter),
     queryFn: () => tauriApi.listTransactions(bookId, transactionFilter),
-    enabled: Boolean(bookId),
+    enabled: Boolean(bookId) && enableTransactionsQuery,
   });
 
   const balancesQuery = useQuery({
@@ -435,6 +443,68 @@ export function useBookFinance({
     transferBetweenBooksMutation,
     upsertBudgetMutation,
     deleteBudgetMutation,
+  };
+}
+
+/**
+ * Infinite scroll pagination hook for TransactionTable.
+ * Fetches incremental pages via limit/offset while caching under
+ * `bookQueryKeys.transactionsAll(bookId)` so mutations and CRDT sync auto-refresh pages.
+ */
+export function useInfiniteTransactions(
+  bookId: string,
+  filter: TransactionFilter = {
+    limit: 25,
+    offset: 0,
+    sort_by: "tx_date",
+    sort_dir: "desc",
+  }
+) {
+  const pageSize = Math.max(1, filter.limit ?? 25);
+  const { offset: _ignoredOffset, ...filterWithoutOffset } = filter;
+
+  const query = useInfiniteQuery({
+    queryKey: bookQueryKeys.transactionsInfinite(bookId, filterWithoutOffset),
+    queryFn: ({ pageParam }) =>
+      tauriApi.listTransactions(bookId, {
+        ...filterWithoutOffset,
+        limit: pageSize,
+        offset: pageParam,
+      }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      const loadedCount = allPages.reduce(
+        (sum, page) => sum + page.items.length,
+        0
+      );
+      if (lastPage.items.length === 0 || loadedCount >= lastPage.total) {
+        return undefined;
+      }
+      return loadedCount;
+    },
+    enabled: Boolean(bookId),
+  });
+
+  const flattened = useMemo(() => {
+    const pages = query.data?.pages ?? [];
+    const seen = new Set<string>();
+    const items: TransactionView[] = [];
+    for (const page of pages) {
+      for (const item of page.items) {
+        if (!seen.has(item.id)) {
+          seen.add(item.id);
+          items.push(item);
+        }
+      }
+    }
+    const total = pages[pages.length - 1]?.total ?? 0;
+    return { items, total };
+  }, [query.data?.pages]);
+
+  return {
+    ...query,
+    items: flattened.items,
+    total: flattened.total,
   };
 }
 

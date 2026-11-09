@@ -1,6 +1,9 @@
 import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useBookFinance } from "../hooks/useBookFinance";
+import {
+  useBookFinance,
+  useInfiniteTransactions,
+} from "../hooks/useBookFinance";
 import { useUiStore } from "../stores/ui-store";
 import type { TransactionView } from "../lib/tauri-api";
 import { TransactionTable } from "../components/transactions/TransactionTable";
@@ -27,15 +30,16 @@ const TransactionsRouteComponent: React.FC = () => {
   const {
     accountsQuery,
     categoriesQuery,
-    transactionsQuery,
     addTransactionMutation,
     updateTransactionMutation,
     deleteTransactionMutation,
     transferBetweenBooksMutation,
   } = useBookFinance({
     bookId,
-    transactionFilter: activeFilterDraft,
+    enableTransactionsQuery: false,
   });
+
+  const infiniteTxQuery = useInfiniteTransactions(bookId, activeFilterDraft);
 
   const handleDeleteTx = async (txId: string) => {
     try {
@@ -54,12 +58,20 @@ const TransactionsRouteComponent: React.FC = () => {
   return (
     <div className="w-full">
       <TransactionTable
-        items={transactionsQuery.data?.items ?? []}
-        total={transactionsQuery.data?.total ?? 0}
+        items={infiniteTxQuery.items}
+        total={infiniteTxQuery.total}
         filter={activeFilterDraft}
         accounts={accountsQuery.data ?? []}
         categories={categoriesQuery.data ?? []}
-        isLoading={transactionsQuery.isLoading}
+        isLoading={infiniteTxQuery.isLoading}
+        hasNextPage={Boolean(infiniteTxQuery.hasNextPage)}
+        isFetchingNextPage={infiniteTxQuery.isFetchingNextPage}
+        isLoadMoreError={infiniteTxQuery.isFetchNextPageError}
+        onLoadMore={() => {
+          if (infiniteTxQuery.hasNextPage && !infiniteTxQuery.isFetchingNextPage) {
+            void infiniteTxQuery.fetchNextPage();
+          }
+        }}
         onFilterChange={setActiveFilterDraft}
         onResetFilter={resetActiveFilterDraft}
         onEditTx={(tx) => setEditingTx(tx)}
@@ -80,6 +92,9 @@ const TransactionsRouteComponent: React.FC = () => {
         }
         onTransferBetweenBooks={(input) =>
           transferBetweenBooksMutation.mutateAsync(input)
+        }
+        onDeleteTransaction={(txId) =>
+          deleteTransactionMutation.mutateAsync(txId)
         }
       />
     </div>

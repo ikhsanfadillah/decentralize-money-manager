@@ -32,6 +32,8 @@ describe("ButtonSlideToConfirm", () => {
     const knob = screen.getByTestId("button-slide-to-confirm-knob");
 
     expect(track.getAttribute("data-status")).toBe("idle");
+    expect(knob.className).toContain("bg-cta-surface");
+    expect(knob.className).toContain("text-cta-foreground");
     expect(screen.getByText("Geser untuk Simpan Transaksi")).toBeInTheDocument();
 
     // Press down on the knob

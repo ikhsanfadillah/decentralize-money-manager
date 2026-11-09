@@ -190,48 +190,46 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
   const peers = peersQuery.data ?? [];
 
   return (
-    <div className="w-full space-y-3">
+    <div className="w-full space-y-4">
       {/* Page Header */}
-      <div className="tabular-grid-container grid grid-cols-1">
-        <div className="tabular-grid-cell flex flex-wrap items-center justify-between gap-2.5 px-3 py-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <Link
-              to="/books/$bookId/settings"
-              params={{ bookId }}
-              className="nav-touch-item inline-flex h-7 shrink-0 items-center rounded border border-border bg-background px-2.5 font-mono text-[11px] font-semibold text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-            >
-              ← Pengaturan
-            </Link>
-            <div className="min-w-0">
-              <h1 className="text-xs font-semibold tracking-tight text-foreground sm:text-sm">
-                Sinkronisasi Antar-Perangkat
-              </h1>
-              <p className="text-[11px] text-muted-foreground truncate sm:text-clip">
-                Sinkronisasi data langsung antar-perangkat secara privat dan aman
-              </p>
-            </div>
+      <div className="glass-card flex flex-wrap items-center justify-between gap-2.5 px-4 py-3.5 sm:px-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <Link
+            to="/books/$bookId/settings"
+            params={{ bookId }}
+            className="nav-touch-item inline-flex h-8 shrink-0 items-center rounded-full border border-border bg-black/[0.04] px-3 font-mono text-[11px] font-semibold text-foreground transition-colors hover:bg-muted dark:bg-white/[0.06] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+          >
+            ← Pengaturan
+          </Link>
+          <div className="min-w-0">
+            <h1 className="text-sm font-bold tracking-tight text-foreground sm:text-base">
+              Sinkronisasi Antar-Perangkat
+            </h1>
+            <p className="truncate text-[11px] text-muted-foreground sm:text-clip">
+              Sinkronisasi data langsung antar-perangkat secara privat dan aman
+            </p>
           </div>
+        </div>
 
-          <div className="flex items-center gap-2">
-            <Link
-              to="/books/$bookId/backup"
-              params={{ bookId }}
-              className="nav-touch-item inline-flex items-center gap-1.5 rounded border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-            >
-              <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-              <span>Backup</span>
-            </Link>
-          </div>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/books/$bookId/backup"
+            params={{ bookId }}
+            className="nav-touch-item inline-flex h-8 items-center gap-1.5 rounded-full border border-border bg-black/[0.04] px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted dark:bg-white/[0.06] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+          >
+            <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+            <span>Backup</span>
+          </Link>
         </div>
       </div>
 
       {/* Main Grid: Left = Add Device / Active Invite, Right = Connected Peers & Topology */}
-      <div className="tabular-grid-container grid grid-cols-1 lg:grid-cols-12">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         {/* Left Column: Invite & QR */}
-        <div className="tabular-grid-cell space-y-3 px-3.5 py-3 lg:col-span-7">
+        <div className="glass-card space-y-4 p-4 sm:p-5 lg:col-span-7">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-muted/30 text-primary">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-border bg-black/[0.04] text-primary dark:bg-white/[0.06]">
                 <QrCode className="h-4 w-4" />
               </div>
               <h2 className="text-xs font-semibold text-foreground sm:text-sm">
@@ -244,7 +242,7 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
                 type="button"
                 onClick={() => void handleGenerateInvite()}
                 disabled={createInviteMutation.isPending}
-                className="nav-touch-item rounded border border-border bg-background px-2.5 py-1 text-[11px] font-medium text-primary hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
+                className="nav-touch-item rounded-full border border-border bg-black/[0.04] px-3 py-1 text-[11px] font-semibold text-primary transition-colors hover:bg-muted dark:bg-white/[0.06] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
               >
                 {createInviteMutation.isPending
                   ? "Membuat..."
@@ -254,11 +252,11 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
           </div>
 
           {!activeInvite ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/15 p-6 text-center">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <QrCode className="h-5 w-5" />
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-black/[0.03] p-6 text-center dark:bg-white/[0.03]">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary">
+                <QrCode className="h-6 w-6" />
               </div>
-              <h3 className="mt-2.5 text-xs font-semibold text-foreground sm:text-sm">
+              <h3 className="mt-3 text-xs font-semibold text-foreground sm:text-sm">
                 Mulai Sinkronisasi Antar-Perangkat
               </h3>
               <p className="mt-1 max-w-sm text-[11px] text-muted-foreground">
@@ -268,7 +266,7 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
                 type="button"
                 onClick={() => void handleGenerateInvite()}
                 disabled={createInviteMutation.isPending}
-                className="nav-touch-item mt-3.5 inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-2xs hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
+                className="nav-touch-item mt-4 inline-flex items-center gap-1.5 rounded-full bg-cta-surface px-4 py-2 text-xs font-semibold text-cta-foreground transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
               >
                 <QrCode className="h-3.5 w-3.5" />
                 <span>
@@ -279,11 +277,11 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
               </button>
             </div>
           ) : (
-            <div className="animate-card-up space-y-3 rounded-lg border border-border bg-card p-3 shadow-2xs">
+            <div className="animate-card-up space-y-3.5 rounded-2xl border border-border bg-black/[0.03] p-4 dark:bg-white/[0.04]">
               {/* Expiry & Meta Header */}
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 pb-2.5">
                 <div className="flex items-center gap-1.5">
-                  <span className="flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 font-mono text-[10px] font-semibold text-primary">
+                  <span className="flex items-center gap-1 rounded-full border border-primary/35 bg-primary/10 px-2.5 py-0.5 font-mono text-[10px] font-semibold text-primary">
                     <Clock className="h-3 w-3" />
                     <span>Kedaluwarsa: {formatExpiryTime(activeInvite.expires_at)}</span>
                   </span>
@@ -293,10 +291,10 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
                 </span>
               </div>
 
-              {/* QR Code Area: Revealed or Blurred */}
+              {/* QR Code Area: Revealed or Blurred (Solid White Container Strictly Preserved) */}
               {isQrRevealed ? (
                 <div className="flex flex-col items-center justify-center py-2">
-                  <div className="rounded-xl border border-border bg-white p-3 shadow-2xs">
+                  <div className="rounded-2xl bg-white p-4">
                     <QRCodeSVG
                       value={activeInvite.invite_url || activeInvite.qr_json}
                       size={220}
@@ -307,9 +305,9 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
                   <button
                     type="button"
                     onClick={() => setIsQrRevealed(false)}
-                    className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground"
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-black/[0.04] px-3 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground dark:bg-white/[0.06]"
                   >
-                    <EyeOff className="h-3 w-3" />
+                    <EyeOff className="h-3.5 w-3.5" />
                     <span>Sembunyikan QR</span>
                   </button>
                 </div>
@@ -317,7 +315,7 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
                 <div className="flex flex-col items-center justify-center py-2">
                   <div
                     onClick={() => setIsQrRevealed(true)}
-                    className="group relative flex h-56 w-56 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border border-border bg-muted/40 transition-all hover:border-primary/50"
+                    className="group relative flex h-56 w-56 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border border-border bg-black/[0.05] transition-all hover:border-primary/50 dark:bg-white/[0.05]"
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) => {
@@ -327,7 +325,7 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
                     }}
                   >
                     {/* Blurred QR silhouette in background */}
-                    <div className="absolute inset-0 flex items-center justify-center opacity-10 filter blur-[3px] select-none pointer-events-none">
+                    <div className="pointer-events-none absolute inset-0 flex select-none items-center justify-center opacity-10 blur-[3px]">
                       <QRCodeSVG
                         value={activeInvite.invite_url || activeInvite.qr_json}
                         size={180}
@@ -337,8 +335,8 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
                     </div>
 
                     {/* Central reveal pill */}
-                    <div className="relative z-10 flex flex-col items-center gap-1.5 rounded-lg border border-border bg-card/95 px-3.5 py-2.5 shadow-sm backdrop-blur-xs transition-transform group-hover:scale-105">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <div className="floating-surface relative z-10 flex flex-col items-center gap-1.5 rounded-2xl border border-border px-4 py-3 transition-transform group-hover:scale-105">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 text-primary">
                         <Eye className="h-4 w-4" />
                       </div>
                       <span className="text-xs font-semibold text-foreground">
@@ -353,7 +351,7 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
               )}
 
               {/* Shareable Link Input */}
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-medium text-muted-foreground">
                     Link Undangan:
@@ -370,17 +368,17 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
                     </a>
                   )}
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   <input
                     type="text"
                     readOnly
                     value={activeInvite.invite_url || activeInvite.qr_json}
-                    className="flex-1 rounded border border-border bg-background px-2.5 py-1.5 font-mono text-[11px] text-foreground select-all focus:outline-none"
+                    className="h-9 flex-1 select-all rounded-xl border border-border bg-black/[0.04] px-3 py-1.5 font-mono text-[11px] text-foreground focus:outline-none dark:bg-white/[0.06]"
                   />
                   <button
                     type="button"
                     onClick={() => void handleCopyInvite()}
-                    className="nav-touch-item inline-flex shrink-0 items-center gap-1.5 rounded bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                    className="nav-touch-item inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-cta-surface px-4 text-xs font-semibold text-cta-foreground transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                   >
                     <Copy className="h-3.5 w-3.5" />
                     <span>Salin</span>
@@ -398,34 +396,37 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
             </div>
           )}
 
-          {/* Discreet Security Note */}
+          {/* Security Note in Contrast Card */}
           <div
             data-testid="qr-bearer-warning"
-            className="flex items-start gap-2 rounded-lg border border-amber-500/25 bg-amber-500/10 p-2.5 text-[11px] text-amber-800 dark:text-amber-300"
+            className="contrast-card flex items-start gap-3 p-3.5 text-xs text-white/85"
           >
-            <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
-            <p className="leading-snug">
-              <span className="font-semibold">Perhatian Keamanan:</span> Siapa pun yang memindai kode ini memiliki akses penuh ke buku ini. Hanya bagikan ke perangkat pribadi Anda.
+            <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-400/20 text-amber-300">
+              <ShieldAlert className="h-4 w-4" />
+            </div>
+            <p className="leading-relaxed">
+              <span className="font-semibold text-amber-300">Perhatian Keamanan:</span>{" "}
+              Siapa pun yang memindai kode ini memiliki akses penuh ke buku ini. Hanya bagikan ke perangkat pribadi Anda.
             </p>
           </div>
         </div>
 
         {/* Known Peers & Live Sync Diagnostics */}
-        <div className="tabular-grid-cell space-y-3 px-3 py-3 lg:col-span-5">
+        <div className="glass-card space-y-4 p-4 sm:p-5 lg:col-span-5">
           {/* Header & Status Indicator */}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <h2 className="text-xs font-semibold text-foreground sm:text-sm">
                 Perangkat Terhubung
               </h2>
-              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+              <span className="rounded-full border border-border bg-black/[0.04] px-2 py-0.5 text-[10px] font-semibold text-muted-foreground dark:bg-white/[0.06]">
                 {peers.length}
               </span>
             </div>
 
             <div className="flex items-center gap-2">
               <div
-                className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-medium ${
                   syncStatus.state === "syncing"
                     ? "border border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400"
                     : syncStatus.state === "connecting"
@@ -438,9 +439,9 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
                 <span
                   className={`h-1.5 w-1.5 rounded-full ${
                     syncStatus.state === "syncing"
-                      ? "bg-sky-500 animate-spin"
+                      ? "animate-spin bg-sky-500"
                       : syncStatus.state === "connecting"
-                        ? "bg-amber-500 animate-pulse"
+                        ? "animate-pulse bg-amber-500"
                         : syncStatus.state === "error"
                           ? "bg-rose-500"
                           : "bg-emerald-500"
@@ -462,7 +463,7 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
                 data-testid="btn-manual-sync"
                 onClick={() => manualSyncMutation.mutate()}
                 disabled={manualSyncMutation.isPending}
-                className="nav-touch-item inline-flex items-center gap-1 rounded border border-border bg-background px-2 py-1 font-mono text-[10px] font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
+                className="nav-touch-item inline-flex items-center gap-1.5 rounded-full border border-border bg-black/[0.04] px-2.5 py-1 font-mono text-[10px] font-semibold text-foreground transition-colors hover:bg-muted dark:bg-white/[0.06] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
                 title="Sinkronkan data sekarang"
               >
                 <RefreshCw
@@ -475,24 +476,24 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
 
           {/* List of Connected Peers */}
           {peers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 p-5 text-center">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                <Laptop className="h-4 w-4 opacity-70" />
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-black/[0.03] p-6 text-center dark:bg-white/[0.03]">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.05] text-muted-foreground dark:bg-white/[0.08]">
+                <Laptop className="h-4 w-4 opacity-75" />
               </div>
-              <p className="mt-2 text-xs font-semibold text-foreground">
+              <p className="mt-2.5 text-xs font-semibold text-foreground">
                 Belum ada perangkat terhubung
               </p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {peers.map((peer, idx) => (
                 <div
                   key={peer.node_id}
                   style={{ animationDelay: `${idx * 35}ms` }}
-                  className="animate-card-up flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-2.5 shadow-2xs transition-colors hover:border-primary/40"
+                  className="animate-card-up flex items-center justify-between gap-3 rounded-2xl border border-border bg-black/[0.03] p-3 transition-colors hover:border-primary/40 dark:bg-white/[0.04]"
                 >
                   <div className="flex min-w-0 items-center gap-2.5">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-background text-muted-foreground">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-black/[0.04] text-muted-foreground dark:bg-white/[0.06]">
                       <Laptop className="h-4 w-4" />
                     </div>
                     <div className="min-w-0">
@@ -500,26 +501,26 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
                         <span className="truncate text-xs font-semibold text-foreground">
                           {resolvePeerDisplayName(peer)}
                         </span>
-                        <span className="rounded border border-border bg-muted/40 px-1 py-0.2 font-mono text-[9px] text-muted-foreground">
+                        <span className="rounded-full border border-border bg-black/[0.04] px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground dark:bg-white/[0.06]">
                           ID: {peer.device_id ? peer.device_id.slice(0, 8) : peer.node_id.slice(0, 8)}
                         </span>
                         {peer.custom_alias && (
-                          <span className="rounded bg-sky-500/10 px-1 py-0.2 text-[9px] font-semibold text-sky-600 dark:text-sky-400">
+                          <span className="rounded-full bg-sky-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-sky-600 dark:text-sky-400">
                             Alias
                           </span>
                         )}
                         {peer.is_preferred_hub && (
-                          <span className="rounded border border-primary/30 bg-primary/10 px-1.5 py-0.2 font-mono text-[9px] font-semibold text-primary">
+                          <span className="rounded-full border border-primary/35 bg-primary/10 px-2 py-0.5 font-mono text-[9px] font-semibold text-primary">
                             HUB UTAMA
                           </span>
                         )}
                       </div>
-                      <div className="mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground">
+                      <div className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
                         <span className="inline-flex items-center gap-1">
                           <span
                             className={`h-1.5 w-1.5 rounded-full ${
                               peer.is_online
-                                ? "bg-emerald-500 animate-pulse"
+                                ? "animate-pulse bg-emerald-500"
                                 : "bg-muted-foreground/40"
                             }`}
                           />
@@ -537,7 +538,7 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
                                 : "Menghubungkan"}
                           </span>
                         </span>
-                        <span>•</span>
+                        <span>·</span>
                         <span
                           className="truncate"
                           title={
@@ -560,7 +561,7 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
                       data-testid={`btn-edit-alias-${peer.node_id}`}
                       onClick={() => handleOpenAliasModal(peer)}
                       title="Ubah Nama Panggilan"
-                      className="nav-touch-item inline-flex h-6 w-6 items-center justify-center rounded border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                      className="nav-touch-item inline-flex h-7 w-7 items-center justify-center rounded-full border border-border bg-black/[0.04] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground dark:bg-white/[0.06] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                     >
                       <Pencil className="h-3 w-3" />
                       <span className="sr-only">Ubah Nama</span>
@@ -573,7 +574,7 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
                           setPreferredHubMutation.mutate(peer.node_id)
                         }
                         disabled={setPreferredHubMutation.isPending}
-                        className="nav-touch-item rounded border border-border bg-background px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
+                        className="nav-touch-item rounded-full border border-border bg-black/[0.04] px-2.5 py-1 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground dark:bg-white/[0.06] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
                       >
                         Jadikan Hub
                       </button>
@@ -592,26 +593,30 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
               aria-labelledby="edit-peer-alias-title"
               className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-fade-in"
             >
-              <div className="w-full max-w-sm rounded-lg border border-border bg-card p-4 shadow-xl">
-                <div className="flex items-center justify-between pb-2 border-b border-border">
+              <div
+                data-floating-surface="true"
+                className="floating-surface w-full max-w-sm rounded-3xl border border-border p-5"
+              >
+                <div className="flex items-center justify-between border-b border-border/70 pb-3">
                   <h3
                     id="edit-peer-alias-title"
-                    className="text-xs font-semibold text-foreground sm:text-sm flex items-center gap-1.5"
+                    className="flex items-center gap-2 text-sm font-semibold text-foreground"
                   >
                     <Pencil className="h-4 w-4 text-primary" />
                     <span>Ubah Nama Panggilan Perangkat</span>
                   </h3>
                   <button
                     type="button"
+                    aria-label="Tutup"
                     onClick={() => setEditingPeer(null)}
-                    className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    className="rounded-full border border-border p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                   >
                     <X className="h-4 w-4" />
                   </button>
                 </div>
 
-                <form onSubmit={handleSaveAlias} className="mt-3 space-y-3">
-                  <div className="rounded border border-border/60 bg-muted/20 p-2 text-[11px] space-y-1">
+                <form onSubmit={handleSaveAlias} className="mt-4 space-y-3.5">
+                  <div className="space-y-1 rounded-2xl border border-border bg-black/[0.03] p-3 text-[11px] dark:bg-white/[0.04]">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">ID Perangkat:</span>
                       <span className="font-mono font-medium text-foreground">
@@ -629,7 +634,7 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
                   <div>
                     <label
                       htmlFor="input-peer-alias"
-                      className="block text-[11px] font-medium text-muted-foreground mb-1"
+                      className="mb-1.5 block text-xs font-medium text-muted-foreground"
                     >
                       Nama Panggilan (Alias Lokal)
                     </label>
@@ -641,14 +646,14 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
                       placeholder="Contoh: Mas Budi, Laptop Kasir Toko"
                       maxLength={64}
                       autoFocus
-                      className="w-full rounded border border-border bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-hidden"
+                      className="flex h-10 w-full rounded-xl border border-border bg-black/[0.04] px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/60 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary dark:bg-white/[0.06]"
                     />
-                    <p className="mt-1 text-[10px] text-muted-foreground">
+                    <p className="mt-1.5 text-[10px] text-muted-foreground">
                       Nama ini hanya disimpan di perangkat ini untuk memudahkan Anda mengenali perangkat tersebut.
                     </p>
                   </div>
 
-                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-border">
+                  <div className="flex items-center justify-between gap-2 border-t border-border/70 pt-3">
                     {editingPeer.custom_alias ? (
                       <button
                         type="button"
@@ -667,14 +672,14 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
                       <button
                         type="button"
                         onClick={() => setEditingPeer(null)}
-                        className="rounded border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
+                        className="rounded-full border border-border bg-black/[0.04] px-4 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground dark:bg-white/[0.06]"
                       >
                         Batal
                       </button>
                       <button
                         type="submit"
                         disabled={setPeerCustomAliasMutation.isPending}
-                        className="rounded bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                        className="rounded-full bg-cta-surface px-4 py-1.5 text-xs font-semibold text-cta-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
                       >
                         {setPeerCustomAliasMutation.isPending
                           ? "Menyimpan..."
@@ -688,16 +693,16 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
           )}
 
           {/* Collapsible Advanced Topology Controls */}
-          <div className="overflow-hidden rounded-lg border border-border/80 bg-muted/15">
+          <div className="overflow-hidden rounded-2xl border border-border bg-black/[0.03] dark:bg-white/[0.04]">
             <button
               type="button"
               onClick={() => setIsTopologyExpanded((prev) => !prev)}
-              className="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-medium text-foreground transition-colors hover:bg-muted/30"
+              className="flex w-full items-center justify-between px-3.5 py-2.5 text-left text-xs font-medium text-foreground transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
             >
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <Network className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-[11px] font-medium">Topologi Jaringan</span>
-                <span className="rounded border border-primary/30 bg-primary/10 px-1.5 py-0.2 font-mono text-[9px] font-semibold text-primary">
+                <span className="rounded-full border border-primary/35 bg-primary/10 px-2 py-0.5 font-mono text-[9px] font-semibold text-primary">
                   {topologyQuery.data?.preferred_hub_node_id
                     ? topologyQuery.data.preferred_hub_node_id ===
                       topologyQuery.data.local_node_id
@@ -714,11 +719,11 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
             </button>
 
             {isTopologyExpanded && (
-              <div className="border-t border-border/60 px-3 py-2.5 text-xs">
+              <div className="border-t border-border/70 px-3.5 py-3 text-xs">
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
                   Perubahan data dikirim melalui koneksi persisten dan otomatis diteruskan oleh perangkat Hub ke anggota lain.
                 </p>
-                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <div className="mt-2.5 flex flex-wrap items-center gap-2">
                   {topologyQuery.data?.local_node_id &&
                     topologyQuery.data.preferred_hub_node_id !==
                       topologyQuery.data.local_node_id && (
@@ -731,7 +736,7 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
                           )
                         }
                         disabled={setPreferredHubMutation.isPending}
-                        className="nav-touch-item rounded border border-border bg-card px-2 py-0.5 font-mono text-[10px] font-semibold text-primary hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
+                        className="nav-touch-item rounded-full border border-primary/40 bg-primary/10 px-3 py-1 font-mono text-[10px] font-semibold text-primary transition-colors hover:bg-primary/20 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
                       >
                         Jadikan Perangkat Ini Hub
                       </button>
@@ -742,7 +747,7 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
                       data-testid="btn-reset-mesh"
                       onClick={() => setPreferredHubMutation.mutate(null)}
                       disabled={setPreferredHubMutation.isPending}
-                      className="nav-touch-item rounded border border-border bg-card px-2 py-0.5 font-mono text-[10px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
+                      className="nav-touch-item rounded-full border border-border bg-black/[0.04] px-3 py-1 font-mono text-[10px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground dark:bg-white/[0.06] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
                     >
                       Reset ke Mesh Otomatis
                     </button>
@@ -752,10 +757,12 @@ export const SyncPage: React.FC<SyncPageProps> = ({ bookId }) => {
             )}
           </div>
 
-          {/* Compact Tips Callout */}
-          <div className="flex items-start gap-2 rounded-lg border border-border/60 bg-muted/20 p-2.5 text-[11px] text-muted-foreground">
-            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/80" />
-            <p>
+          {/* Contrast Tips Callout */}
+          <div className="contrast-card flex items-start gap-3 p-3.5 text-xs text-white/80">
+            <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-zinc-950">
+              <Info className="h-3.5 w-3.5" />
+            </div>
+            <p className="leading-relaxed">
               Pastikan kedua perangkat terhubung dalam jaringan yang sama agar sinkronisasi P2P langsung berjalan optimal.
             </p>
           </div>

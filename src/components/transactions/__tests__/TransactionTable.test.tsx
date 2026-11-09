@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { TransactionTable } from "../TransactionTable";
 import type { TransactionView } from "../../../lib/tauri-api";
 
@@ -53,10 +53,14 @@ describe("TransactionTable (Mobile Friendly & Responsive)", () => {
     onOpenNewTx: vi.fn(),
   };
 
-  it("renders mobile-friendly transaction cards with all details and actions", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("renders clickable mobile transaction cards without swipe-to-reveal actions and supports desktop actions", () => {
     render(<TransactionTable {...defaultProps} />);
 
-    // Mobile card for tx-1 (seamless 2-line TransactionItem)
+    // Mobile card for tx-1 (simple clickable 2-line TransactionItem, no swipe surface)
     const mobileCard1 = screen.getByTestId("tx-mobile-card-tx-1");
     expect(mobileCard1).toBeInTheDocument();
     expect(mobileCard1).toHaveTextContent("Jajan");
@@ -65,15 +69,30 @@ describe("TransactionTable (Mobile Friendly & Responsive)", () => {
     expect(mobileCard1).toHaveTextContent("BCA");
     expect(mobileCard1).toHaveTextContent("2026-10-27");
     expect(mobileCard1).toHaveTextContent("#683742");
+    expect(screen.queryByTestId("tx-swipe-surface-tx-1")).not.toBeInTheDocument();
+    expect(within(mobileCard1).queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+    expect(within(mobileCard1).queryByRole("button", { name: "Hapus" })).not.toBeInTheDocument();
 
-    // Click Edit on mobile card
+    // Clicking mobile card opens edit/detail directly
+    fireEvent.click(mobileCard1);
+    expect(defaultProps.onEditTx).toHaveBeenCalledTimes(1);
+    expect(defaultProps.onEditTx).toHaveBeenLastCalledWith(mockTransactions[0]);
+
+    // Keyboard Enter/Space on mobile card also opens edit/detail
+    fireEvent.keyDown(mobileCard1, { key: "Enter" });
+    expect(defaultProps.onEditTx).toHaveBeenCalledTimes(2);
+    fireEvent.keyDown(mobileCard1, { key: " " });
+    expect(defaultProps.onEditTx).toHaveBeenCalledTimes(3);
+
+    // Desktop row actions still work cleanly without double-triggering row click
     const editBtns = screen.getAllByRole("button", { name: "Edit" });
     fireEvent.click(editBtns[0]);
-    expect(defaultProps.onEditTx).toHaveBeenCalledWith(mockTransactions[0]);
+    expect(defaultProps.onEditTx).toHaveBeenCalledTimes(4);
 
-    // Click Hapus on mobile card to open confirm bottom drawer
+    // Click Hapus on desktop row to open confirm bottom drawer (does not trigger onEditTx)
     const hapusBtns = screen.getAllByRole("button", { name: "Hapus" });
     fireEvent.click(hapusBtns[0]);
+    expect(defaultProps.onEditTx).toHaveBeenCalledTimes(4);
 
     // Confirm in the bottom drawer popup
     const confirmBtn = screen.getByRole("button", { name: "Hapus Transaksi" });
@@ -111,30 +130,22 @@ describe("TransactionTable (Mobile Friendly & Responsive)", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("snaps sticky open to -140px on light left swipe and does not bounce back to 0px on post-drag click", () => {
+  it("opens edit/detail directly on mobile card click and desktop row click without swipe gesture", () => {
     render(<TransactionTable {...defaultProps} />);
 
-    const surface1 = screen.getByTestId("tx-swipe-surface-tx-1");
-    expect(surface1).toHaveStyle({ transform: "translateX(0px)" });
+    // No swipe surfaces exist for any item
+    expect(screen.queryByTestId("tx-swipe-surface-tx-1")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("tx-swipe-surface-tx-2")).not.toBeInTheDocument();
 
-    // 1) Simulate light mouse left swipe (25px) followed by mouseUp + synthetic browser click
-    fireEvent.mouseDown(surface1, { clientX: 200, clientY: 20, button: 0 });
-    fireEvent.mouseMove(window, { clientX: 175, clientY: 20 });
-    fireEvent.mouseUp(window, { clientX: 175, clientY: 20 });
-    fireEvent.click(surface1);
+    // Clicking mobile card tx-2 triggers onEditTx with tx-2
+    const mobileCard2 = screen.getByTestId("tx-mobile-card-tx-2");
+    fireEvent.click(mobileCard2);
+    expect(defaultProps.onEditTx).toHaveBeenCalledWith(mockTransactions[1]);
 
-    // Must remain sticky open at -140px and NOT close from the post-drag click
-    expect(surface1).toHaveStyle({ transform: "translateX(-140px)" });
-
-    // 2) Simulate light touch swipe on tx-2 (automatically closes tx-1 and opens tx-2)
-    const surface2 = screen.getByTestId("tx-swipe-surface-tx-2");
-    fireEvent.touchStart(surface2, { touches: [{ clientX: 220, clientY: 20 }] });
-    fireEvent.touchMove(surface2, { touches: [{ clientX: 195, clientY: 20 }] });
-    fireEvent.touchEnd(surface2);
-    fireEvent.click(surface2);
-
-    expect(surface2).toHaveStyle({ transform: "translateX(-140px)" });
-    expect(surface1).toHaveStyle({ transform: "translateX(0px)" });
+    // Clicking desktop row tx-1 triggers onEditTx with tx-1
+    const desktopRow1 = screen.getByTestId("tx-desktop-row-tx-1");
+    fireEvent.click(desktopRow1);
+    expect(defaultProps.onEditTx).toHaveBeenCalledWith(mockTransactions[0]);
   });
 
   it("opens sort drawer on mobile sort button click and updates sorting on selection", () => {
@@ -233,5 +244,156 @@ describe("TransactionTable (Mobile Friendly & Responsive)", () => {
       sort_dir: "desc",
       offset: 0,
     });
+  });
+
+  it("replaces page-number pagination controls with scroll sentinel footer", () => {
+    render(
+      <TransactionTable
+        {...defaultProps}
+        total={50}
+        hasNextPage={true}
+      />
+    );
+
+    expect(
+      screen.queryByRole("button", { name: /Sebelumnya/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Berikutnya/i })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Halaman \d+/)).not.toBeInTheDocument();
+
+    const sentinel = screen.getByTestId("tx-scroll-sentinel");
+    expect(sentinel).toHaveTextContent("Menampilkan 2 dari 50 transaksi");
+    expect(sentinel).toHaveTextContent("Gulir untuk memuat lainnya");
+  });
+
+  it("triggers onLoadMore on window scroll and prevents duplicate calls while in-flight", () => {
+    const onLoadMore = vi.fn();
+    const { rerender } = render(
+      <TransactionTable
+        {...defaultProps}
+        total={50}
+        hasNextPage={true}
+        isFetchingNextPage={false}
+        onLoadMore={onLoadMore}
+      />
+    );
+
+    fireEvent.scroll(window);
+    expect(onLoadMore).toHaveBeenCalledTimes(1);
+
+    // Rapid follow-up scroll before state settles must not spam onLoadMore
+    fireEvent.scroll(window);
+    expect(onLoadMore).toHaveBeenCalledTimes(1);
+
+    // Loading state renders spinner text
+    rerender(
+      <TransactionTable
+        {...defaultProps}
+        total={50}
+        hasNextPage={true}
+        isFetchingNextPage={true}
+        onLoadMore={onLoadMore}
+      />
+    );
+    expect(screen.getByTestId("tx-scroll-sentinel")).toHaveTextContent(
+      "Memuat transaksi berikutnya..."
+    );
+
+    // Settling fetch allows subsequent scroll to trigger next page
+    rerender(
+      <TransactionTable
+        {...defaultProps}
+        total={50}
+        hasNextPage={true}
+        isFetchingNextPage={false}
+        onLoadMore={onLoadMore}
+      />
+    );
+    fireEvent.scroll(window);
+    expect(onLoadMore).toHaveBeenCalledTimes(2);
+  });
+
+  it("triggers onLoadMore via IntersectionObserver when sentinel intersects viewport", () => {
+    const callbacks: IntersectionObserverCallback[] = [];
+    const observe = vi.fn();
+    const disconnect = vi.fn();
+
+    class MockIntersectionObserver implements IntersectionObserver {
+      readonly root = null;
+      readonly rootMargin = "240px 0px";
+      readonly scrollMargin = "0px";
+      readonly thresholds = [0];
+      constructor(cb: IntersectionObserverCallback) {
+        callbacks.push(cb);
+      }
+      observe = observe;
+      disconnect = disconnect;
+      unobserve = vi.fn();
+      takeRecords = vi.fn(() => []);
+    }
+
+    vi.stubGlobal("IntersectionObserver", MockIntersectionObserver);
+    try {
+      const onLoadMore = vi.fn();
+      render(
+        <TransactionTable
+          {...defaultProps}
+          total={50}
+          hasNextPage={true}
+          onLoadMore={onLoadMore}
+        />
+      );
+
+      expect(observe).toHaveBeenCalledTimes(1);
+      callbacks[0](
+        [
+          {
+            isIntersecting: true,
+          } as IntersectionObserverEntry,
+        ],
+        {} as IntersectionObserver
+      );
+      expect(onLoadMore).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("shows manual retry button on load-more error and completion message when all items loaded", () => {
+    const onLoadMore = vi.fn();
+    const { rerender } = render(
+      <TransactionTable
+        {...defaultProps}
+        total={50}
+        hasNextPage={true}
+        isLoadMoreError={true}
+        onLoadMore={onLoadMore}
+      />
+    );
+
+    // Scroll should not auto-loop when in error state
+    fireEvent.scroll(window);
+    expect(onLoadMore).not.toHaveBeenCalled();
+
+    const retryBtn = screen.getByRole("button", {
+      name: /Gagal memuat · Ketuk untuk coba lagi/i,
+    });
+    fireEvent.click(retryBtn);
+    expect(onLoadMore).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <TransactionTable
+        {...defaultProps}
+        total={2}
+        hasNextPage={false}
+        isLoadMoreError={false}
+        onLoadMore={onLoadMore}
+      />
+    );
+    expect(screen.getByTestId("tx-scroll-sentinel")).toHaveTextContent(
+      "Semua transaksi telah ditampilkan"
+    );
   });
 });

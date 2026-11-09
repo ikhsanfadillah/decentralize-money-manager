@@ -244,166 +244,182 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
   };
 
   return (
-    <div className="w-full">
-      {/* 1. Enterprise Header & Actions (Hairline Tabular Grid) */}
-      <div className="tabular-grid-container grid grid-cols-1 md:grid-cols-12">
-        <div className="tabular-grid-cell flex flex-col justify-center px-3 py-2.5 md:col-span-7">
-          <div className="flex items-center gap-2">
-            <Link
-              to="/books/$bookId/settings"
-              params={{ bookId }}
-              className="nav-touch-item inline-flex h-6 shrink-0 items-center rounded border border-border bg-background px-2 font-mono text-[10px] font-semibold text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-            >
-              ←
-            </Link>
-            <div className="flex items-center justify-between flex-1">
-
-              <h1 className="text-xs font-semibold tracking-tight text-foreground sm:text-sm">
-                Rekening & Dompet
-              </h1>
-              <div>
-
-                <span className="font-mono text-sm sm:text-base font-bold tabular-nums tracking-tight text-foreground">
-                  {formatRupiah(totalBalance)}
-                </span>
-              </div>
-            </div>
+    <div className="w-full space-y-4">
+      {/* 1. Glass Header & Total Balance Summary */}
+      <div className="glass-card flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <Link
+            to="/books/$bookId/settings"
+            params={{ bookId }}
+            aria-label="Kembali ke Pengaturan"
+            className="nav-touch-item inline-flex h-8 shrink-0 items-center rounded-full border border-border bg-black/[0.04] dark:bg-white/[0.06] px-3 font-mono text-[11px] font-semibold text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+          >
+            ← Pengaturan
+          </Link>
+          <div className="min-w-0">
+            <h1 className="truncate text-sm font-bold tracking-tight text-foreground sm:text-base">
+              Rekening &amp; Dompet
+            </h1>
+            <p className="text-[11px] text-muted-foreground">
+              {activeRootAccounts.length} akun aktif tercatat
+            </p>
           </div>
         </div>
 
-      </div>
-
-      <div className="tabular-grid-container grid grid-cols-1">
-        <div className="tabular-grid-cell flex items-center justify-end gap-1.5 px-3 py-2 md:col-span-5">
-          <button
-            type="button"
-            onClick={handleOpenCreateAccount}
-            className="nav-touch-item flex flex-1 justify-center items-center gap-1 rounded border border-border bg-primary px-2.5 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Tambah Akun</span>
-          </button>
-          {activeRootAccounts.length >= 2 && (
-            <button
-              type="button"
-              onClick={handleOpenMergeModal}
-              className="nav-touch-item inline-flex items-center gap-1 rounded border border-border bg-background px-2.5 py-2 text-xs font-semibold text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-            >
-              <GitMerge className="h-3.5 w-3.5 text-muted-foreground" />
-            </button>
-          )}
+        <div className="text-right">
+          <p className="text-[11px] text-muted-foreground">Total Saldo Akun</p>
+          <p className="font-mono text-lg font-extrabold tabular-nums tracking-tight text-foreground sm:text-xl">
+            {formatRupiah(totalBalance)}
+          </p>
         </div>
       </div>
 
-      {/* 3. Tabular Grid Account Rows */}
-      <div className="tabular-grid-container grid grid-cols-1">
+      {/* 2. Quick Actions Capsule Bar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={handleOpenCreateAccount}
+          className="nav-touch-item inline-flex flex-1 sm:flex-initial justify-center items-center gap-1.5 rounded-full bg-cta-surface px-4 py-2 text-xs font-semibold text-cta-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          <span>Tambah Akun</span>
+        </button>
+        {activeRootAccounts.length >= 2 && (
+          <button
+            type="button"
+            onClick={handleOpenMergeModal}
+            className="nav-touch-item inline-flex items-center gap-1.5 rounded-full border border-border bg-card backdrop-blur-sm px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+          >
+            <GitMerge className="h-3.5 w-3.5 text-primary" />
+            <span>Gabung Akun</span>
+          </button>
+        )}
+      </div>
+
+      {/* 3. Glass Card Account List */}
+      <div className="glass-card overflow-hidden">
         {/* Desktop Table Header */}
-        <div className="tabular-grid-cell hidden grid-cols-12 items-center px-3 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-muted-foreground md:grid">
+        <div className="hidden grid-cols-12 items-center border-b border-border/70 bg-black/[0.02] dark:bg-white/[0.04] px-4 py-2 font-mono text-[10px] font-semibold uppercase tracking-wider text-muted-foreground md:grid">
           <div className="col-span-8">Nama Akun</div>
           <div className="col-span-4 text-right">Saldo</div>
         </div>
 
-        {activeRootAccounts.length === 0 ? (
-          <div className="tabular-grid-cell p-6 text-center text-xs text-muted-foreground">
-            <p>Belum ada akun aktif di buku ini.</p>
-            <button
-              type="button"
-              onClick={handleOpenCreateAccount}
-              className="mt-2.5 nav-touch-item inline-flex items-center gap-1 rounded border border-border bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Tambah Akun Baru
-            </button>
-          </div>
-        ) : (
-          activeRootAccounts.map((acc, idx) => {
-            const currentBal =
-              balanceMap.get(acc.id) ?? acc.initial_balance;
-            const visual = getAccountVisual(acc.account_type);
-            const IconComp = visual.icon;
-
-            return (
-              <div
-                key={acc.id}
-                data-testid={`account-row-${acc.id}`}
-                role="button"
-                tabIndex={0}
-                title={`Lihat mutasi transaksi ${acc.name}`}
-                aria-label={`Buka buku besar mutasi ${acc.name}`}
-                onClick={() => handleStartEdit(acc)}
-                style={{ animationDelay: `${idx * 25}ms` }}
-                className="tabular-grid-cell group nav-touch-item animate-card-up flex cursor-pointer items-center justify-between p-3.5 text-sm transition-colors hover:bg-muted/60 active:bg-muted/80 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+        <div className="divide-y divide-border/70">
+          {activeRootAccounts.length === 0 ? (
+            <div className="p-8 text-center text-xs text-muted-foreground">
+              <p>Belum ada akun aktif di buku ini.</p>
+              <button
+                type="button"
+                onClick={handleOpenCreateAccount}
+                className="mt-3 nav-touch-item inline-flex items-center gap-1.5 rounded-full bg-cta-surface px-4 py-2 text-xs font-semibold text-cta-foreground hover:opacity-90"
               >
-                {/* Left: Icon + Full Name + Badge (Max space, no squeeze!) */}
-                <div className="flex min-w-0 flex-1 items-center gap-2 pr-3">
-                  <IconComp className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-foreground transition-colors" />
-                  <span className="truncate font-semibold text-foreground text-xs sm:text-sm">
-                    {acc.name}
-                  </span>
-                  <span className="shrink-0 rounded border border-border bg-background px-1.5 py-0.2 font-mono text-[10px] text-muted-foreground">
-                    {visual.label}
-                  </span>
-                </div>
+                <Plus className="h-3.5 w-3.5" />
+                Tambah Akun Baru
+              </button>
+            </div>
+          ) : (
+            activeRootAccounts.map((acc, idx) => {
+              const currentBal =
+                balanceMap.get(acc.id) ?? acc.initial_balance;
+              const visual = getAccountVisual(acc.account_type);
+              const IconComp = visual.icon;
 
-                {/* Right: Balance + Initial (if diff) + Chevron. No 'SALDO SAAT INI' clutter! */}
-                {/* Right: Balance + Initial (if diff) + Edit Button + Chevron */}
-                <div className="flex shrink-0 items-center gap-2">
-                  <div className="text-right">
-                    <div className="flex items-center justify-end gap-1 font-mono text-xs sm:text-sm font-semibold tabular-nums tracking-tight text-foreground">
-                      {currentBal > acc.initial_balance && (
-                        <span title="Saldo bertambah dari saldo awal" className="inline-flex">
-                          <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-                        </span>
-                      )}
-                      {currentBal < acc.initial_balance && (
-                        <span title="Saldo berkurang dari saldo awal" className="inline-flex">
-                          <TrendingDown className="h-3.5 w-3.5 text-rose-500" />
-                        </span>
-                      )}
-                      <span className={currentBal < 0 ? "text-rose-600 dark:text-rose-400" : ""}>
-                        {formatRupiah(currentBal)}
-                      </span>
+              return (
+                <div
+                  key={acc.id}
+                  data-testid={`account-row-${acc.id}`}
+                  role="button"
+                  tabIndex={0}
+                  title={`Lihat mutasi transaksi ${acc.name}`}
+                  aria-label={`Buka buku besar mutasi ${acc.name}`}
+                  onClick={() => handleStartEdit(acc)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleStartEdit(acc);
+                    }
+                  }}
+                  style={{ animationDelay: `${idx * 25}ms` }}
+                  className="group nav-touch-item animate-card-up flex cursor-pointer items-center justify-between px-4 py-3.5 text-sm transition-colors hover:bg-white/[0.05] active:bg-white/[0.08] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                >
+                  {/* Left: Rounded Icon Container + Name + Type Badge */}
+                  <div className="flex min-w-0 flex-1 items-center gap-3 pr-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-black/[0.04] text-foreground dark:bg-white/[0.1] dark:text-foreground">
+                      <IconComp className="h-4.5 w-4.5" />
                     </div>
-                    {acc.initial_balance !== 0 && (
-                      <div className="font-mono text-[10px] text-muted-foreground tabular-nums">
-                        Awal: {formatRupiah(acc.initial_balance)}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate font-semibold text-foreground text-xs sm:text-sm">
+                          {acc.name}
+                        </span>
+                        <span className="shrink-0 rounded-full border border-border bg-black/[0.03] dark:bg-white/[0.06] px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
+                          {visual.label}
+                        </span>
                       </div>
-                    )}
+                      {acc.initial_balance !== 0 && (
+                        <div className="mt-0.5 font-mono text-[10px] text-muted-foreground tabular-nums">
+                          Saldo awal: {formatRupiah(acc.initial_balance)}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+
+                  {/* Right: Balance + Chevron */}
+                  <div className="flex shrink-0 items-center gap-2">
+                    <div className="text-right">
+                      <div className="flex items-center justify-end gap-1 font-mono text-xs sm:text-sm font-bold tabular-nums tracking-tight text-foreground">
+                        {currentBal > acc.initial_balance && (
+                          <span title="Saldo bertambah dari saldo awal" className="inline-flex">
+                            <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
+                          </span>
+                        )}
+                        {currentBal < acc.initial_balance && (
+                          <span title="Saldo berkurang dari saldo awal" className="inline-flex">
+                            <TrendingDown className="h-3.5 w-3.5 text-rose-400" />
+                          </span>
+                        )}
+                        <span className={currentBal < 0 ? "text-rose-500 dark:text-rose-400" : ""}>
+                          {formatRupiah(currentBal)}
+                        </span>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />
+                  </div>
                 </div>
-              </div>
-            );
-          })
-        )}
+              );
+            })
+          )}
+        </div>
       </div>
 
-      {/* 4. Merged Accounts History Section */}
+      {/* 4. Merged Accounts History Section (CRDT Contrast Note) */}
       {mergedAccounts.length > 0 && (
-        <div className="tabular-grid-container grid grid-cols-1">
-          <div className="tabular-grid-cell px-3 py-2">
-            <h2 className="font-mono text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Rekening yang Digabungkan ({mergedAccounts.length})
+        <div className="contrast-card overflow-hidden">
+          <div className="border-b border-white/10 px-4 py-2.5">
+            <h2 className="font-mono text-[10px] font-semibold uppercase tracking-wider text-white/70">
+              Rekening yang Digabungkan via CRDT ({mergedAccounts.length})
             </h2>
           </div>
-          {mergedAccounts.map((m) => (
-            <div
-              key={m.id}
-              className="tabular-grid-cell flex items-center justify-between px-3 py-2 text-xs"
-            >
-              <div className="min-w-0 flex items-center gap-2">
-                <span className="truncate font-medium text-muted-foreground line-through">
-                  {m.name}
-                </span>
-                <span className="shrink-0 font-mono text-[10px] text-amber-500">
-                  Tergabung
+          <div className="divide-y divide-white/10">
+            {mergedAccounts.map((m) => (
+              <div
+                key={m.id}
+                className="flex items-center justify-between px-4 py-2.5 text-xs"
+              >
+                <div className="min-w-0 flex items-center gap-2">
+                  <span className="truncate font-medium text-white/70 line-through">
+                    {m.name}
+                  </span>
+                  <span className="shrink-0 rounded-full bg-amber-500/20 px-2 py-0.5 font-mono text-[10px] font-semibold text-amber-300">
+                    Tergabung
+                  </span>
+                </div>
+                <span className="shrink-0 font-mono text-[10px] tabular-nums tracking-tight text-white/65">
+                  Saldo awal: {formatRupiah(m.initial_balance)}
                 </span>
               </div>
-              <span className="shrink-0 font-mono text-[10px] tabular-nums tracking-tight text-muted-foreground">
-                Saldo awal: {formatRupiah(m.initial_balance)}
-              </span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
 
@@ -417,13 +433,13 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
         }}
         shouldScaleBackground={false}
       >
-        <DrawerContent className="fixed inset-x-0 bottom-0 z-50 flex max-h-[90vh] flex-col rounded-t-xl border-t border-border bg-card p-0 shadow-2xl focus:outline-none sm:mx-auto sm:max-w-lg">
+        <DrawerContent className="max-h-[90vh] p-0 sm:mx-auto sm:max-w-lg">
           <form onSubmit={handleSaveAccountDirect} className="flex flex-col">
             {/* Header */}
-            <div className="border-b border-border py-3">
-              <div className="flex items-center justify-between px-4 sm:px-5">
+            <div className="border-b border-border/70 py-3.5">
+              <div className="flex items-center justify-between px-5">
                 <div>
-                  <DrawerTitle className="text-sm font-semibold text-foreground">
+                  <DrawerTitle className="text-sm font-bold text-foreground">
                     {editingAccount
                       ? "Detail & Ubah Akun"
                       : "Tambah Akun Keuangan"}
@@ -438,53 +454,51 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
                   type="button"
                   onClick={handleCloseAccountDrawer}
                   aria-label="Tutup"
-                  className="nav-touch-item inline-flex h-7 w-7 items-center justify-center rounded border border-border hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
+                  className="nav-touch-item inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-black/[0.04] dark:bg-white/[0.06] hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              {
-                editingAccount && (
-                  <div className="mt-3 px-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const target = editingAccount;
-                        handleCloseAccountDrawer();
-                        handleViewLedger(target);
-                      }}
-                      className="nav-touch-item flex w-full items-center justify-center gap-1.5 rounded border border-border bg-muted py-1.5 text-xs font-semibold text-primary transition-colors"
-                    >
-                      <FileText className="h-3.5 w-3.5" />
-                      <span>Lihat Mutasi Transaksi</span>
-                      <ArrowUpRight className="h-3.5 w-3.5" />
-                    </button>
-
-                  </div>
-                )
-              }
+              {editingAccount && (
+                <div className="mt-3 px-5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const target = editingAccount;
+                      handleCloseAccountDrawer();
+                      handleViewLedger(target);
+                    }}
+                    className="nav-touch-item flex w-full items-center justify-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 py-2 text-xs font-semibold text-primary hover:bg-primary/15 transition-colors"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    <span>Lihat Mutasi Transaksi</span>
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Body */}
-            <div className="space-y-3.5 px-4 py-4 sm:px-5">
+            <div className="space-y-4 px-5 py-4">
               {/* Financial & Ledger Summary for Existing Account */}
               {editingAccount && (
-                <div className="space-y-2.5 ">
-                  <div className="flex items-center justify-between text-xs">
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-black/[0.03] dark:bg-white/[0.04] px-3.5 py-2.5 text-xs">
                     <span className="text-muted-foreground font-medium">Saldo Saat Ini:</span>
                     <span
-                      className={`font-mono text-sm font-bold tabular-nums ${editingAccountBalance < 0
-                        ? "text-rose-600 dark:text-rose-400"
-                        : "text-foreground"
-                        }`}
+                      className={`font-mono text-sm font-bold tabular-nums ${
+                        editingAccountBalance < 0
+                          ? "text-rose-500 dark:text-rose-400"
+                          : "text-foreground"
+                      }`}
                     >
                       {formatRupiah(editingAccountBalance)}
                     </span>
                   </div>
 
                   {editingAccountBalance < 0 && (
-                    <div className="flex items-start gap-2 rounded border border-rose-500/20 bg-rose-500/10 p-2 text-[11px] text-rose-700 dark:text-rose-300">
-                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-500" />
+                    <div className="flex items-start gap-2 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-3 text-[11px] text-rose-700 dark:text-rose-300">
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-400" />
                       <div className="space-y-0.5">
                         <p className="font-semibold">Catatan Akuntansi: Saldo Negatif</p>
                         <p className="leading-tight opacity-90">
@@ -497,7 +511,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
               )}
 
               {/* Account Name */}
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <label
                   htmlFor="account-name-input"
                   className="text-xs font-medium text-foreground"
@@ -513,12 +527,12 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
                 />
               </div>
 
-              {/* Account Type: Segmented Buttons for 1-Tap Experience */}
-              <div className="space-y-1">
+              {/* Account Type: Segmented Buttons */}
+              <div className="space-y-1.5">
                 <span className="text-xs font-medium text-foreground">
                   Jenis Akun
                 </span>
-                <div className="grid grid-cols-3 gap-1.5">
+                <div className="grid grid-cols-3 gap-2">
                   {(
                     [
                       { type: "CASH", label: "Kas Tunai", icon: Banknote },
@@ -533,10 +547,11 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
                         key={item.type}
                         type="button"
                         onClick={() => setAccountType(item.type)}
-                        className={`nav-touch-item flex items-center justify-center gap-1.5 rounded border py-1.5 px-2 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${isSelected
-                          ? "border-primary bg-primary/10 font-semibold text-primary"
-                          : "border-border bg-background text-muted-foreground hover:bg-muted"
-                          }`}
+                        className={`nav-touch-item flex items-center justify-center gap-1.5 rounded-xl border py-2 px-2.5 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
+                          isSelected
+                            ? "border-primary bg-primary/15 font-semibold text-primary"
+                            : "border-border bg-black/[0.03] dark:bg-white/[0.05] text-muted-foreground hover:bg-muted hover:text-foreground"
+                        }`}
                       >
                         <ItemIcon className="h-3.5 w-3.5" />
                         <span>{item.label}</span>
@@ -547,7 +562,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
               </div>
 
               {/* Initial Balance */}
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label
                     htmlFor="account-initial-balance"
@@ -568,7 +583,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
 
               {/* Destructive Action Trigger: Buka Confirm Drawer */}
               {editingAccount && (
-                <div className="mt-3 border-t border-border/60">
+                <div className="pt-2 border-t border-border/60">
                   <button
                     type="button"
                     onClick={() => {
@@ -576,7 +591,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
                       handleCloseAccountDrawer();
                       setAccountPendingDelete(target);
                     }}
-                    className="nav-touch-item flex w-full items-center justify-center gap-1.5 rounded-lg border border-rose-500/20 bg-rose-500/5 py-2 text-xs font-medium text-rose-600 hover:bg-rose-500/10 active:scale-[0.99] dark:text-rose-400 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
+                    className="nav-touch-item flex w-full items-center justify-center gap-1.5 rounded-full border border-rose-500/25 bg-rose-500/10 py-2.5 text-xs font-medium text-rose-600 hover:bg-rose-500/15 active:scale-[0.99] dark:text-rose-400 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                     <span>Hapus Akun Ini</span>
@@ -586,11 +601,11 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
             </div>
 
             {/* Direct Save Action Buttons */}
-            <div className="flex items-center justify-end gap-2 border-t border-border px-4 py-2.5 sm:px-5">
+            <div className="flex items-center justify-end gap-2 border-t border-border/70 px-5 py-3">
               <button
                 type="submit"
                 disabled={upsertAccountMutation.isPending}
-                className="nav-touch-item rounded-lg border flex-1 border-border bg-primary px-4 py-3 text-xs font-semibold text-primary-foreground hover:opacity-90 active:scale-[0.98] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                className="nav-touch-item flex-1 rounded-full bg-cta-surface px-5 py-3 text-xs font-semibold text-cta-foreground hover:opacity-90 active:scale-[0.98] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
               >
                 {upsertAccountMutation.isPending
                   ? "Menyimpan..."
@@ -603,7 +618,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
         </DrawerContent>
       </Drawer>
 
-      {/* 6. Dedicated Delete Account Confirmation Drawer (Identik dengan TransactionTable) */}
+      {/* 6. Dedicated Delete Account Confirmation Drawer */}
       <Drawer
         open={accountPendingDelete !== null}
         onOpenChange={(open) => {
@@ -612,9 +627,9 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
       >
         <DrawerContent
           aria-describedby="delete-account-confirm-desc"
-          className="p-0 sm:mx-auto sm:max-w-md sm:rounded-t-2xl"
+          className="p-0 sm:mx-auto sm:max-w-md"
         >
-          <div className="flex flex-col items-center px-4 pt-5 pb-2 text-center">
+          <div className="flex flex-col items-center px-5 pt-5 pb-3 text-center">
             {/* Vector Illustration */}
             <DeleteTransactionIllustration className="h-24 w-24 my-1" />
 
@@ -633,21 +648,21 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
 
             {/* Account Preview Box */}
             {accountPendingDelete && (
-              <div className="w-full mt-3 rounded-lg border border-border bg-muted/40 p-3 text-left text-xs space-y-1.5">
+              <div className="w-full mt-3 rounded-2xl border border-border bg-black/[0.04] dark:bg-white/[0.05] p-3.5 text-left text-xs space-y-1.5">
                 <div className="flex items-center justify-between font-semibold">
                   <span className="truncate text-foreground text-sm">
                     {accountPendingDelete.name}
                   </span>
-                  <span className="rounded border border-border bg-background px-1.5 py-0.2 font-mono text-[10px] text-muted-foreground">
+                  <span className="rounded-full border border-border bg-black/[0.04] dark:bg-white/[0.06] px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
                     {formatAccountTypeLabel(accountPendingDelete.account_type)}
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border/50">
+                <div className="flex items-center justify-between text-xs text-muted-foreground pt-1.5 border-t border-border/50">
                   <span>Saldo Terakhir:</span>
                   <span className="font-mono font-bold text-foreground">
                     {formatRupiah(
                       balanceMap.get(accountPendingDelete.id) ??
-                      accountPendingDelete.initial_balance
+                        accountPendingDelete.initial_balance
                     )}
                   </span>
                 </div>
@@ -655,11 +670,11 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
             )}
           </div>
 
-          <DrawerFooter className="border-t border-border px-4 py-3 bg-card/60 backdrop-blur-xs flex flex-row items-center gap-2">
+          <DrawerFooter className="border-t border-border/70 px-5 py-3 flex flex-row items-center gap-2">
             <button
               type="button"
               onClick={() => setAccountPendingDelete(null)}
-              className="nav-touch-item flex-1 h-9 rounded-lg border border-border bg-background px-4 font-mono text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground active:scale-98 transition-all focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+              className="nav-touch-item flex-1 h-10 rounded-full border border-border bg-black/[0.04] dark:bg-white/[0.06] px-4 font-mono text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground active:scale-98 transition-all focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
             >
               Batal
             </button>
@@ -667,7 +682,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
               type="button"
               disabled={deleteAccountMutation.isPending}
               onClick={() => void handleConfirmDeleteAccount()}
-              className="nav-touch-item flex-1 h-9 inline-flex items-center justify-center gap-1.5 rounded-lg bg-rose-600 px-4 text-xs font-semibold text-white shadow-xs hover:bg-rose-700 active:scale-98 transition-all focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-rose-600 disabled:opacity-50"
+              className="nav-touch-item flex-1 h-10 inline-flex items-center justify-center gap-1.5 rounded-full bg-rose-600 px-4 text-xs font-semibold text-white hover:bg-rose-700 active:scale-98 transition-all focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-rose-600 disabled:opacity-50"
             >
               <Trash2 className="h-4 w-4" />
               <span>
@@ -684,15 +699,15 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
         onOpenChange={setIsMergeModalOpen}
         shouldScaleBackground={false}
       >
-        <DrawerContent className="fixed inset-x-0 bottom-0 z-50 flex max-h-[90vh] flex-col rounded-t-xl border-t border-border bg-card p-0 shadow-2xl focus:outline-none sm:mx-auto sm:max-w-lg">
+        <DrawerContent className="max-h-[90vh] p-0 sm:mx-auto sm:max-w-lg">
           <form
             onSubmit={(e) => e.preventDefault()}
             className="flex flex-col overflow-hidden"
           >
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-5">
+            <div className="flex items-center justify-between border-b border-border/70 px-5 py-3.5">
               <div>
-                <DrawerTitle className="text-sm font-semibold text-foreground">
+                <DrawerTitle className="text-sm font-bold text-foreground">
                   Gabungkan Dua Akun
                 </DrawerTitle>
                 <DrawerDescription className="text-xs text-muted-foreground">
@@ -703,15 +718,15 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
                 type="button"
                 onClick={() => setIsMergeModalOpen(false)}
                 aria-label="Tutup"
-                className="nav-touch-item inline-flex h-7 w-7 items-center justify-center rounded border border-border hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
+                className="nav-touch-item inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-black/[0.04] dark:bg-white/[0.06] hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             {/* Body */}
-            <div className="space-y-3.5 px-4 py-4 sm:px-5">
-              <div className="space-y-1">
+            <div className="space-y-4 px-5 py-4">
+              <div className="space-y-1.5">
                 <label
                   htmlFor="merge-source-account"
                   className="text-xs font-medium text-foreground"
@@ -722,7 +737,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
                   id="merge-source-account"
                   value={mergeSourceId}
                   onChange={(e) => setMergeSourceId(e.target.value)}
-                  className="flex h-8 w-full rounded border border-border bg-background px-2.5 text-xs text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                  className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 text-xs text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                 >
                   {activeRootAccounts.map((acc) => (
                     <option key={acc.id} value={acc.id}>
@@ -732,7 +747,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
                 </select>
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <label
                   htmlFor="merge-target-account"
                   className="text-xs font-medium text-foreground"
@@ -743,7 +758,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
                   id="merge-target-account"
                   value={mergeTargetId}
                   onChange={(e) => setMergeTargetId(e.target.value)}
-                  className="flex h-8 w-full rounded border border-border bg-background px-2.5 text-xs text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                  className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 text-xs text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                 >
                   {activeRootAccounts.map((acc) => (
                     <option key={acc.id} value={acc.id}>
@@ -753,16 +768,16 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
                 </select>
               </div>
 
-              <div className="rounded border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-600 dark:text-amber-400">
-                <p className="font-semibold">⚠️ Tindakan Permanen</p>
-                <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
-                  Tindakan ini tidak dapat dibatalkan. Seluruh riwayat transaksi dari akun sumber akan digabungkan secara permanen ke akun tujuan.
+              <div className="contrast-card p-3.5 text-xs text-amber-300">
+                <p className="font-semibold">Tindakan Permanen &amp; CRDT</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-white/75">
+                  Tindakan ini tidak dapat dibatalkan. Seluruh riwayat transaksi dari akun sumber akan digabungkan secara permanen ke akun tujuan dan otomatis diselaraskan antar perangkat.
                 </p>
               </div>
             </div>
 
             {/* Slider Konfirmasi untuk Safety */}
-            <div className="border-t border-border p-3 sm:px-5">
+            <div className="border-t border-border/70 p-3.5 sm:px-5">
               <ButtonSlideToConfirm
                 key={isMergeModalOpen ? "merge-open" : "merge-closed"}
                 disabled={mergeAccountsMutation.isPending}

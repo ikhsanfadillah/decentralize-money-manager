@@ -150,22 +150,22 @@ describe("BudgetsPage (Section 8.2 & 10.2)", () => {
       expect(screen.getByText("Total Pengeluaran")).toBeInTheDocument();
     });
 
-    // Verify explicit text labels accompany each status color
+    // Verify explicit text labels accompany each status color (OK kept Emerald, distinct from Amber WARNING)
     const okLabel = screen.getByTestId("budget-status-label-OK");
     expect(okLabel).toHaveTextContent("AMAN (OK)");
-    expect(okLabel.className).toContain("text-primary");
+    expect(okLabel.className).toContain("text-emerald-600");
 
     const warningLabel = screen.getByTestId("budget-status-label-WARNING");
     expect(warningLabel).toHaveTextContent("PERINGATAN (WARNING)");
-    expect(warningLabel.className).toContain("text-amber-500");
+    expect(warningLabel.className).toContain("text-amber-600");
 
     const overLabel = screen.getByTestId("budget-status-label-OVER");
     expect(overLabel).toHaveTextContent("MELEBIHI BATAS (OVER)");
     expect(overLabel.className).toContain("text-rose-500");
 
-    // Verify progress bar fill colors
+    // Verify progress indicator dot fill colors
     expect(screen.getByTestId("budget-progress-fill-OK").className).toContain(
-      "bg-primary"
+      "bg-emerald-500"
     );
     expect(
       screen.getByTestId("budget-progress-fill-WARNING").className

@@ -133,9 +133,11 @@ export const InviteAcceptPage: React.FC = () => {
   if (!parsedPayload) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center p-4">
-        <div className="flex flex-col items-center gap-3 text-slate-500">
-          <RefreshCw className="h-8 w-8 animate-spin text-emerald-500" />
-          <p className="text-sm">Memvalidasi kode undangan P2P...</p>
+        <div className="glass-card flex flex-col items-center gap-3 px-8 py-6 text-muted-foreground">
+          <RefreshCw className="h-7 w-7 animate-spin text-primary" />
+          <p className="text-sm font-medium text-foreground">
+            Memvalidasi kode undangan P2P...
+          </p>
         </div>
       </div>
     );
@@ -143,23 +145,23 @@ export const InviteAcceptPage: React.FC = () => {
 
   return (
     <div className="mx-auto flex min-h-[75vh] w-full max-w-lg items-center justify-center p-4">
-      <div className="w-full rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900 sm:p-8">
+      <div className="glass-card w-full p-6 sm:p-8">
         {existingBook ? (
           /* State 1: Buku sudah ada di perangkat ini */
           <div className="flex flex-col items-center text-center">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="h-8 w-8" />
             </div>
 
-            <span className="mb-2 inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
+            <span className="mb-2 inline-flex items-center rounded-full border border-emerald-500/35 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
               Buku Sudah Terdaftar
             </span>
 
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
               {existingBook.name}
             </h1>
 
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+            <p className="mt-2 text-sm text-muted-foreground">
               Buku keuangan ini sudah tersimpan dan aktif di perangkat Anda. Anda dapat langsung membukanya atau menjalankan sinkronisasi data terbaru.
             </p>
 
@@ -167,7 +169,7 @@ export const InviteAcceptPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleOpenExistingBook}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 font-medium text-white shadow transition hover:bg-emerald-700 active:scale-[0.99]"
+                className="nav-touch-item flex w-full items-center justify-center gap-2 rounded-full bg-cta-surface px-5 py-3 text-sm font-semibold text-cta-foreground transition-opacity hover:opacity-90 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
               >
                 <BookOpen className="h-4 w-4" />
                 Buka Buku Sekarang
@@ -176,48 +178,51 @@ export const InviteAcceptPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleResyncExistingBook}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                className="nav-touch-item flex w-full items-center justify-center gap-2 rounded-full border border-border bg-black/[0.04] px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted dark:bg-white/[0.06] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
               >
                 <RefreshCw className="h-4 w-4" />
-                Sinkronkan Ulang & Buka
+                Sinkronkan Ulang &amp; Buka
               </button>
             </div>
           </div>
         ) : (
           /* State 2: Buku baru, konfirmasi bergabung */
           <div className="flex flex-col">
-            <div className="mb-6 flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-md">
+            <div className="mb-5 flex items-center justify-between border-b border-border/70 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-cta-surface text-cta-foreground">
                   <Users className="h-5 w-5" />
                 </div>
                 <div>
-                  <span className="text-xs font-semibold tracking-wider text-emerald-600 uppercase dark:text-emerald-400">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-primary">
                     Undangan Kolaborasi P2P
                   </span>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                  <h2 className="text-lg font-bold tracking-tight text-foreground">
                     Gabung ke Buku Keuangan
                   </h2>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4 dark:border-emerald-950 dark:bg-emerald-950/20">
-              <span className="text-xs text-slate-500 dark:text-slate-400">Nama Buku:</span>
-              <p className="text-xl font-bold text-slate-900 dark:text-white">
+            <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4">
+              <span className="text-xs text-muted-foreground">Nama Buku:</span>
+              <p className="mt-0.5 text-xl font-bold text-foreground">
                 {parsedPayload.book_name}
               </p>
-              <div className="mt-2 flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-300">
-                <Clock className="h-3.5 w-3.5" />
+              <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-black/[0.05] px-2.5 py-0.5 font-mono text-[11px] text-primary dark:bg-white/[0.06]">
+                <Clock className="h-3 w-3" />
                 <span>Berlaku hingga {formatExpiryTime(parsedPayload.expires_at)}</span>
               </div>
             </div>
 
             {/* Zero-Knowledge Security Notice */}
-            <div className="mt-5 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
-              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-              <span>
-                Sinkronisasi berjalan langsung antar-perangkat secara <strong>End-to-End Encrypted</strong>. Server Cloudflare tidak dapat membaca catatan transaksi Anda.
+            <div className="contrast-card mt-4 flex items-start gap-3 p-3.5 text-xs text-white/85">
+              <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-zinc-950">
+                <ShieldCheck className="h-4 w-4" />
+              </div>
+              <span className="leading-relaxed">
+                Sinkronisasi berjalan langsung antar-perangkat secara{" "}
+                <strong className="text-amber-300">End-to-End Encrypted</strong>. Server relay tidak dapat membaca catatan transaksi Anda.
               </span>
             </div>
 
@@ -226,12 +231,12 @@ export const InviteAcceptPage: React.FC = () => {
                 type="button"
                 disabled={joinMutation.isPending}
                 onClick={() => joinMutation.mutate()}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 font-medium text-white shadow-md transition hover:bg-emerald-700 active:scale-[0.99] disabled:opacity-50"
+                className="nav-touch-item flex w-full items-center justify-center gap-2 rounded-full bg-cta-surface px-5 py-3 text-sm font-semibold text-cta-foreground transition-opacity hover:opacity-90 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary disabled:opacity-50"
               >
                 {joinMutation.isPending ? (
                   <>
                     <RefreshCw className="h-4 w-4 animate-spin" />
-                    Menyambungkan & Menyinkronkan...
+                    Menyambungkan &amp; Menyinkronkan...
                   </>
                 ) : (
                   <>
@@ -245,7 +250,7 @@ export const InviteAcceptPage: React.FC = () => {
                 type="button"
                 disabled={joinMutation.isPending}
                 onClick={() => void navigate({ to: "/" })}
-                className="w-full py-2 text-center text-sm text-slate-500 transition hover:text-slate-800 dark:hover:text-slate-300"
+                className="w-full rounded-full py-2.5 text-center text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 Batal
               </button>

@@ -11,12 +11,18 @@ const config: Config = {
         card: {
           DEFAULT: "var(--color-card)",
           foreground: "var(--color-foreground)",
+          contrast: "var(--color-card-contrast)",
         },
         border: "var(--color-border)",
         primary: {
           DEFAULT: "var(--color-primary)",
           foreground: "var(--color-primary-foreground)",
         },
+        cta: {
+          DEFAULT: "var(--color-cta-surface)",
+          foreground: "var(--color-cta-foreground)",
+        },
+        dock: "var(--color-dock)",
         muted: {
           DEFAULT: "var(--color-muted)",
           foreground: "var(--color-muted-foreground)",

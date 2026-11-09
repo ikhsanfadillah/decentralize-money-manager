@@ -1,7 +1,8 @@
 import * as React from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeftRight, Plus, TrendingDown, TrendingUp, X } from "lucide-react";
+import { ArrowLeftRight, Plus, Trash2, TrendingDown, TrendingUp, X } from "lucide-react";
+import { DeleteTransactionDrawer } from "./DeleteTransactionDrawer";
 import { CurrencyInput } from "../ui/currency-input";
 import { Input } from "../ui/input";
 import {
@@ -45,6 +46,7 @@ export interface TransactionDialogProps {
   onAddTransaction: (input: AddTransactionInput) => Promise<unknown>;
   onUpdateTransaction: (input: UpdateTransactionInput) => Promise<unknown>;
   onTransferBetweenBooks: (input: TransferBetweenBooksInput) => Promise<unknown>;
+  onDeleteTransaction?: (txId: string) => Promise<unknown> | void;
 }
 
 interface TxFormValues {
@@ -69,7 +71,11 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
   onAddTransaction,
   onUpdateTransaction,
   onTransferBetweenBooks,
+  onDeleteTransaction,
 }) => {
+  const [txPendingDelete, setTxPendingDelete] =
+    React.useState<TransactionView | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
   const activeAccounts = React.useMemo(
     () => accounts.filter((a) => a.merged_into_id === null),
     [accounts]
@@ -147,6 +153,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
       setNewCategoryName("");
       return;
     }
+    setTxPendingDelete(null);
     if (editingTx) {
       reset({
         mode: editingTx.tx_type,
@@ -368,73 +375,99 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
     }
   };
 
+  const handleConfirmDelete = async (txId: string) => {
+    if (!onDeleteTransaction || isDeleting) return;
+    setIsDeleting(true);
+    try {
+      await onDeleteTransaction(txId);
+      pushToast("Transaksi berhasil dihapus", { variant: "info" });
+      setTxPendingDelete(null);
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Gagal menghapus transaksi";
+      pushToast("Gagal menghapus transaksi", {
+        description: msg,
+        variant: "error",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
-    <Drawer
-      open={isOpen}
-      onOpenChange={(open) => {
-        if (!open) {
-          onClose();
-        }
-      }}
-      shouldScaleBackground={false}
-    >
-      <DrawerContent
-        className="fixed inset-x-0 bottom-0 z-50 flex h-[100dvh] max-h-[100dvh] w-full flex-col rounded-none border-t border-border bg-card p-0 shadow-2xl focus:outline-none sm:mx-auto sm:h-auto sm:max-h-[90vh] sm:max-w-xl sm:rounded-t-2xl"
+    <>
+      <Drawer
+        open={isOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            onClose();
+          }
+        }}
+        shouldScaleBackground={false}
       >
-        <form
-          onSubmit={(e) => e.preventDefault()}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-            }
-          }}
-          className="flex h-full sm:h-auto flex-1 flex-col overflow-hidden"
-        >
-          {/* Header - Border divider mentok ke container */}
-          <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6 shrink-0 bg-card">
-            <div>
-              <DrawerTitle
-                id="tx-dialog-title"
-                className="text-sm font-semibold text-foreground"
-              >
-                {editingTx ? "Ubah Catatan Transaksi" : "Catat Transaksi Baru"}
-              </DrawerTitle>
-              <DrawerDescription className="mt-0.5 text-xs text-muted-foreground">
-                Pilih jenis transaksi dan isi nominal uangnya.
-              </DrawerDescription>
-            </div>
+        <DrawerContent className="h-[92dvh] max-h-[92dvh] w-full p-0 sm:mx-auto sm:h-auto sm:max-h-[90vh] sm:max-w-xl">
+          <form
+            onSubmit={(e) => e.preventDefault()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+              }
+            }}
+            className="flex h-full sm:h-auto flex-1 flex-col overflow-hidden"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-border/70 px-5 py-3.5 shrink-0">
+              <div>
+                <DrawerTitle
+                  id="tx-dialog-title"
+                  className="text-sm font-bold text-foreground"
+                >
+                  {editingTx ? "Detail & Ubah Transaksi" : "Catat Transaksi Baru"}
+                </DrawerTitle>
+                <DrawerDescription className="mt-0.5 text-xs text-muted-foreground">
+                  {editingTx
+                    ? "Tinjau detail, ubah catatan, atau hapus transaksi ini."
+                    : "Pilih jenis transaksi dan isi nominal uangnya."}
+                </DrawerDescription>
+              </div>
             <button
               type="button"
               onClick={onClose}
               aria-label="Tutup"
-              className="nav-touch-item inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
+              className="nav-touch-item inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-black/[0.04] dark:bg-white/[0.06] text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
 
-          {/* Scrollable Content Body - Padding container hanya di content */}
-          <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 space-y-4">
-            {/* Transaction Mode Selector */}
-            <div className="tabular-grid-container grid grid-cols-2 sm:grid-cols-4 -m-4 mb-4">
+          {/* Scrollable Content Body */}
+          <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4 space-y-4">
+            {/* Capsule Transaction Mode Selector */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 rounded-2xl border border-border bg-black/[0.04] dark:bg-white/[0.04] p-1.5">
               {(
                 [
                   {
                     key: "EXPENSE",
                     label: "Pengeluaran",
-                    color: "text-rose-500!",
+                    color: "text-rose-500",
+                    activeClass:
+                      "border border-rose-500/40 bg-rose-500/15 text-rose-500 dark:text-rose-300",
                     icon: TrendingDown,
                   },
                   {
                     key: "INCOME",
                     label: "Pemasukan",
-                    color: "text-emerald-500!",
+                    color: "text-emerald-500",
+                    activeClass:
+                      "border border-emerald-500/40 bg-emerald-500/15 text-emerald-600 dark:text-emerald-300",
                     icon: TrendingUp,
                   },
                   {
                     key: "TRANSFER",
                     label: "Pindah Saldo",
-                    color: "text-sky-500!",
+                    color: "text-sky-500",
+                    activeClass:
+                      "border border-sky-500/40 bg-sky-500/15 text-sky-600 dark:text-sky-300",
                     icon: ArrowLeftRight,
                   },
                   ...(!editingTx
@@ -442,7 +475,9 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                         {
                           key: "CROSS_BOOK_TRANSFER" as const,
                           label: "Pindah Buku",
-                          color: "text-amber-500!",
+                          color: "text-amber-500",
+                          activeClass:
+                            "border border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-300",
                           icon: ArrowLeftRight,
                         },
                       ]
@@ -456,21 +491,24 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                     key={tab.key}
                     type="button"
                     onClick={() => setValue("mode", tab.key)}
-                    className={`tabular-grid-cell inline-flex items-center justify-center gap-1.5 whitespace-nowrap px-2.5 py-2.5 text-xs ${tab.color} font-semibold focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
+                    className={`nav-touch-item inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-2.5 py-2 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
                       active
-                        ? "bg-muted!"
-                        : `text-muted-foreground hover:text-foreground`
+                        ? tab.activeClass
+                        : `border border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground`
                     }`}
                   >
-                    <IconComponent className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    <IconComponent
+                      className={`h-3.5 w-3.5 shrink-0 ${active ? "" : tab.color}`}
+                      aria-hidden="true"
+                    />
                     <span>{tab.label}</span>
                   </button>
                 );
               })}
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-1">
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+              <div className="space-y-1.5">
                 <label
                   htmlFor="tx-account-select"
                   className="block text-xs font-medium text-foreground"
@@ -483,7 +521,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                 <select
                   id="tx-account-select"
                   {...register("accountId")}
-                  className="flex h-9 w-full rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                  className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                 >
                   {activeAccounts.map((acc) => (
                     <option key={acc.id} value={acc.id}>
@@ -494,7 +532,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
               </div>
 
               {currentMode === "TRANSFER" && (
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label
                     htmlFor="tx-to-account-select"
                     className="block text-xs font-medium text-foreground"
@@ -504,7 +542,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                   <select
                     id="tx-to-account-select"
                     {...register("toAccountId")}
-                    className="flex h-9 w-full rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                    className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                   >
                     <option value="">-- Pilih Tujuan --</option>
                     {activeAccounts.map((acc) => (
@@ -541,7 +579,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                   </div>
 
                   {isQuickAddCategory ? (
-                    <div className="rounded-md border border-primary/40 bg-primary/5 p-2.5 space-y-2">
+                    <div className="rounded-2xl border border-primary/40 bg-primary/10 p-3 space-y-2">
                       <p className="text-[11px] font-medium text-foreground">
                         Tambah Kategori {currentMode === "EXPENSE" ? "Pengeluaran" : "Pemasukan"} Baru:
                       </p>
@@ -550,7 +588,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                           value={newCategoryName}
                           onChange={(e) => setNewCategoryName(e.target.value)}
                           placeholder="Contoh: Belanja Bulanan, Kopi, Hiburan..."
-                          className="h-8 text-xs bg-background"
+                          className="h-9 text-xs"
                           autoFocus
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
@@ -566,14 +604,14 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                           type="button"
                           onClick={() => void handleQuickAddCategory()}
                           disabled={isAddingCategory || !newCategoryName.trim()}
-                          className="nav-touch-item shrink-0 h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 disabled:opacity-50"
+                          className="nav-touch-item shrink-0 h-9 px-3.5 rounded-full bg-cta-surface text-cta-foreground text-xs font-semibold hover:opacity-90 disabled:opacity-50"
                         >
                           {isAddingCategory ? "..." : "Simpan"}
                         </button>
                         <button
                           type="button"
                           onClick={() => setIsQuickAddCategory(false)}
-                          className="nav-touch-item shrink-0 h-8 px-2.5 rounded-md border border-border bg-background text-muted-foreground text-xs hover:text-foreground"
+                          className="nav-touch-item shrink-0 h-9 px-3 rounded-full border border-border bg-black/[0.04] dark:bg-white/[0.06] text-muted-foreground text-xs hover:text-foreground"
                         >
                           Batal
                         </button>
@@ -591,7 +629,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                         }
                         setValue("categoryId", e.target.value);
                       }}
-                      className="flex h-9 w-full rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                      className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                     >
                       <option value="">-- Pilih Kategori --</option>
                       {filteredCategories.map((cat) => (
@@ -606,7 +644,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
               )}
 
               {currentMode === "CROSS_BOOK_TRANSFER" && (
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label
                     htmlFor="tx-to-book-select"
                     className="block text-xs font-medium text-foreground"
@@ -616,7 +654,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                   <select
                     id="tx-to-book-select"
                     {...register("toBookId")}
-                    className="flex h-9 w-full rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                    className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                   >
                     <option value="">-- Pilih Buku Tujuan --</option>
                     {otherBooks.map((b) => (
@@ -630,7 +668,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
             </div>
 
             {currentMode === "CROSS_BOOK_TRANSFER" && (
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <label
                   htmlFor="tx-to-book-account-select"
                   className="block text-xs font-medium text-foreground"
@@ -640,7 +678,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                 <select
                   id="tx-to-book-account-select"
                   {...register("toBookAccountId")}
-                  className="flex h-9 w-full rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                  className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                 >
                   <option value="">-- Pilih Rekening Buku Tujuan --</option>
                   {destBookAccounts.map((acc) => (
@@ -652,8 +690,8 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
               </div>
             )}
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-1">
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+              <div className="space-y-1.5">
                 <label
                   htmlFor="tx-amount-input"
                   className="block text-xs font-medium text-foreground"
@@ -676,7 +714,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                 />
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label
                     htmlFor="tx-date-input"
@@ -699,7 +737,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
               </div>
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <label
                 htmlFor="tx-note-input"
                 className="block text-xs font-medium text-foreground"
@@ -712,10 +750,29 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                 {...register("note")}
               />
             </div>
+
+            {/* Destructive Action inside Detail (Progressive Disclosure) */}
+            {editingTx && onDeleteTransaction && (
+              <div className="pt-2 border-t border-border/60">
+                <button
+                  type="button"
+                  data-testid="tx-detail-delete-button"
+                  onClick={() => {
+                    const target = editingTx;
+                    onClose();
+                    setTxPendingDelete(target);
+                  }}
+                  className="nav-touch-item flex w-full items-center justify-center gap-1.5 rounded-full border border-rose-500/25 bg-rose-500/10 py-2.5 text-xs font-medium text-rose-600 hover:bg-rose-500/15 active:scale-[0.99] dark:text-rose-400 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Hapus Transaksi Ini</span>
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Footer - Border divider mentok ke container */}
-          <div className="flex items-center justify-end gap-2 border-t border-border p-2.5 sm:px-6 bg-card/60 backdrop-blur-xs shrink-0">
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-2 border-t border-border/70 p-3 sm:px-5 shrink-0">
             <ButtonSlideToConfirm
               key={isOpen ? `open-${editingTx?.id ?? "new"}` : "closed"}
               disabled={isSubmitting}
@@ -731,6 +788,18 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
         </form>
       </DrawerContent>
     </Drawer>
+
+    <DeleteTransactionDrawer
+      tx={txPendingDelete}
+      isDeleting={isDeleting}
+      onClose={() => {
+        if (!isDeleting) {
+          setTxPendingDelete(null);
+        }
+      }}
+      onConfirmDelete={(txId) => void handleConfirmDelete(txId)}
+    />
+    </>
   );
 };
 

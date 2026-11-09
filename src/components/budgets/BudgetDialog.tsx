@@ -170,14 +170,14 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
       }}
       shouldScaleBackground={false}
     >
-      <DrawerContent className="fixed inset-x-0 bottom-0 z-50 flex max-h-[90vh] flex-col rounded-t-xl border-t border-border bg-card p-0 shadow-2xl focus:outline-none sm:mx-auto sm:max-w-lg">
+      <DrawerContent className="max-h-[90vh] p-0 sm:mx-auto sm:max-w-lg">
         <form onSubmit={handleDirectSubmit} className="flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-5">
+          <div className="flex items-center justify-between border-b border-border/70 px-5 py-3.5">
             <div>
               <DrawerTitle
                 id="budget-dialog-title"
-                className="text-sm font-semibold text-foreground"
+                className="text-sm font-bold text-foreground"
               >
                 {matchedExistingBudget
                   ? "Detail & Ubah Anggaran"
@@ -193,15 +193,15 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
               type="button"
               onClick={onClose}
               aria-label="Tutup"
-              className="nav-touch-item inline-flex h-7 w-7 items-center justify-center rounded border border-border hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
+              className="nav-touch-item inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-black/[0.04] dark:bg-white/[0.06] hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
 
           {/* Form Body */}
-          <div className="space-y-3.5 px-4 py-4 sm:px-5">
-            <div className="space-y-1">
+          <div className="space-y-4 px-5 py-4">
+            <div className="space-y-1.5">
               <label
                 htmlFor="budget-category-select"
                 className="text-xs font-medium text-foreground"
@@ -211,7 +211,7 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
               <select
                 id="budget-category-select"
                 {...register("categorySelection")}
-                className="flex h-8 w-full rounded border border-border bg-background px-2.5 text-xs text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 text-xs text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
               >
                 <option value="__ALL__">
                   Semua pengeluaran (Total Pengeluaran Bulanan)
@@ -224,7 +224,7 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
               </select>
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <label
                 htmlFor="budget-limit-input"
                 className="text-xs font-medium text-foreground"
@@ -247,7 +247,7 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
               />
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label
                   htmlFor="budget-threshold-input"
@@ -279,7 +279,7 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
                     onClose();
                     onInitiateDelete(target);
                   }}
-                  className="nav-touch-item flex w-full items-center justify-center gap-1.5 rounded border border-rose-500/20 bg-rose-500/5 py-2 text-xs font-medium text-rose-600 hover:bg-rose-500/10 active:scale-[0.99] dark:text-rose-400 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
+                  className="nav-touch-item flex w-full items-center justify-center gap-1.5 rounded-full border border-rose-500/25 bg-rose-500/10 py-2.5 text-xs font-medium text-rose-600 hover:bg-rose-500/15 active:scale-[0.99] dark:text-rose-400 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   <span>Hapus Anggaran Ini</span>
@@ -289,18 +289,18 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-2 border-t border-border px-4 py-2.5 sm:px-5">
+          <div className="flex items-center justify-end gap-2 border-t border-border/70 px-5 py-3">
             <button
               type="button"
               onClick={onClose}
-              className="nav-touch-item rounded border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+              className="nav-touch-item rounded-full border border-border bg-black/[0.04] dark:bg-white/[0.06] px-4 py-2 text-xs font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={isSaving}
-              className="nav-touch-item rounded border border-border bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 active:scale-[0.98] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+              className="nav-touch-item rounded-full bg-cta-surface px-5 py-2 text-xs font-semibold text-cta-foreground hover:opacity-90 active:scale-[0.98] disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
             >
               {isSaving
                 ? "Menyimpan..."

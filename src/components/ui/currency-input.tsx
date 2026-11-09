@@ -435,10 +435,11 @@ export const CurrencyInput = React.forwardRef<
             ref={drawerContentRef}
             hideOverlay
             data-calculator-drawer="true"
+            data-floating-surface="true"
             data-testid="currency-calculator-drawer"
             onOpenAutoFocus={(e) => e.preventDefault()}
             onCloseAutoFocus={(e) => e.preventDefault()}
-            className="pointer-events-auto z-[70] mx-auto w-full max-w-md border-x border-t border-border bg-card pb-4 shadow-2xl"
+            className="floating-surface pointer-events-auto z-[70] mx-auto w-full max-w-md border-x border-t border-border pb-4"
           >
             {/* Header & Live Calculation Display */}
             <div className="px-4 pt-2 pb-2.5">
@@ -451,7 +452,7 @@ export const CurrencyInput = React.forwardRef<
                 </DrawerDescription>
               </div>
 
-              <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-right">
+              <div className="rounded-2xl border border-border bg-muted px-3.5 py-2.5 text-right">
                 <div
                   data-testid="calc-expression-display"
                   className="min-h-[18px] truncate font-mono text-xs text-muted-foreground tabular-nums"
@@ -482,7 +483,7 @@ export const CurrencyInput = React.forwardRef<
                 data-testid="calc-key-clear"
                 aria-label="Reset kalkulator"
                 onClick={handleClearPress}
-                className="flex h-11 items-center justify-center rounded-md border border-border bg-muted/40 font-mono text-sm font-bold text-rose-500 transition-colors hover:bg-muted active:scale-[0.98]"
+                className="flex h-11 items-center justify-center rounded-xl border border-border bg-muted font-mono text-sm font-bold text-rose-400 transition-colors hover:bg-white/10 active:scale-[0.98]"
               >
                 C
               </button>
@@ -491,7 +492,7 @@ export const CurrencyInput = React.forwardRef<
                 data-testid="calc-key-backspace"
                 aria-label="Hapus digit"
                 onClick={handleBackspacePress}
-                className="flex h-11 items-center justify-center rounded-md border border-border bg-muted/40 font-mono text-sm font-semibold text-foreground transition-colors hover:bg-muted active:scale-[0.98]"
+                className="flex h-11 items-center justify-center rounded-xl border border-border bg-muted font-mono text-sm font-semibold text-foreground transition-colors hover:bg-white/10 active:scale-[0.98]"
               >
                 ⌫
               </button>
@@ -499,7 +500,7 @@ export const CurrencyInput = React.forwardRef<
                 type="button"
                 data-testid="calc-key-000"
                 onClick={() => handleDigitPress("000")}
-                className="flex h-11 items-center justify-center rounded-md border border-border bg-background font-mono text-xs font-semibold text-foreground transition-colors hover:bg-muted active:scale-[0.98]"
+                className="flex h-11 items-center justify-center rounded-xl border border-border bg-white/5 font-mono text-xs font-semibold text-foreground transition-colors hover:bg-white/10 active:scale-[0.98]"
               >
                 000
               </button>
@@ -508,7 +509,7 @@ export const CurrencyInput = React.forwardRef<
                 data-testid="calc-key-div"
                 aria-label="Bagi"
                 onClick={() => handleOperatorPress("/")}
-                className="flex h-11 items-center justify-center rounded-md border border-border bg-muted/60 font-mono text-base font-bold text-primary transition-colors hover:bg-muted active:scale-[0.98]"
+                className="flex h-11 items-center justify-center rounded-xl border border-border bg-primary/12 font-mono text-base font-bold text-foreground transition-colors hover:bg-primary/20 active:scale-[0.98]"
               >
                 ÷
               </button>
@@ -520,7 +521,7 @@ export const CurrencyInput = React.forwardRef<
                   type="button"
                   data-testid={`calc-key-${d}`}
                   onClick={() => handleDigitPress(d)}
-                  className="flex h-11 items-center justify-center rounded-md border border-border bg-background font-mono text-base font-semibold text-foreground transition-colors hover:bg-muted active:scale-[0.98]"
+                  className="flex h-11 items-center justify-center rounded-xl border border-border bg-white/5 font-mono text-base font-semibold text-foreground transition-colors hover:bg-white/10 active:scale-[0.98]"
                 >
                   {d}
                 </button>
@@ -530,7 +531,7 @@ export const CurrencyInput = React.forwardRef<
                 data-testid="calc-key-mul"
                 aria-label="Kali"
                 onClick={() => handleOperatorPress("*")}
-                className="flex h-11 items-center justify-center rounded-md border border-border bg-muted/60 font-mono text-base font-bold text-primary transition-colors hover:bg-muted active:scale-[0.98]"
+                className="flex h-11 items-center justify-center rounded-xl border border-border bg-primary/12 font-mono text-base font-bold text-foreground transition-colors hover:bg-primary/20 active:scale-[0.98]"
               >
                 ×
               </button>
@@ -542,7 +543,7 @@ export const CurrencyInput = React.forwardRef<
                   type="button"
                   data-testid={`calc-key-${d}`}
                   onClick={() => handleDigitPress(d)}
-                  className="flex h-11 items-center justify-center rounded-md border border-border bg-background font-mono text-base font-semibold text-foreground transition-colors hover:bg-muted active:scale-[0.98]"
+                  className="flex h-11 items-center justify-center rounded-xl border border-border bg-white/5 font-mono text-base font-semibold text-foreground transition-colors hover:bg-white/10 active:scale-[0.98]"
                 >
                   {d}
                 </button>
@@ -552,7 +553,7 @@ export const CurrencyInput = React.forwardRef<
                 data-testid="calc-key-sub"
                 aria-label="Kurang"
                 onClick={() => handleOperatorPress("-")}
-                className="flex h-11 items-center justify-center rounded-md border border-border bg-muted/60 font-mono text-base font-bold text-primary transition-colors hover:bg-muted active:scale-[0.98]"
+                className="flex h-11 items-center justify-center rounded-xl border border-border bg-primary/12 font-mono text-base font-bold text-foreground transition-colors hover:bg-primary/20 active:scale-[0.98]"
               >
                 −
               </button>
@@ -564,7 +565,7 @@ export const CurrencyInput = React.forwardRef<
                   type="button"
                   data-testid={`calc-key-${d}`}
                   onClick={() => handleDigitPress(d)}
-                  className="flex h-11 items-center justify-center rounded-md border border-border bg-background font-mono text-base font-semibold text-foreground transition-colors hover:bg-muted active:scale-[0.98]"
+                  className="flex h-11 items-center justify-center rounded-xl border border-border bg-white/5 font-mono text-base font-semibold text-foreground transition-colors hover:bg-white/10 active:scale-[0.98]"
                 >
                   {d}
                 </button>
@@ -574,7 +575,7 @@ export const CurrencyInput = React.forwardRef<
                 data-testid="calc-key-add"
                 aria-label="Tambah"
                 onClick={() => handleOperatorPress("+")}
-                className="flex h-11 items-center justify-center rounded-md border border-border bg-muted/60 font-mono text-base font-bold text-primary transition-colors hover:bg-muted active:scale-[0.98]"
+                className="flex h-11 items-center justify-center rounded-xl border border-border bg-primary/12 font-mono text-base font-bold text-foreground transition-colors hover:bg-primary/20 active:scale-[0.98]"
               >
                 +
               </button>
@@ -584,7 +585,7 @@ export const CurrencyInput = React.forwardRef<
                 type="button"
                 data-testid="calc-key-0"
                 onClick={() => handleDigitPress("0")}
-                className="flex h-11 items-center justify-center rounded-md border border-border bg-background font-mono text-base font-semibold text-foreground transition-colors hover:bg-muted active:scale-[0.98]"
+                className="flex h-11 items-center justify-center rounded-xl border border-border bg-white/5 font-mono text-base font-semibold text-foreground transition-colors hover:bg-white/10 active:scale-[0.98]"
               >
                 0
               </button>
@@ -593,7 +594,7 @@ export const CurrencyInput = React.forwardRef<
                 data-testid="calc-key-eq"
                 aria-label="Sama dengan"
                 onClick={handleEqualsPress}
-                className="flex h-11 items-center justify-center rounded-md border border-border bg-muted/60 font-mono text-base font-bold text-foreground transition-colors hover:bg-muted active:scale-[0.98]"
+                className="flex h-11 items-center justify-center rounded-xl border border-border bg-muted font-mono text-base font-bold text-foreground transition-colors hover:bg-white/10 active:scale-[0.98]"
               >
                 =
               </button>
@@ -602,7 +603,7 @@ export const CurrencyInput = React.forwardRef<
                 data-testid="calc-key-done"
                 aria-label="Selesai"
                 onClick={handleDonePress}
-                className="col-span-2 flex h-11 items-center justify-center gap-1.5 rounded-md border border-border bg-primary font-mono text-xs font-bold text-primary-foreground transition-opacity hover:opacity-90 active:scale-[0.98]"
+                className="col-span-2 flex h-11 items-center justify-center gap-1.5 rounded-xl bg-cta-surface font-mono text-xs font-bold text-cta-foreground transition-opacity hover:opacity-90 active:scale-[0.98]"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

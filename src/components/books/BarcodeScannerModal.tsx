@@ -500,12 +500,12 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
 
   return (
     <Drawer open={open} onOpenChange={(v) => !v && handleClose()} shouldScaleBackground={false}>
-      <DrawerContent className="fixed inset-x-0 bottom-0 z-50 flex h-[100dvh] max-h-[100dvh] w-full flex-col rounded-none border-t border-border bg-card p-0 shadow-2xl focus:outline-none sm:mx-auto sm:h-auto sm:max-h-[90vh] sm:max-w-xl sm:rounded-t-2xl">
+      <DrawerContent className="h-[92dvh] max-h-[92dvh] w-full p-0 sm:mx-auto sm:h-auto sm:max-h-[90vh] sm:max-w-xl">
         <div className="flex h-full sm:h-auto flex-1 flex-col overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6 shrink-0 bg-card">
+          <div className="flex items-center justify-between border-b border-border/70 px-5 py-3.5 shrink-0">
             <div>
-              <DrawerTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <DrawerTitle className="text-sm font-bold text-foreground flex items-center gap-2">
                 <ScanLine className="h-4 w-4 text-primary" />
                 <span>
                   {parsedPayload
@@ -523,7 +523,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
               type="button"
               onClick={handleClose}
               aria-label="Tutup"
-              className="nav-touch-item inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
+              className="nav-touch-item inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-black/[0.04] dark:bg-white/[0.06] text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
@@ -531,17 +531,17 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
 
           {/* Mode Switcher Tabs (Only when not in preview mode) */}
           {!parsedPayload && (
-            <div className="flex items-center border-b border-border bg-muted/30 px-4 py-1.5 sm:px-6 gap-1 shrink-0">
+            <div className="flex items-center gap-1.5 border-b border-border/60 bg-black/[0.02] dark:bg-white/[0.02] px-5 py-2.5 shrink-0 overflow-x-auto no-scrollbar">
               <button
                 type="button"
                 onClick={() => {
                   setMode("camera");
                   setScanErrorMessage(null);
                 }}
-                className={`nav-touch-item inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                className={`nav-touch-item inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium whitespace-nowrap transition-colors ${
                   mode === "camera"
-                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    ? "bg-cta-surface text-cta-foreground font-semibold"
+                    : "border border-border/70 bg-black/[0.03] dark:bg-white/[0.05] text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 <Camera className="h-3.5 w-3.5" />
@@ -554,10 +554,10 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
                   setMode("upload");
                   setScanErrorMessage(null);
                 }}
-                className={`nav-touch-item inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                className={`nav-touch-item inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium whitespace-nowrap transition-colors ${
                   mode === "upload"
-                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    ? "bg-cta-surface text-cta-foreground font-semibold"
+                    : "border border-border/70 bg-black/[0.03] dark:bg-white/[0.05] text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 <ImageIcon className="h-3.5 w-3.5" />
@@ -570,10 +570,10 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
                   setMode("manual");
                   setScanErrorMessage(null);
                 }}
-                className={`nav-touch-item inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                className={`nav-touch-item inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium whitespace-nowrap transition-colors ${
                   mode === "manual"
-                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    ? "bg-cta-surface text-cta-foreground font-semibold"
+                    : "border border-border/70 bg-black/[0.03] dark:bg-white/[0.05] text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 <FileText className="h-3.5 w-3.5" />
@@ -583,23 +583,23 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
           )}
 
           {/* Content Body */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 space-y-4">
+          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
             {parsedPayload ? (
               /* Preview Stage */
               <div className="space-y-4 animate-card-up">
                 <div
-                  className={`rounded-lg border p-4 transition-all ${
+                  className={`glass-card p-4 transition-all ${
                     isSuccessFeedback
-                      ? "border-emerald-500/70 bg-emerald-500/5 ring-2 ring-emerald-500/20"
-                      : "border-border bg-card"
+                      ? "border-emerald-500/70 bg-emerald-500/10"
+                      : ""
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <div
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${
                         isExpired
-                          ? "bg-rose-500/10 text-rose-500"
-                          : "bg-emerald-500/10 text-emerald-500"
+                          ? "bg-rose-500/15 text-rose-400"
+                          : "bg-emerald-500/15 text-emerald-400"
                       }`}
                     >
                       {isExpired ? (
@@ -614,9 +614,9 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
                           Undangan Buku Keuangan
                         </span>
                         <span
-                          className={`rounded px-1.5 py-0.2 font-mono text-[10px] font-semibold ${
+                          className={`rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold ${
                             isExpired
-                              ? "bg-rose-500/15 text-rose-500"
+                              ? "bg-rose-500/15 text-rose-400"
                               : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
                           }`}
                         >
@@ -632,14 +632,14 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
                     </div>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2 border-t border-border pt-3 text-xs">
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2.5 border-t border-border/70 pt-3 text-xs">
                     <div>
                       <span className="text-muted-foreground block text-[11px]">
                         Masa Berlaku Undangan:
                       </span>
                       <span
                         className={`font-semibold ${
-                          isExpired ? "text-rose-500" : "text-foreground"
+                          isExpired ? "text-rose-400" : "text-foreground"
                         }`}
                       >
                         {formatExpiryTime(parsedPayload.expires_at)}
@@ -659,7 +659,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
                 </div>
 
                 {isExpired ? (
-                  <div className="rounded border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400">
+                  <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-3.5 text-xs text-rose-600 dark:text-rose-300">
                     <p className="font-semibold">Masa Berlaku Habis</p>
                     <p className="mt-0.5 text-[11px]">
                       Kode ini telah melewati batas waktu 10 menit. Silakan minta
@@ -673,14 +673,14 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
                         setRawScannedText("");
                         setMode("camera");
                       }}
-                      className="mt-2.5 rounded border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted"
+                      className="mt-3 rounded-full border border-border bg-black/[0.04] dark:bg-white/[0.08] px-3.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted"
                     >
                       Scan Ulang Kode Lain
                     </button>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground">
+                  <div className="contrast-card p-3.5">
+                    <p className="text-xs text-white/80 leading-relaxed">
                       Setelah bergabung, catatan transaksi buku ini akan
                       disinkronkan secara peer-to-peer (P2P) antar perangkat.
                     </p>
@@ -693,7 +693,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
                 {/* Mode Camera */}
                 {mode === "camera" && (
                   <div className="space-y-3">
-                    <div className="relative mx-auto w-full max-w-sm overflow-hidden rounded-xl border border-border bg-black shadow-inner aspect-square flex items-center justify-center">
+                    <div className="relative mx-auto w-full max-w-sm overflow-hidden rounded-2xl border border-border bg-black aspect-square flex items-center justify-center">
                       {/* Viewfinder container element used by html5-qrcode */}
                       <div
                         id={containerId}
@@ -702,7 +702,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
 
                       {/* Reticle HUD overlay */}
                       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                        <div className="relative h-48 w-48 rounded-lg border-2 border-primary/70 shadow-lg">
+                        <div className="relative h-48 w-48 rounded-2xl border-2 border-primary/70">
                           {/* Corner markers */}
                           <div className="absolute -top-1 -left-1 h-4 w-4 border-t-2 border-l-2 border-primary" />
                           <div className="absolute -top-1 -right-1 h-4 w-4 border-t-2 border-r-2 border-primary" />
@@ -713,7 +713,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
 
                       {/* Loading or Switch controls */}
                       {isCameraStarting && (
-                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/70 text-white">
+                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/75 text-white">
                           <RefreshCw className="h-6 w-6 animate-spin text-primary" />
                           <p className="mt-2 text-xs font-medium">
                             Menghubungkan ke kamera...
@@ -727,7 +727,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
                           type="button"
                           onClick={() => void handleToggleCamera()}
                           title="Ganti Kamera"
-                          className="absolute top-3 right-3 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs hover:bg-black/80 transition-colors"
+                          className="absolute top-3 right-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-xs hover:bg-black/80 transition-colors"
                         >
                           <SwitchCamera className="h-4 w-4" />
                         </button>
@@ -741,24 +741,24 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
 
                     {/* Camera Error Message */}
                     {cameraError && (
-                      <div className="rounded border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
+                      <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-700 dark:text-amber-300">
                         <p className="font-semibold flex items-center gap-1.5">
                           <AlertTriangle className="h-4 w-4 shrink-0" />
                           <span>Kamera tidak dapat diakses</span>
                         </p>
                         <p className="mt-1 text-[11px]">{cameraError}</p>
-                        <div className="mt-2.5 flex items-center gap-2">
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
                           <button
                             type="button"
                             onClick={() => void startCamera()}
-                            className="rounded border border-border bg-background px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-muted"
+                            className="rounded-full border border-border bg-black/[0.04] dark:bg-white/[0.08] px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted"
                           >
                             Coba Akses Lagi
                           </button>
                           <button
                             type="button"
                             onClick={() => setMode("upload")}
-                            className="rounded border border-border bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground hover:opacity-90"
+                            className="rounded-full bg-cta-surface px-3 py-1.5 text-xs font-semibold text-cta-foreground hover:opacity-90"
                           >
                             Unggah Gambar QR
                           </button>
@@ -773,9 +773,9 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
                   <div className="space-y-3">
                     <label
                       htmlFor="barcode-file-input"
-                      className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/10 p-8 text-center cursor-pointer hover:bg-muted/30 hover:border-primary/50 transition-colors"
+                      className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-black/[0.02] dark:bg-white/[0.04] p-8 text-center cursor-pointer hover:bg-muted/40 hover:border-primary/50 transition-colors"
                     >
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
                         <Upload className="h-6 w-6" />
                       </div>
                       <p className="mt-3 text-xs font-semibold text-foreground">
@@ -811,13 +811,13 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
                         value={manualInput}
                         onChange={(e) => setManualInput(e.target.value)}
                         placeholder="Tempel link undangan (https://.../#/invite?d=...) atau token kode undangan..."
-                        className="mt-1.5 w-full rounded border border-input bg-background p-2.5 font-mono text-xs text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                        className="mt-1.5 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] p-3 font-mono text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
                       />
                     </div>
                     <button
                       type="button"
                       onClick={handleVerifyManual}
-                      className="nav-touch-item w-full rounded border border-border bg-primary py-2 text-xs font-semibold text-primary-foreground hover:opacity-90"
+                      className="nav-touch-item w-full rounded-full bg-cta-surface py-2.5 text-xs font-semibold text-cta-foreground hover:opacity-90"
                     >
                       Verifikasi & Periksa Kode
                     </button>
@@ -826,7 +826,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
 
                 {/* Scan Error Alert */}
                 {scanErrorMessage && (
-                  <div className="rounded border border-rose-500/30 bg-rose-500/10 p-2.5 text-xs text-rose-600 dark:text-rose-400 flex items-start gap-2 animate-card-up">
+                  <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-300 flex items-start gap-2 animate-card-up">
                     <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                     <span>{scanErrorMessage}</span>
                   </div>
@@ -837,7 +837,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
 
           {/* Footer Controls */}
           {parsedPayload && !isExpired && (
-            <div className="flex items-center justify-between gap-3 border-t border-border p-3 sm:px-6 bg-card/60 backdrop-blur-xs shrink-0">
+            <div className="flex items-center justify-between gap-3 border-t border-border/70 p-3.5 sm:px-5 shrink-0">
               <button
                 type="button"
                 onClick={() => {
@@ -846,7 +846,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
                   setMode("camera");
                 }}
                 disabled={isJoining}
-                className="nav-touch-item rounded border border-border bg-background px-3 py-2 text-xs font-medium text-foreground hover:bg-muted"
+                className="nav-touch-item rounded-full border border-border bg-black/[0.04] dark:bg-white/[0.06] px-4 py-2 text-xs font-medium text-foreground hover:bg-muted"
               >
                 Scan Ulang
               </button>

@@ -122,50 +122,48 @@ export const BackupPage: React.FC<BackupPageProps> = ({ bookId }) => {
   };
 
   return (
-    <div className="w-full space-y-3">
+    <div className="w-full space-y-4">
       {/* Header */}
-      <div className="tabular-grid-container grid grid-cols-1">
-        <div className="tabular-grid-cell flex flex-wrap items-center justify-between gap-2.5 px-3 py-3">
-          <div className="flex items-center gap-3">
-            <Link
-              to="/books/$bookId/settings"
-              params={{ bookId }}
-              className="nav-touch-item inline-flex h-6 shrink-0 items-center rounded border border-border bg-background px-2 font-mono text-[10px] font-semibold text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-            >
-              ← Pengaturan
-            </Link>
-            <div>
-              <h1 className="text-xs font-semibold tracking-tight text-foreground sm:text-sm">
-                Cadangan Buku Terenkripsi
-              </h1>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">
-                Simpan salinan seluruh transaksi dan akun Anda ke dalam satu file cadangan aman yang dilindungi kata sandi.
-              </p>
-            </div>
+      <div className="glass-card flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:px-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <Link
+            to="/books/$bookId/settings"
+            params={{ bookId }}
+            className="nav-touch-item inline-flex h-8 shrink-0 items-center rounded-full border border-border bg-black/[0.04] px-3 font-mono text-[11px] font-semibold text-foreground transition-colors hover:bg-muted dark:bg-white/[0.06] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+          >
+            ← Pengaturan
+          </Link>
+          <div className="min-w-0">
+            <h1 className="text-sm font-bold tracking-tight text-foreground sm:text-base">
+              Cadangan Buku Terenkripsi
+            </h1>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Simpan salinan seluruh transaksi dan akun Anda ke dalam satu file cadangan aman yang dilindungi kata sandi.
+            </p>
           </div>
+        </div>
 
-          <div className="flex items-center gap-2">
-            <Link
-              to="/books/$bookId/sync"
-              params={{ bookId }}
-              className="nav-touch-item inline-flex items-center gap-1.5 rounded border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-            >
-              <RefreshCw className="h-3 w-3" />
-              <span>Buka Sinkronisasi P2P →</span>
-            </Link>
-          </div>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/books/$bookId/sync"
+            params={{ bookId }}
+            className="nav-touch-item inline-flex h-8 items-center gap-1.5 rounded-full border border-border bg-black/[0.04] px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted dark:bg-white/[0.06] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+          >
+            <RefreshCw className="h-3.5 w-3.5 text-primary" />
+            <span>Buka Sinkronisasi P2P →</span>
+          </Link>
         </div>
       </div>
 
       {/* Backup Content Form */}
       <form
         onSubmit={(e) => e.preventDefault()}
-        className="tabular-grid-container grid grid-cols-1 lg:grid-cols-12"
+        className="grid grid-cols-1 gap-4 lg:grid-cols-12"
       >
         {/* Information & Security Callout */}
-        <div className="tabular-grid-cell space-y-3 px-4 py-4 lg:col-span-5">
+        <div className="glass-card space-y-4 p-4 sm:p-5 lg:col-span-5">
           <div className="flex items-start gap-3">
-            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-primary">
+            <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border bg-black/[0.04] text-primary dark:bg-white/[0.06]">
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
@@ -178,21 +176,21 @@ export const BackupPage: React.FC<BackupPageProps> = ({ bookId }) => {
             </div>
           </div>
 
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-[11px] text-foreground">
-            <p className="font-semibold text-amber-600 dark:text-amber-400">
+          <div className="contrast-card p-3.5 text-[11px] text-white/85">
+            <p className="font-semibold text-amber-300">
               Penting Diingat:
             </p>
-            <p className="mt-1 leading-relaxed text-muted-foreground">
-              Tidak ada fitur "Lupa Kata Sandi" pada sistem terdesentralisasi. Pastikan Anda mengingat atau mencatat kata sandi yang digunakan untuk cadangan ini.
+            <p className="mt-1 leading-relaxed text-white/75">
+              Tidak ada fitur &ldquo;Lupa Kata Sandi&rdquo; pada sistem terdesentralisasi. Pastikan Anda mengingat atau mencatat kata sandi yang digunakan untuk cadangan ini.
             </p>
           </div>
 
           {lastExportedPath && (
-            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 text-[11px]">
+            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-[11px]">
               <p className="font-semibold text-emerald-600 dark:text-emerald-400">
                 Ekspor Terakhir Berhasil:
               </p>
-              <p className="mt-1 font-mono text-[10px] text-foreground break-all">
+              <p className="mt-1 break-all font-mono text-[10px] text-foreground">
                 {lastExportedPath}
               </p>
             </div>
@@ -200,11 +198,11 @@ export const BackupPage: React.FC<BackupPageProps> = ({ bookId }) => {
         </div>
 
         {/* Form Fields */}
-        <div className="tabular-grid-cell space-y-3.5 px-4 py-4 lg:col-span-7">
+        <div className="glass-card space-y-4 p-4 sm:p-5 lg:col-span-7">
           <div>
             <label
               htmlFor="export-dest-path"
-              className="mb-1 block text-xs font-medium text-foreground"
+              className="mb-1.5 block text-xs font-medium text-foreground"
             >
               Lokasi & Nama File Cadangan
             </label>
@@ -219,7 +217,7 @@ export const BackupPage: React.FC<BackupPageProps> = ({ bookId }) => {
               }
               className="font-mono text-xs"
             />
-            <p className="mt-1 text-[10px] text-muted-foreground">
+            <p className="mt-1.5 text-[10px] text-muted-foreground">
               {isDesktop ? (
                 <>
                   Format file dianjurkan menggunakan ekstensi{" "}
@@ -234,11 +232,11 @@ export const BackupPage: React.FC<BackupPageProps> = ({ bookId }) => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
             <div>
               <label
                 htmlFor="export-passphrase"
-                className="mb-1 block text-xs font-medium text-foreground"
+                className="mb-1.5 block text-xs font-medium text-foreground"
               >
                 Kata Sandi Cadangan
               </label>
@@ -255,7 +253,7 @@ export const BackupPage: React.FC<BackupPageProps> = ({ bookId }) => {
             <div>
               <label
                 htmlFor="export-confirm-passphrase"
-                className="mb-1 block text-xs font-medium text-foreground"
+                className="mb-1.5 block text-xs font-medium text-foreground"
               >
                 Ulangi Kata Sandi
               </label>
@@ -270,7 +268,7 @@ export const BackupPage: React.FC<BackupPageProps> = ({ bookId }) => {
             </div>
           </div>
 
-          <div className="flex items-center justify-end pt-3">
+          <div className="flex items-center justify-end pt-2">
             <ButtonSlideToConfirm
               disabled={exportBackupMutation.isPending}
               label="Geser untuk Ekspor Cadangan"
@@ -284,10 +282,10 @@ export const BackupPage: React.FC<BackupPageProps> = ({ bookId }) => {
       </form>
 
       {!isDesktop && (
-        <div className="tabular-grid-container grid grid-cols-1 lg:grid-cols-12">
-          <div className="tabular-grid-cell space-y-2 px-4 py-4 lg:col-span-5">
+        <div className="glass-card grid grid-cols-1 gap-4 p-4 sm:p-5 lg:grid-cols-12">
+          <div className="space-y-2 lg:col-span-5">
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-primary">
+              <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border bg-black/[0.04] text-primary dark:bg-white/[0.06]">
                 <Upload className="h-5 w-5" />
               </div>
               <div>
@@ -303,12 +301,12 @@ export const BackupPage: React.FC<BackupPageProps> = ({ bookId }) => {
             </div>
           </div>
 
-          <div className="tabular-grid-cell space-y-3.5 px-4 py-4 lg:col-span-7">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="space-y-3.5 lg:col-span-7">
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
               <div>
                 <label
                   htmlFor="import-backup-file"
-                  className="mb-1 block text-xs font-medium text-foreground"
+                  className="mb-1.5 block text-xs font-medium text-foreground"
                 >
                   Pilih File Cadangan (.fmm.enc)
                 </label>
@@ -326,7 +324,7 @@ export const BackupPage: React.FC<BackupPageProps> = ({ bookId }) => {
               <div>
                 <label
                   htmlFor="import-backup-passphrase"
-                  className="mb-1 block text-xs font-medium text-foreground"
+                  className="mb-1.5 block text-xs font-medium text-foreground"
                 >
                   Kata Sandi Pemulihan
                 </label>
@@ -350,7 +348,7 @@ export const BackupPage: React.FC<BackupPageProps> = ({ bookId }) => {
                   importBackupMutation.isPending
                 }
                 onClick={() => importBackupMutation.mutate()}
-                className="nav-touch-item inline-flex h-8 items-center justify-center rounded border border-border bg-primary px-3 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:pointer-events-none disabled:opacity-50"
+                className="nav-touch-item inline-flex h-9 items-center justify-center rounded-full bg-cta-surface px-5 text-xs font-semibold text-cta-foreground transition-opacity hover:opacity-90 disabled:pointer-events-none disabled:opacity-50"
               >
                 {importBackupMutation.isPending
                   ? "Memulihkan Cadangan..."

@@ -85,8 +85,9 @@ const DrawerContent = React.forwardRef<
           }
           onFocusOutside?.(e);
         }}
+        data-floating-surface="true"
         className={cn(
-          "fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] max-h-[85vh] flex-col rounded-t-2xl border-t border-border bg-card shadow-2xl focus:outline-none overscroll-contain",
+          "floating-surface fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] max-h-[85vh] flex-col rounded-t-3xl border-t border-border text-foreground focus:outline-none overscroll-contain",
           className
         )}
         {...props}

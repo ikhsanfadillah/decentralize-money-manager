@@ -405,8 +405,12 @@ export const tauriApi = {
   renameBook: (bookId: string, newName: string): Promise<BookMetadata> =>
     callCommand("rename_book", { bookId, newName }),
 
-  deleteBook: (bookId: string): Promise<void> =>
-    callCommand("delete_book", { bookId }),
+  deleteBook: async (bookId: string): Promise<void> => {
+    await callCommand<void>("delete_book", { bookId });
+    if (!isTauriRuntime()) {
+      getWebSyncEngine().stopTopicSyncForBook(bookId);
+    }
+  },
 
   openBook: async (bookId: string): Promise<BookMetadata> => {
     const meta = await callCommand<BookMetadata>("open_book", { bookId });
