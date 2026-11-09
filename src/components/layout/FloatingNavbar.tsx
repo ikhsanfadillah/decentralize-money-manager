@@ -134,7 +134,7 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
       {/* Floating Capsule Dock with Centered Neutral CTA FAB (+) */}
       <nav
         aria-label="Navigasi Buku"
-        className="floating-navbar-pill pointer-events-auto grid w-full grid-cols-5 items-center gap-1 rounded-full border border-border bg-dock px-2.5 py-1.5 backdrop-blur-xl"
+        className="floating-navbar-pill pointer-events-auto grid w-full grid-cols-5 items-center gap-1 rounded-full border border-border/70 bg-background/75 backdrop-blur-md px-2.5 py-1.5"
       >
         {leftNavItems.map(renderNavItem)}
 
