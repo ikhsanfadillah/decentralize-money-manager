@@ -2,6 +2,7 @@ import * as React from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeftRight, Plus, Trash2, TrendingDown, TrendingUp, X } from "lucide-react";
+import { SmartMagicInputBar } from "../ai/SmartMagicInputBar";
 import { DeleteTransactionDrawer } from "./DeleteTransactionDrawer";
 import { CurrencyInput } from "../ui/currency-input";
 import { Input } from "../ui/input";
@@ -442,6 +443,61 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
 
           {/* Scrollable Content Body */}
           <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4 space-y-4">
+            {!editingTx && (
+              <SmartMagicInputBar
+                bookId={bookId}
+                accounts={accounts}
+                categories={categories}
+                onApplySingleDraft={(draft) => {
+                  setValue("mode", draft.tx_type);
+                  setValue("accountId", draft.account_id);
+                  if (draft.tx_type === "TRANSFER" && draft.to_account_id) {
+                    setValue("toAccountId", draft.to_account_id);
+                  }
+                  if (draft.category_id) {
+                    setValue("categoryId", draft.category_id);
+                  }
+                  setValue("rawAmount", Math.abs(draft.amount));
+                  setValue("txDate", draft.tx_date);
+                  setValue("note", draft.note);
+                }}
+                onSaveMultipleDrafts={async (inputs) => {
+                  for (const inp of inputs) {
+                    await onAddTransaction(inp);
+                  }
+                  pushToast(`${inputs.length} transaksi berhasil disimpan`, {
+                    variant: "success",
+                  });
+                  onClose();
+                }}
+                onQuickCreateCategory={async (name, kind) => {
+                  try {
+                    const created = await tauriApi.upsertCategory(bookId, {
+                      id: null,
+                      name,
+                      kind,
+                    });
+                    await queryClient.invalidateQueries({
+                      queryKey: bookQueryKeys.categories(bookId),
+                    });
+                    setValue("categoryId", created.id);
+                    pushToast(`Kategori "${name}" berhasil dibuat`, {
+                      variant: "success",
+                    });
+                    return created.id;
+                  } catch (err: unknown) {
+                    pushToast(
+                      err instanceof Error
+                        ? err.message
+                        : "Gagal membuat kategori",
+                      { variant: "error" }
+                    );
+                    return null;
+                  }
+                }}
+              />
+            )}
+
             {/* Capsule Transaction Mode Selector */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 rounded-2xl border border-border bg-black/[0.04] dark:bg-white/[0.04] p-1.5">
               {(

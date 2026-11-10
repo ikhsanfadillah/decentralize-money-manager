@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BookLayout } from "../BookLayout";
 import { tauriApi, type BookMetadata } from "../../../lib/tauri-api";
-import { useUiStore } from "../../../stores/ui-store";
 
 const mockUseLocation = vi.fn(() => ({ pathname: "/books/book-123/dashboard" }));
 
@@ -51,7 +50,6 @@ describe("BookLayout Top Navbar", () => {
     vi.restoreAllMocks();
     window.scrollTo = vi.fn();
     mockUseLocation.mockReturnValue({ pathname: `/books/${bookId}/dashboard` });
-    useUiStore.getState().setBalanceHidden(false);
 
     vi.spyOn(tauriApi, "listAccounts").mockResolvedValue([]);
     vi.spyOn(tauriApi, "listCategories").mockResolvedValue([]);
@@ -74,7 +72,7 @@ describe("BookLayout Top Navbar", () => {
     );
   };
 
-  it("renders Money Manager brand title, subtitle, privacy toggle, and settings link", () => {
+  it("renders Money Manager brand title, subtitle, AI Co-Pilot toggle, and settings link", () => {
     renderLayout();
 
     expect(screen.getByText("Money Manager")).toBeInTheDocument();
@@ -83,9 +81,8 @@ describe("BookLayout Top Navbar", () => {
     const brandLink = screen.getByText("Money Manager").closest("a");
     expect(brandLink).toHaveAttribute("href", `/books/${bookId}/dashboard`);
 
-    const privacyBtn = screen.getByTestId("navbar-privacy-toggle");
-    expect(privacyBtn).toBeInTheDocument();
-    expect(privacyBtn).toHaveAttribute("aria-label", "Sembunyikan saldo");
+    const aiCopilotBtn = screen.getByTestId("navbar-ai-copilot-toggle");
+    expect(aiCopilotBtn).toBeInTheDocument();
 
     const settingsLink = screen.getByTestId("navbar-settings-link");
     expect(settingsLink).toBeInTheDocument();
@@ -93,7 +90,7 @@ describe("BookLayout Top Navbar", () => {
     expect(settingsLink).not.toHaveAttribute("aria-current");
   });
 
-  it("does not render relocated book switcher, back button, sync pill, or theme toggle in top navbar", () => {
+  it("does not render relocated book switcher, back button, sync pill, theme toggle, or privacy toggle in top navbar", () => {
     renderLayout();
 
     expect(
@@ -106,21 +103,9 @@ describe("BookLayout Top Navbar", () => {
     expect(
       screen.queryByLabelText(/Ganti ke mode/i)
     ).not.toBeInTheDocument();
-  });
-
-  it("toggles balance privacy state when navbar eye button is clicked", () => {
-    renderLayout();
-
-    const privacyBtn = screen.getByTestId("navbar-privacy-toggle");
-    expect(useUiStore.getState().isBalanceHidden).toBe(false);
-
-    fireEvent.click(privacyBtn);
-    expect(useUiStore.getState().isBalanceHidden).toBe(true);
-    expect(privacyBtn).toHaveAttribute("aria-label", "Tampilkan saldo");
-
-    fireEvent.click(privacyBtn);
-    expect(useUiStore.getState().isBalanceHidden).toBe(false);
-    expect(privacyBtn).toHaveAttribute("aria-label", "Sembunyikan saldo");
+    expect(
+      screen.queryByTestId("navbar-privacy-toggle")
+    ).not.toBeInTheDocument();
   });
 
   it("marks settings link as current page when on settings route", () => {

@@ -31,6 +31,7 @@ import {
 } from "../ui/drawer";
 import { BudgetDialog } from "./BudgetDialog";
 import { BudgetProgressBar } from "./BudgetProgressBar";
+import { AiReportInsightCard } from "../ai/AiReportInsightCard";
 
 export interface BudgetsPageProps {
   bookId: string;
@@ -51,6 +52,7 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ bookId }) => {
   const {
     budgetProgressQuery,
     categoriesQuery,
+    monthlyReportQuery,
     upsertBudgetMutation,
     deleteBudgetMutation,
   } = useBookFinance({
@@ -193,6 +195,16 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ bookId }) => {
           </button>
         </div>
       </div>
+
+      {/* AI Budget Advisor Card */}
+      <AiReportInsightCard
+        bookId={bookId}
+        month={selectedMonth}
+        report={monthlyReportQuery.data}
+        budgets={budgets}
+        categories={categories}
+        onApplyBudget={(input) => upsertBudgetMutation.mutateAsync(input)}
+      />
 
       {/* 2. Budget Glass Cards List */}
       {budgetProgressQuery.isPending ? (

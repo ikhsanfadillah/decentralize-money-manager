@@ -20,6 +20,7 @@ import {
 import { formatDateReadable, formatDateShort } from "../../lib/date";
 import { Calendar, ChevronLeft, ChevronRight, Download, TrendingDown, TrendingUp } from "lucide-react";
 import { pushToast } from "../../lib/toast";
+import { AiReportInsightCard } from "../ai/AiReportInsightCard";
 import { InteractiveCashFlowChart } from "./InteractiveCashFlowChart";
 import { InteractiveCategoryChart } from "./InteractiveCategoryChart";
 
@@ -40,7 +41,12 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
 
   useBookSyncEvents(bookId);
 
-  const { monthlyReportQuery } = useBookFinance({
+  const {
+    monthlyReportQuery,
+    budgetProgressQuery,
+    categoriesQuery,
+    upsertBudgetMutation,
+  } = useBookFinance({
     bookId,
     budgetMonth: selectedMonth,
   });
@@ -459,6 +465,17 @@ export const MonthlyReportPage: React.FC<MonthlyReportPageProps> = ({
             </div>
           )}
       </div>
+
+      {/* AI Financial Advisor & Budget Insight Card */}
+      <AiReportInsightCard
+        bookId={bookId}
+        month={selectedMonth}
+        report={report}
+        budgets={budgetProgressQuery.data ?? []}
+        categories={categoriesQuery.data ?? []}
+        isBusinessBook={isBusinessBook}
+        onApplyBudget={(input) => upsertBudgetMutation.mutateAsync(input)}
+      />
 
       {/* Interactive Chart 1: Daily Cash Flow & Cumulative Burn Rate */}
       <InteractiveCashFlowChart

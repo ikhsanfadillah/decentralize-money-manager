@@ -1,10 +1,13 @@
 import * as React from "react";
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
-import { Eye, EyeOff, Settings } from "lucide-react";
+import { Settings, Sparkles } from "lucide-react";
 import { type BookMetadata } from "../../lib/tauri-api";
 import { useBookFinance, useBookSyncEvents } from "../../hooks/useBookFinance";
+import { useAiStore } from "../../stores/ai-store";
 import { useUiStore } from "../../stores/ui-store";
+import { AiCopilotDrawer } from "../ai/AiCopilotDrawer";
+import { AiByokConfigDrawer } from "../settings/AiByokSettingsSection";
 import { TransactionDialog } from "../transactions/TransactionDialog";
 import { FloatingNavbar } from "./FloatingNavbar";
 
@@ -13,7 +16,10 @@ export interface BookLayoutProps {
   bookMeta: BookMetadata;
 }
 
-export const BookLayout: React.FC<BookLayoutProps> = ({ bookId }) => {
+export const BookLayout: React.FC<BookLayoutProps> = ({
+  bookId,
+  bookMeta,
+}) => {
   const location = useLocation();
   useBookSyncEvents(bookId);
 
@@ -29,8 +35,8 @@ export const BookLayout: React.FC<BookLayoutProps> = ({ bookId }) => {
   const setNewTransactionModalOpen = useUiStore(
     (s) => s.setNewTransactionModalOpen
   );
-  const isBalanceHidden = useUiStore((s) => s.isBalanceHidden);
-  const toggleBalanceHidden = useUiStore((s) => s.toggleBalanceHidden);
+  const isCopilotOpen = useAiStore((s) => s.isCopilotOpen);
+  const setCopilotOpen = useAiStore((s) => s.setCopilotOpen);
 
   const {
     accountsQuery,
@@ -88,25 +94,24 @@ export const BookLayout: React.FC<BookLayoutProps> = ({ bookId }) => {
             </div>
           </Link>
 
-          {/* Right: Privacy Eye Toggle + Settings Action */}
+          {/* Right: AI Co-Pilot + Settings Action */}
           <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
-              data-testid="navbar-privacy-toggle"
-              onClick={toggleBalanceHidden}
-              aria-label={
-                isBalanceHidden ? "Tampilkan saldo" : "Sembunyikan saldo"
-              }
-              title={
-                isBalanceHidden ? "Tampilkan nominal" : "Sembunyikan nominal"
-              }
-              className="nav-touch-item inline-flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-black/[0.05] text-foreground transition-colors hover:bg-black/[0.1] dark:bg-white/[0.09] dark:hover:bg-white/[0.15] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+              data-testid="navbar-ai-copilot-toggle"
+              onClick={() => setCopilotOpen(true)}
+              aria-label="Buka Financial Co-Pilot AI"
+              title="Financial Co-Pilot AI (BYOK)"
+              className={`nav-touch-item inline-flex h-10 items-center gap-1.5 rounded-full border px-3 transition-colors focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
+                isCopilotOpen
+                  ? "border-transparent bg-cta-surface text-cta-foreground"
+                  : "border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
+              }`}
             >
-              {isBalanceHidden ? (
-                <EyeOff className="h-[18px] w-[18px]" aria-hidden="true" />
-              ) : (
-                <Eye className="h-[18px] w-[18px]" aria-hidden="true" />
-              )}
+              <Sparkles className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className="hidden text-xs font-bold sm:inline">
+                AI Co-Pilot
+              </span>
             </button>
 
             <Link
@@ -183,6 +188,9 @@ export const BookLayout: React.FC<BookLayoutProps> = ({ bookId }) => {
           transferBetweenBooksMutation.mutateAsync(input)
         }
       />
+
+      <AiCopilotDrawer bookId={bookId} bookName={bookMeta?.name} />
+      <AiByokConfigDrawer />
     </div>
   );
 };

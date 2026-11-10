@@ -34,6 +34,7 @@ import {
   type ThemeMode,
 } from "../../lib/utils";
 import { pushToast } from "../../lib/toast";
+import { AiByokSettingsSection } from "./AiByokSettingsSection";
 import { Input } from "../ui/input";
 import {
   Drawer,
@@ -503,6 +504,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ bookId }) => {
           </button>
         </div>
       </div>
+
+      {/* Grup AI Agent (BYOK) */}
+      <AiByokSettingsSection />
 
       {/* Grup Tampilan: Dark Mode Toggle */}
       <div className="space-y-2">
