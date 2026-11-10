@@ -928,7 +928,7 @@ export const BookSetupWizardDrawer: React.FC<BookSetupWizardDrawerProps> = ({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 font-mono text-[10px] font-semibold text-primary">
+                  <span className="inline-flex items-center rounded-full border border-zinc-900 bg-zinc-900 px-2.5 py-0.5 font-mono text-[10px] font-semibold text-white dark:border-zinc-600 dark:bg-zinc-800 dark:text-white">
                     Langkah {step} / 4
                   </span>
                   {bookName.trim() && step > 1 && (
@@ -983,11 +983,11 @@ export const BookSetupWizardDrawer: React.FC<BookSetupWizardDrawerProps> = ({
                     data-testid={`wizard-step-tab-${s}`}
                     className={`flex items-center justify-center gap-1.5 rounded-xl border px-2 py-1.5 text-[11px] font-semibold transition-all focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
                       isActive
-                        ? "border-primary/50 bg-primary/15 text-foreground shadow-2xs"
+                        ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
                         : isDone
                           ? "border-emerald-500/35 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                           : "border-border/70 bg-black/[0.02] text-muted-foreground dark:bg-white/[0.03]"
-                    } ${canJump ? "cursor-pointer hover:bg-muted/70" : "cursor-default opacity-70"}`}
+                    } ${canJump ? "cursor-pointer hover:opacity-90" : "cursor-default opacity-70"}`}
                   >
                     {isDone ? (
                       <Check className="h-3 w-3 shrink-0" aria-hidden="true" />
@@ -1048,8 +1048,8 @@ export const BookSetupWizardDrawer: React.FC<BookSetupWizardDrawerProps> = ({
                           onClick={() => setBookName(suggestion)}
                           className={`nav-touch-item inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
                             isSelected
-                              ? "border-primary/50 bg-primary/15 font-semibold text-foreground"
-                              : "border-border bg-black/[0.03] text-muted-foreground hover:bg-muted hover:text-foreground dark:bg-white/[0.04]"
+                              ? "border-zinc-900 bg-zinc-900 font-semibold text-white dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+                              : "border-border bg-white/80 text-muted-foreground hover:bg-muted hover:text-foreground dark:bg-white/[0.04]"
                           }`}
                         >
                           <span>{suggestion}</span>
@@ -1066,7 +1066,7 @@ export const BookSetupWizardDrawer: React.FC<BookSetupWizardDrawerProps> = ({
                   </p>
                   <ul className="mt-2 space-y-1.5 text-[11px] text-muted-foreground">
                     <li className="flex items-center gap-2">
-                      <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/15 font-mono text-[10px] font-bold text-primary">
+                      <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-zinc-900 font-mono text-[10px] font-bold text-white dark:bg-zinc-800 dark:text-white">
                         1
                       </span>
                       <span>
@@ -1074,7 +1074,7 @@ export const BookSetupWizardDrawer: React.FC<BookSetupWizardDrawerProps> = ({
                       </span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/15 font-mono text-[10px] font-bold text-primary">
+                      <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-zinc-900 font-mono text-[10px] font-bold text-white dark:bg-zinc-800 dark:text-white">
                         2
                       </span>
                       <span>
@@ -1082,7 +1082,7 @@ export const BookSetupWizardDrawer: React.FC<BookSetupWizardDrawerProps> = ({
                       </span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/15 font-mono text-[10px] font-bold text-primary">
+                      <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-zinc-900 font-mono text-[10px] font-bold text-white dark:bg-zinc-800 dark:text-white">
                         3
                       </span>
                       <span>
@@ -1105,7 +1105,7 @@ export const BookSetupWizardDrawer: React.FC<BookSetupWizardDrawerProps> = ({
                   </span>
                   <span
                     data-testid="selected-accounts-count"
-                    className="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-primary"
+                    className="rounded-full border border-zinc-900 bg-zinc-900 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-white dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
                   >
                     {selectedAccounts.length} dipilih
                   </span>
@@ -1139,15 +1139,15 @@ export const BookSetupWizardDrawer: React.FC<BookSetupWizardDrawerProps> = ({
                               onClick={() => toggleAccountKey(item.key)}
                               className={`nav-touch-item flex items-center justify-between gap-2 rounded-2xl border px-3 py-2.5 text-left text-xs transition-all focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
                                 isSelected
-                                  ? "border-primary/50 bg-primary/12 font-semibold text-foreground shadow-2xs"
-                                  : "border-border bg-black/[0.02] text-muted-foreground hover:bg-muted/60 hover:text-foreground dark:bg-white/[0.04]"
+                                  ? "border-zinc-900 bg-zinc-900 font-semibold text-white dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+                                  : "border-border bg-white/80 text-muted-foreground hover:bg-muted/60 hover:text-foreground dark:bg-white/[0.04]"
                               }`}
                             >
                               <div className="flex min-w-0 items-center gap-2">
                                 <div
                                   className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border transition-colors ${
                                     isSelected
-                                      ? "border-primary/40 bg-primary/20 text-primary"
+                                      ? "border-white/15 bg-white/15 text-white"
                                       : "border-border bg-black/[0.04] text-muted-foreground dark:bg-white/[0.06]"
                                   }`}
                                 >
@@ -1158,7 +1158,7 @@ export const BookSetupWizardDrawer: React.FC<BookSetupWizardDrawerProps> = ({
                               <div
                                 className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border transition-colors ${
                                   isSelected
-                                    ? "border-primary bg-primary text-primary-foreground"
+                                    ? "border-white bg-white text-zinc-900"
                                     : "border-border/80 bg-transparent"
                                 }`}
                               >
@@ -1228,7 +1228,7 @@ export const BookSetupWizardDrawer: React.FC<BookSetupWizardDrawerProps> = ({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span
                     data-testid="selected-categories-count"
-                    className="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-primary"
+                    className="rounded-full border border-zinc-900 bg-zinc-900 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-white dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
                   >
                     {selectedCategories.length} kategori dipilih
                   </span>
@@ -1305,10 +1305,8 @@ export const BookSetupWizardDrawer: React.FC<BookSetupWizardDrawerProps> = ({
                               onClick={() => toggleCategoryKey(cat.key)}
                               className={`nav-touch-item flex items-center justify-between gap-2 rounded-2xl border px-3 py-2.5 text-left text-xs transition-all focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
                                 isSelected
-                                  ? isExpense
-                                    ? "border-rose-500/45 bg-rose-500/12 font-semibold text-foreground shadow-2xs"
-                                    : "border-emerald-500/45 bg-emerald-500/12 font-semibold text-foreground shadow-2xs"
-                                  : "border-border bg-black/[0.02] text-muted-foreground hover:bg-muted/60 hover:text-foreground dark:bg-white/[0.04]"
+                                  ? "border-zinc-900 bg-zinc-900 font-semibold text-white dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+                                  : "border-border bg-white/80 text-muted-foreground hover:bg-muted/60 hover:text-foreground dark:bg-white/[0.04]"
                               }`}
                             >
                               <div className="flex min-w-0 items-center gap-2">
@@ -1316,8 +1314,8 @@ export const BookSetupWizardDrawer: React.FC<BookSetupWizardDrawerProps> = ({
                                   className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border transition-colors ${
                                     isSelected
                                       ? isExpense
-                                        ? "border-rose-500/40 bg-rose-500/20 text-rose-500 dark:text-rose-400"
-                                        : "border-emerald-500/40 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                                        ? "border-white/15 bg-white/15 text-rose-400"
+                                        : "border-white/15 bg-white/15 text-emerald-400"
                                       : "border-border bg-black/[0.04] text-muted-foreground dark:bg-white/[0.06]"
                                   }`}
                                 >
@@ -1328,9 +1326,7 @@ export const BookSetupWizardDrawer: React.FC<BookSetupWizardDrawerProps> = ({
                               <div
                                 className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border transition-colors ${
                                   isSelected
-                                    ? isExpense
-                                      ? "border-rose-500 bg-rose-500 text-white"
-                                      : "border-emerald-500 bg-emerald-500 text-white"
+                                    ? "border-white bg-white text-zinc-900"
                                     : "border-border/80 bg-transparent"
                                 }`}
                               >
@@ -1431,8 +1427,8 @@ export const BookSetupWizardDrawer: React.FC<BookSetupWizardDrawerProps> = ({
                           onClick={() => handleSelectTotalBudgetPill(pill.value)}
                           className={`nav-touch-item rounded-xl border py-2 px-2 font-mono text-xs font-semibold transition-all ${
                             isSelected
-                              ? "border-primary bg-primary/15 text-primary shadow-2xs"
-                              : "border-border bg-black/[0.03] text-muted-foreground hover:bg-muted hover:text-foreground dark:bg-white/[0.04]"
+                              ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+                              : "border-border bg-white/80 text-muted-foreground hover:bg-muted hover:text-foreground dark:bg-white/[0.04]"
                           }`}
                         >
                           {pill.label}
@@ -1546,7 +1542,7 @@ export const BookSetupWizardDrawer: React.FC<BookSetupWizardDrawerProps> = ({
                                       <div
                                         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${
                                           isIncluded
-                                            ? "border-primary bg-primary text-primary-foreground"
+                                            ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
                                             : "border-border bg-transparent"
                                         }`}
                                       >
