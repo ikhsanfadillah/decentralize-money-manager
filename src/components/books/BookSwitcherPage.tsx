@@ -12,23 +12,12 @@ import {
   RefreshCw,
   ScanLine,
   Sun,
-  X,
 } from "lucide-react";
-import { tauriApi, type BookKind } from "../../lib/tauri-api";
+import { tauriApi, type BookKind, type BookMetadata } from "../../lib/tauri-api";
 import { bookQueryKeys } from "../../hooks/useBookFinance";
 import { useSmoothReady } from "../../hooks/useSmoothReady";
-import { Input } from "../ui/input";
-import {
-  ButtonSlideToConfirm,
-  type SlideConfirmResult,
-} from "../ui/ButtonSlideToConfirm";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerTitle,
-} from "../ui/drawer";
 import { BarcodeScannerModal } from "./BarcodeScannerModal";
+import { BookSetupWizardDrawer } from "./BookSetupWizardDrawer";
 import { pushToast } from "../../lib/toast";
 import {
   formatDateShort,
@@ -49,7 +38,6 @@ export const BookSwitcherPage: React.FC = () => {
   const [theme, setTheme] = React.useState<ThemeMode>(() => getStoredTheme());
   const [isCreateBookDrawerOpen, setIsCreateBookDrawerOpen] =
     React.useState(false);
-  const [newBookName, setNewBookName] = React.useState("");
   const [isScanModalOpen, setIsScanModalOpen] = React.useState(false);
 
   const booksQuery = useQuery({
@@ -57,17 +45,16 @@ export const BookSwitcherPage: React.FC = () => {
     queryFn: () => tauriApi.listBooks(),
   });
 
-  const createBookMutation = useMutation({
-    mutationFn: ({ name, kind }: { name: string; kind: BookKind }) =>
-      tauriApi.createBook(name, kind),
-    onSuccess: (created) => {
-      void queryClient.invalidateQueries({ queryKey: bookQueryKeys.allBooks });
-      setNewBookName("");
-      pushToast(`Buku "${created.name}" berhasil dibuat`, {
-        variant: "success",
-      });
-    },
-  });
+  const handleBookCreated = (created: BookMetadata) => {
+    void queryClient.invalidateQueries({ queryKey: bookQueryKeys.allBooks });
+    pushToast(`Buku "${created.name}" berhasil dibuat`, {
+      variant: "success",
+    });
+    void navigate({
+      to: "/books/$bookId/dashboard",
+      params: { bookId: created.id },
+    });
+  };
 
   const joinBookMutation = useMutation({
     mutationFn: ({ qr, kind }: { qr: string; kind: BookKind }) =>
@@ -88,25 +75,6 @@ export const BookSwitcherPage: React.FC = () => {
     const next: ThemeMode = theme === "dark" ? "light" : "dark";
     setTheme(next);
     applyTheme(next);
-  };
-
-  const handleSlideConfirmCreateBook = async (): Promise<SlideConfirmResult> => {
-    const trimmed = newBookName.trim();
-    if (!trimmed) {
-      pushToast("Nama buku tidak boleh kosong", { variant: "warning" });
-      return { ok: false, message: "Nama buku tidak boleh kosong" };
-    }
-    try {
-      await createBookMutation.mutateAsync({
-        name: trimmed,
-        kind: "PERSONAL",
-      });
-      return { ok: true };
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Gagal membuat buku";
-      pushToast("Gagal membuat buku", { description: msg, variant: "error" });
-      return { ok: false, message: "Gagal Membuat Buku" };
-    }
   };
 
   const shouldReduceMotion = useReducedMotion();
@@ -385,80 +353,12 @@ export const BookSwitcherPage: React.FC = () => {
         )}
       </motion.main>
 
-      {/* Create New Book Drawer with ButtonSlideToConfirm */}
-      <Drawer
+      {/* 4-Step Create Book & Setup Wizard Drawer */}
+      <BookSetupWizardDrawer
         open={isCreateBookDrawerOpen}
         onOpenChange={setIsCreateBookDrawerOpen}
-        shouldScaleBackground={false}
-      >
-        <DrawerContent className="fixed inset-x-0 bottom-0 z-50 flex h-[100dvh] max-h-[100dvh] w-full flex-col rounded-none border-t border-border p-0 focus:outline-none sm:mx-auto sm:h-auto sm:max-h-[90vh] sm:max-w-xl sm:rounded-t-3xl">
-          <form
-            onSubmit={(e) => e.preventDefault()}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-              }
-            }}
-            className="flex h-full flex-1 flex-col overflow-hidden sm:h-auto"
-          >
-            <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-4">
-              <div>
-                <DrawerTitle
-                  id="create-book-drawer-title"
-                  className="text-sm font-bold text-foreground"
-                >
-                  Buat Buku Keuangan Baru
-                </DrawerTitle>
-                <DrawerDescription className="mt-0.5 text-xs text-muted-foreground">
-                  Pisahkan catatan uang harian, tabungan keluarga, atau usaha
-                  Anda.
-                </DrawerDescription>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsCreateBookDrawerOpen(false)}
-                aria-label="Tutup"
-                className="nav-touch-item inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-muted text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="new-book-name"
-                  className="block text-xs font-medium text-foreground"
-                >
-                  Nama Buku Keuangan
-                </label>
-                <Input
-                  id="new-book-name"
-                  value={newBookName}
-                  onChange={(e) => setNewBookName(e.target.value)}
-                  placeholder="Contoh: Uang Rumah Tangga, Tabungan, Usaha..."
-                  autoFocus
-                />
-              </div>
-            </div>
-
-            <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border p-3.5 sm:px-5">
-              <ButtonSlideToConfirm
-                key={isCreateBookDrawerOpen ? "book-open" : "book-closed"}
-                disabled={createBookMutation.isPending}
-                label="Geser untuk Buat Buku"
-                readyLabel="Lepas untuk Buat Buku"
-                loadingLabel="Menyiapkan Buku..."
-                successLabel="Buku Berhasil Dibuat!"
-                onConfirm={handleSlideConfirmCreateBook}
-                onSuccessComplete={() => {
-                  setIsCreateBookDrawerOpen(false);
-                }}
-              />
-            </div>
-          </form>
-        </DrawerContent>
-      </Drawer>
+        onBookCreated={handleBookCreated}
+      />
 
       {/* Barcode & QR Scanner Modal */}
       <BarcodeScannerModal
