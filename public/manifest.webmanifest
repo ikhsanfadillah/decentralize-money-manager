@@ -1,6 +1,6 @@
 {
   "name": "Decentralize Money Manager",
-  "short_name": "MoneyManager",
+  "short_name": "Money Manager",
   "description": "Aplikasi pencatatan keuangan pribadi peer-to-peer terdesentralisasi",
   "start_url": "/",
   "scope": "/",
