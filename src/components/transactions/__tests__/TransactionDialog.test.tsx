@@ -406,7 +406,7 @@ describe("TransactionDialog (Detail & Delete Action)", () => {
       screen.getByText(/Belum ada rekening aktif di buku ini/i)
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Belum ada kategori\. Pilih Kategori Baru/i)
+      screen.getByText(/Belum ada kategori\. Pilih/i)
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("toggle-ai-magic-mode-btn"));

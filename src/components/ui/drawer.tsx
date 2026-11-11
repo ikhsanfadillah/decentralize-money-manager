@@ -15,6 +15,19 @@ const Drawer = ({
 );
 Drawer.displayName = "Drawer";
 
+const DrawerNested = ({
+  shouldScaleBackground = false,
+  repositionInputs = true,
+  ...props
+}: React.ComponentProps<typeof DrawerPrimitive.NestedRoot>) => (
+  <DrawerPrimitive.NestedRoot
+    shouldScaleBackground={shouldScaleBackground}
+    repositionInputs={repositionInputs}
+    {...props}
+  />
+);
+DrawerNested.displayName = "DrawerNested";
+
 const DrawerTrigger = DrawerPrimitive.Trigger;
 const DrawerPortal = DrawerPrimitive.Portal;
 const DrawerClose = DrawerPrimitive.Close;
@@ -157,6 +170,7 @@ DrawerDescription.displayName = DrawerPrimitive.Description.displayName;
 
 export {
   Drawer,
+  DrawerNested,
   DrawerPortal,
   DrawerOverlay,
   DrawerTrigger,

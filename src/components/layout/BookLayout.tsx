@@ -102,10 +102,10 @@ export const BookLayout: React.FC<BookLayoutProps> = ({
               onClick={() => setCopilotOpen(true)}
               aria-label="Buka Financial Co-Pilot AI"
               title="Financial Co-Pilot AI (BYOK)"
-              className={`nav-touch-item inline-flex h-10 items-center gap-1.5 rounded-full border px-3 transition-colors focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
+              className={`nav-touch-item inline-flex h-10 items-center gap-1.5 rounded-full px-3 transition-colors focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
                 isCopilotOpen
                   ? "border-transparent bg-cta-surface text-cta-foreground"
-                  : "border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
+                  : "text-primary hover:bg-primary/20"
               }`}
             >
               <Sparkles className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -121,10 +121,10 @@ export const BookLayout: React.FC<BookLayoutProps> = ({
               aria-label="Pengaturan"
               aria-current={isSettingsActive ? "page" : undefined}
               title="Pengaturan"
-              className={`nav-touch-item inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
+              className={`nav-touch-item inline-flex h-10 w-10 items-center justify-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
                 isSettingsActive
                   ? "border-transparent bg-cta-surface text-cta-foreground"
-                  : "border-border/60 bg-black/[0.05] text-foreground hover:bg-black/[0.1] dark:bg-white/[0.09] dark:hover:bg-white/[0.15]"
+                  : " text-foreground hover:bg-black/[0.1] dark:bg-white/[0.09] dark:hover:bg-white/[0.15]"
               }`}
             >
               <Settings className="h-[18px] w-[18px]" aria-hidden="true" />

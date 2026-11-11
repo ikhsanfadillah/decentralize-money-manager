@@ -20,6 +20,7 @@ import {
   type SmartMagicInputBarHandle,
 } from "../ai/SmartMagicInputBar";
 import { DeleteTransactionDrawer } from "./DeleteTransactionDrawer";
+import { QuickAddCategoryDrawer } from "./QuickAddCategoryDrawer";
 import { CurrencyInput } from "../ui/currency-input";
 import { Input } from "../ui/input";
 import {
@@ -124,8 +125,8 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
   } | null>(null);
   const [isCreatingAiCategory, setIsCreatingAiCategory] = React.useState(false);
   const [isQuickAddCategory, setIsQuickAddCategory] = React.useState(false);
-  const [newCategoryName, setNewCategoryName] = React.useState("");
   const [isAddingCategory, setIsAddingCategory] = React.useState(false);
+  const pendingCreatedCategoryIdRef = React.useRef<string | null>(null);
 
   const {
     control,
@@ -186,7 +187,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
   React.useEffect(() => {
     if (!isOpen) {
       setIsQuickAddCategory(false);
-      setNewCategoryName("");
+      pendingCreatedCategoryIdRef.current = null;
       return;
     }
     setTxPendingDelete(null);
@@ -221,6 +222,15 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
   }, [isOpen, editingTx, activeAccounts, categories, otherBooks, reset]);
 
   React.useEffect(() => {
+    const pendingId = pendingCreatedCategoryIdRef.current;
+    if (pendingId) {
+      if (filteredCategories.some((c) => c.id === pendingId)) {
+        setValue("categoryId", pendingId);
+        pendingCreatedCategoryIdRef.current = null;
+      }
+      return;
+    }
+
     if (!editingTx && filteredCategories.length > 0) {
       const currentCat = watch("categoryId");
       const stillValid = filteredCategories.some((c) => c.id === currentCat);
@@ -240,8 +250,8 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
     }
   }, [currentMode, destBookAccounts, setValue, watch]);
 
-  const handleQuickAddCategory = async () => {
-    const trimmed = newCategoryName.trim();
+  const handleQuickAddCategory = async (rawName: string) => {
+    const trimmed = rawName.trim();
     if (!trimmed) {
       pushToast("Nama kategori tidak boleh kosong", { variant: "warning" });
       return;
@@ -255,16 +265,18 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
         name: trimmed,
         kind: targetKind,
       });
+      const resolvedId = created.canonical_id ?? created.id;
+      pendingCreatedCategoryIdRef.current = resolvedId;
       await queryClient.invalidateQueries({
         queryKey: bookQueryKeys.categories(bookId),
       });
-      setValue("categoryId", created.id);
+      setValue("categoryId", resolvedId);
       setIsQuickAddCategory(false);
-      setNewCategoryName("");
-      pushToast(`Kategori "${trimmed}" berhasil ditambahkan`, {
+      pushToast(`Kategori "${created.name}" berhasil ditambahkan`, {
         variant: "success",
       });
     } catch (err: unknown) {
+      pendingCreatedCategoryIdRef.current = null;
       const msg =
         err instanceof Error ? err.message : "Gagal menambahkan kategori";
       pushToast("Gagal menambahkan kategori", {
@@ -745,7 +757,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                         id="tx-account-select"
                         disabled={activeAccounts.length === 0}
                         {...register("accountId")}
-                        className="flex h-11 w-full rounded-xl border border-control-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
+                        className="flex h-11 w-full rounded-xl bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
                       >
                         {activeAccounts.length === 0 ? (
                           <option value="">-- Belum ada rekening aktif --</option>
@@ -795,100 +807,38 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
 
                     {(currentMode === "EXPENSE" || currentMode === "INCOME") && (
                       <div className="space-y-1.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <label
-                            htmlFor="tx-category-select"
-                            className="block text-xs font-medium text-foreground"
-                          >
-                            Kategori ({currentMode === "EXPENSE" ? "Pengeluaran" : "Pemasukan"})
-                          </label>
-                          {!isQuickAddCategory && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsQuickAddCategory(true);
-                                setNewCategoryName("");
-                              }}
-                              className="nav-touch-item inline-flex min-h-11 items-center gap-1 rounded-xl px-2.5 text-xs font-semibold text-primary hover:bg-muted hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                            >
-                              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-                              <span>Kategori Baru</span>
-                            </button>
-                          )}
-                        </div>
+                        <label
+                          htmlFor="tx-category-select"
+                          className="block text-xs font-medium text-foreground"
+                        >
+                          Kategori ({currentMode === "EXPENSE" ? "Pengeluaran" : "Pemasukan"})
+                        </label>
 
-                        {isQuickAddCategory ? (
-                          <div className="rounded-xl border border-control-border bg-primary/10 p-3 space-y-2">
-                            <label
-                              htmlFor="tx-new-category-input"
-                              className="block text-xs font-medium text-foreground"
-                            >
-                              Tambah Kategori {currentMode === "EXPENSE" ? "Pengeluaran" : "Pemasukan"} Baru:
-                            </label>
-                            <div className="flex items-center gap-2">
-                              <Input
-                                id="tx-new-category-input"
-                                value={newCategoryName}
-                                onChange={(e) => setNewCategoryName(e.target.value)}
-                                placeholder="Contoh: Belanja Bulanan, Kopi, Hiburan..."
-                                className="h-11 text-xs"
-                                autoFocus
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    e.preventDefault();
-                                    void handleQuickAddCategory();
-                                  } else if (e.key === "Escape") {
-                                    e.preventDefault();
-                                    setIsQuickAddCategory(false);
-                                  }
-                                }}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => void handleQuickAddCategory()}
-                                disabled={isAddingCategory || !newCategoryName.trim()}
-                                className="nav-touch-item shrink-0 h-11 px-3.5 rounded-xl bg-cta-surface text-cta-foreground text-xs font-semibold hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:border disabled:border-control-border disabled:bg-zinc-200 disabled:text-zinc-700 dark:disabled:bg-zinc-800 dark:disabled:text-zinc-300"
-                              >
-                                {isAddingCategory ? "..." : "Simpan"}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setIsQuickAddCategory(false)}
-                                className="nav-touch-item shrink-0 h-11 px-3 rounded-full bg-black/[0.04] dark:bg-white/[0.06] text-foreground text-xs font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                              >
-                                Batal
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <select
-                              id="tx-category-select"
-                              {...register("categoryId")}
-                              onChange={(e) => {
-                                if (e.target.value === "__NEW__") {
-                                  setIsQuickAddCategory(true);
-                                  setNewCategoryName("");
-                                  return;
-                                }
-                                setValue("categoryId", e.target.value);
-                              }}
-                              className="flex h-11 w-full rounded-xl border border-control-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                            >
-                              <option value="">-- Pilih Kategori --</option>
-                              {filteredCategories.map((cat) => (
-                                <option key={cat.id} value={cat.id}>
-                                  {cat.name}
-                                </option>
-                              ))}
-                              <option value="__NEW__">+ Tambah Kategori Baru...</option>
-                            </select>
-                            {filteredCategories.length === 0 && (
-                              <p className="text-xs text-muted-foreground">
-                                Belum ada kategori. Pilih Kategori Baru untuk membuat.
-                              </p>
-                            )}
-                          </>
+                        <select
+                          id="tx-category-select"
+                          {...register("categoryId")}
+                          onChange={(e) => {
+                            if (e.target.value === "__NEW__") {
+                              e.target.value = getValues("categoryId") || "";
+                              setIsQuickAddCategory(true);
+                              return;
+                            }
+                            setValue("categoryId", e.target.value);
+                          }}
+                          className="flex h-11 w-full rounded-xl bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                        >
+                          <option value="">-- Pilih Kategori --</option>
+                          {filteredCategories.map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                          <option value="__NEW__">+ Tambah Kategori Baru...</option>
+                        </select>
+                        {filteredCategories.length === 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            Belum ada kategori. Pilih &ldquo;+ Tambah Kategori Baru...&rdquo; di atas untuk membuat.
+                          </p>
                         )}
                       </div>
                     )}
@@ -905,7 +855,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                           id="tx-to-book-select"
                           disabled={booksQuery.isLoading || otherBooks.length === 0}
                           {...register("toBookId")}
-                          className="flex h-11 w-full rounded-xl border border-control-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
+                          className="flex h-11 w-full rounded-xl bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
                         >
                           <option value="">
                             {booksQuery.isLoading
@@ -948,7 +898,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                           destBookAccounts.length === 0
                         }
                         {...register("toBookAccountId")}
-                        className="flex h-11 w-full rounded-xl border border-control-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
+                        className="flex h-11 w-full rounded-xl bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
                       >
                         <option value="">
                           {destBookAccountsQuery.isLoading
@@ -1192,6 +1142,19 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
 
           </div>
         </form>
+
+        <QuickAddCategoryDrawer
+          isOpen={isQuickAddCategory}
+          kind={currentMode === "INCOME" ? "INCOME" : "EXPENSE"}
+          existingCategories={filteredCategories}
+          isSaving={isAddingCategory}
+          onClose={() => setIsQuickAddCategory(false)}
+          onCreateCategory={handleQuickAddCategory}
+          onSelectExistingCategory={(categoryId) => {
+            setValue("categoryId", categoryId);
+            setIsQuickAddCategory(false);
+          }}
+        />
       </DrawerContent>
     </Drawer>
 
