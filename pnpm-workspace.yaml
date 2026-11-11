@@ -2,6 +2,10 @@ allowBuilds:
   esbuild: true
 minimumReleaseAgeExclude:
   - lucide-react@1.65.0
-  - framer-motion@14.8.0
-  - motion-dom@14.8.0
-  - motion@14.8.0
+  - framer-motion@14.8.0 || 14.12.0
+  - motion-dom@14.8.0 || 14.12.0
+  - motion@14.8.0 || 14.12.0
+  - '@ai-sdk/google@4.0.117'
+  - '@ai-sdk/openai@4.0.114'
+  - '@ai-sdk/provider-utils@5.0.79'
+  - '@testing-library/user-event@14.6.9'

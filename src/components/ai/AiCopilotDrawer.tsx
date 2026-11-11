@@ -8,29 +8,15 @@ import {
   Send,
   Settings2,
   Sparkles,
-  Target,
   Trash2,
   User,
   X,
 } from "lucide-react";
-import { useBookFinance } from "../../hooks/useBookFinance";
 import {
-  compressImageFileToDataUrl,
-  parseDataUrlToImagePayload,
-  runCopilotAgentTurn,
-} from "../../lib/ai-provider";
-import { formatDateShort } from "../../lib/date";
-import { pushToast } from "../../lib/toast";
-import { formatRupiah, formatSignedRupiah } from "../../lib/utils";
-import {
-  resolveActiveAiConfig,
-  toAddTransactionInputFromDraft,
-  toUpsertBudgetInputFromDraft,
-  useAiStore,
-  type CopilotChatMessage,
-  type ProposedBudgetDraft,
-  type ProposedTransactionDraft,
-} from "../../stores/ai-store";
+  useAiConfig,
+  useAiCopilot,
+  useAiImageAttachment,
+} from "../../hooks/ai";
 import {
   Drawer,
   DrawerContent,
@@ -38,13 +24,15 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "../ui/drawer";
+import {
+  ProposedBudgetCard,
+  ProposedTransactionCard,
+} from "./AiProposedDraftCards";
 
 export interface AiCopilotDrawerProps {
   bookId: string;
   bookName?: string;
 }
-
-const EMPTY_CHAT_MESSAGES: CopilotChatMessage[] = [];
 
 const STARTER_PROMPTS = [
   "Analisis pengeluaran bulan ini & apa kategori terbesarnya?",
@@ -57,40 +45,44 @@ export const AiCopilotDrawer: React.FC<AiCopilotDrawerProps> = ({
   bookId,
   bookName,
 }) => {
-  const isOpen = useAiStore((s) => s.isCopilotOpen);
-  const setOpen = useAiStore((s) => s.setCopilotOpen);
-  const byok = useAiStore((s) => s.byok);
-  const setByokSettingsDrawerOpen = useAiStore(
-    (s) => s.setByokSettingsDrawerOpen
-  );
-  const messages = useAiStore(
-    (s) => s.chatByBook[bookId] ?? EMPTY_CHAT_MESSAGES
-  );
-  const appendChatMessage = useAiStore((s) => s.appendChatMessage);
-  const updateChatMessage = useAiStore((s) => s.updateChatMessage);
-  const clearBookChat = useAiStore((s) => s.clearBookChat);
-
-  const activeConfig = React.useMemo(() => resolveActiveAiConfig(byok), [byok]);
+  const {
+    activeConfig,
+    isCopilotOpen: isOpen,
+    setCopilotOpen: setOpen,
+    openByokSettings,
+    ensureConfigured,
+  } = useAiConfig();
 
   const {
-    addTransactionMutation,
-    upsertCategoryMutation,
-    upsertBudgetMutation,
-  } = useBookFinance({ bookId, enableTransactionsQuery: false });
+    attachedImage,
+    fileInputRef,
+    handleFileChange,
+    clearAttachment,
+    openFilePicker,
+  } = useAiImageAttachment({
+    invalidTypeTitle: "Pilih file gambar",
+    invalidTypeDescription: "Format yang didukung: JPG, PNG, WEBP, HEIC.",
+    errorTitle: "Gagal memproses gambar",
+  });
+
+  const {
+    messages,
+    isSending,
+    liveToolStep,
+    applyingItemId,
+    clearBookChat,
+    sendTurn,
+    handleApplyProposedTx,
+    handleApplyProposedBudget,
+  } = useAiCopilot({
+    bookId,
+    bookName,
+    activeConfig,
+    ensureConfigured,
+  });
 
   const [input, setInput] = React.useState("");
-  const [attachedImage, setAttachedImage] = React.useState<{
-    dataUrl: string;
-    fileName: string;
-  } | null>(null);
-  const [isSending, setIsSending] = React.useState(false);
-  const [liveToolStep, setLiveToolStep] = React.useState<string | null>(null);
-  const [applyingItemId, setApplyingItemId] = React.useState<string | null>(
-    null
-  );
-
   const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
-  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   React.useEffect(() => {
     if (scrollContainerRef.current) {
@@ -99,188 +91,18 @@ export const AiCopilotDrawer: React.FC<AiCopilotDrawerProps> = ({
     }
   }, [messages.length, isSending, liveToolStep]);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      pushToast("Pilih file gambar", {
-        description: "Format yang didukung: JPG, PNG, WEBP, HEIC.",
-        variant: "warning",
-      });
-      return;
-    }
-    try {
-      const dataUrl = await compressImageFileToDataUrl(file);
-      setAttachedImage({
-        dataUrl,
-        fileName: file.name,
-      });
-    } catch (err: unknown) {
-      pushToast("Gagal memproses gambar", {
-        description:
-          err instanceof Error ? err.message : "Coba pilih file lain.",
-        variant: "error",
-      });
-    } finally {
-      e.target.value = "";
-    }
-  };
-
-  const handleSend = async (customPrompt?: string) => {
-    const text = (customPrompt ?? input).trim();
-    const currentAttachment = attachedImage;
-    if ((!text && !currentAttachment) || isSending) return;
-
-    if (!activeConfig.isConfigured) {
-      pushToast("Atur API Key AI terlebih dahulu", {
-        description:
-          "Masukkan API Key pribadi Anda (Gemini, OpenAI, Groq, atau OpenRouter).",
-        variant: "warning",
-      });
-      setByokSettingsDrawerOpen(true);
-      return;
-    }
-
-    if (!customPrompt) {
-      setInput("");
-      setAttachedImage(null);
-    }
-
-    const userMsgId = `user-${Date.now()}`;
-    appendChatMessage(bookId, {
-      id: userMsgId,
-      role: "user",
-      content:
-        text ||
-        (currentAttachment
-          ? "Tolong periksa dan ekstrak data transaksi dari foto struk ini."
-          : ""),
-      imageAttachment: currentAttachment ?? undefined,
-      createdAt: new Date().toISOString(),
+  const handleSend = (customPrompt?: string) => {
+    const text = customPrompt ?? input;
+    void sendTurn({
+      text,
+      attachment: customPrompt ? null : attachedImage,
+      onInputConsumed: () => {
+        if (!customPrompt) {
+          setInput("");
+          clearAttachment();
+        }
+      },
     });
-
-    setIsSending(true);
-    setLiveToolStep("Menghubungi AI Agent...");
-
-    try {
-      const imagePayload = currentAttachment
-        ? parseDataUrlToImagePayload(currentAttachment.dataUrl)
-        : null;
-
-      const turnResult = await runCopilotAgentTurn({
-        config: activeConfig,
-        bookId,
-        bookName,
-        history: messages,
-        userMessage: text,
-        image: imagePayload,
-        onToolStep: (step) => setLiveToolStep(step),
-      });
-
-      appendChatMessage(bookId, {
-        id: `assistant-${Date.now()}`,
-        role: "assistant",
-        content: turnResult.replyText,
-        createdAt: new Date().toISOString(),
-        toolSteps: turnResult.toolSteps,
-        proposedTransactions: turnResult.proposedTransactions,
-        proposedBudgets: turnResult.proposedBudgets,
-      });
-    } catch (err: unknown) {
-      const msg =
-        err instanceof Error
-          ? err.message
-          : "Terjadi kendala saat menghubungi AI Agent.";
-      appendChatMessage(bookId, {
-        id: `assistant-err-${Date.now()}`,
-        role: "assistant",
-        content: msg,
-        createdAt: new Date().toISOString(),
-        isError: true,
-      });
-    } finally {
-      setIsSending(false);
-      setLiveToolStep(null);
-    }
-  };
-
-  const handleApplyProposedTx = async (
-    msgId: string,
-    draft: ProposedTransactionDraft
-  ) => {
-    if (draft.applied || applyingItemId) return;
-    setApplyingItemId(draft.id);
-    try {
-      let categoryIdToUse = draft.category_id ?? null;
-      if (
-        draft.suggested_new_category &&
-        (draft.tx_type === "EXPENSE" || draft.tx_type === "INCOME")
-      ) {
-        const createdCat = await upsertCategoryMutation.mutateAsync({
-          id: null,
-          name: draft.suggested_new_category,
-          kind: draft.tx_type,
-        });
-        categoryIdToUse = createdCat.id;
-      }
-
-      const txInput = toAddTransactionInputFromDraft({
-        ...draft,
-        category_id: categoryIdToUse,
-      });
-      await addTransactionMutation.mutateAsync(txInput);
-
-      updateChatMessage(bookId, msgId, (prev) => ({
-        ...prev,
-        proposedTransactions: (prev.proposedTransactions ?? []).map((t) =>
-          t.id === draft.id ? { ...t, applied: true } : t
-        ),
-      }));
-
-      pushToast("Transaksi berhasil dicatat", {
-        description: `${draft.note} (${formatSignedRupiah(draft.amount, draft.tx_type)})`,
-        variant: "success",
-      });
-    } catch (err: unknown) {
-      pushToast(
-        err instanceof Error ? err.message : "Gagal mencatat transaksi",
-        { variant: "error" }
-      );
-    } finally {
-      setApplyingItemId(null);
-    }
-  };
-
-  const handleApplyProposedBudget = async (
-    msgId: string,
-    draft: ProposedBudgetDraft
-  ) => {
-    if (draft.applied || applyingItemId) return;
-    setApplyingItemId(draft.id);
-    try {
-      await upsertBudgetMutation.mutateAsync(
-        toUpsertBudgetInputFromDraft(draft)
-      );
-
-      updateChatMessage(bookId, msgId, (prev) => ({
-        ...prev,
-        proposedBudgets: (prev.proposedBudgets ?? []).map((b) =>
-          b.id === draft.id ? { ...b, applied: true } : b
-        ),
-      }));
-
-      pushToast(`Anggaran "${draft.category_name}" berhasil diterapkan`, {
-        description: `Batas bulanan diatur ke ${formatRupiah(draft.amount_limit)}.`,
-        variant: "success",
-      });
-    } catch (err: unknown) {
-      pushToast(
-        err instanceof Error ? err.message : "Gagal menyimpan anggaran",
-        { variant: "error" }
-      );
-    } finally {
-      setApplyingItemId(null);
-    }
   };
 
   return (
@@ -323,7 +145,7 @@ export const AiCopilotDrawer: React.FC<AiCopilotDrawerProps> = ({
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               type="button"
-              onClick={() => setByokSettingsDrawerOpen(true)}
+              onClick={openByokSettings}
               title="Pengaturan API Key (BYOK)"
               aria-label="Pengaturan API Key"
               className="nav-touch-item inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-black/[0.04] text-muted-foreground hover:bg-muted hover:text-foreground dark:bg-white/[0.06]"
@@ -367,7 +189,7 @@ export const AiCopilotDrawer: React.FC<AiCopilotDrawerProps> = ({
             <button
               type="button"
               data-testid="copilot-setup-key-btn"
-              onClick={() => setByokSettingsDrawerOpen(true)}
+              onClick={openByokSettings}
               className="nav-touch-item shrink-0 inline-flex items-center gap-1.5 rounded-full bg-cta-surface px-3 py-1.5 text-xs font-bold text-cta-foreground"
             >
               <KeyRound className="h-3.5 w-3.5" />
@@ -403,7 +225,7 @@ export const AiCopilotDrawer: React.FC<AiCopilotDrawerProps> = ({
                     key={q}
                     type="button"
                     disabled={isSending}
-                    onClick={() => void handleSend(q)}
+                    onClick={() => handleSend(q)}
                     className="nav-touch-item rounded-2xl border border-border bg-black/[0.03] px-3.5 py-2.5 text-left text-xs font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-primary/[0.06] dark:bg-white/[0.04]"
                   >
                     {q}
@@ -476,56 +298,14 @@ export const AiCopilotDrawer: React.FC<AiCopilotDrawerProps> = ({
                         msg.proposedTransactions.length > 0 && (
                           <div className="space-y-2 pt-1">
                             {msg.proposedTransactions.map((tx) => (
-                              <div
+                              <ProposedTransactionCard
                                 key={tx.id}
-                                className="flex items-center justify-between gap-3 rounded-2xl border border-primary/35 bg-primary/[0.06] px-3.5 py-2.5 text-xs"
-                              >
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate font-bold text-foreground">
-                                    {tx.note}
-                                  </p>
-                                  <p className="truncate text-[11px] text-muted-foreground">
-                                    {tx.account_name} ·{" "}
-                                    {tx.category_name ?? "Transfer"} ·{" "}
-                                    {formatDateShort(tx.tx_date)}
-                                  </p>
-                                  <p
-                                    className={`mt-0.5 font-mono text-xs font-bold ${
-                                      tx.tx_type === "INCOME"
-                                        ? "text-emerald-500"
-                                        : "text-rose-500"
-                                    }`}
-                                  >
-                                    {formatSignedRupiah(tx.amount, tx.tx_type)}
-                                  </p>
-                                </div>
-
-                                <button
-                                  type="button"
-                                  disabled={
-                                    tx.applied || applyingItemId === tx.id
-                                  }
-                                  onClick={() =>
-                                    void handleApplyProposedTx(msg.id, tx)
-                                  }
-                                  className={`nav-touch-item shrink-0 inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold ${
-                                    tx.applied
-                                      ? "border border-emerald-500/40 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                                      : "bg-cta-surface text-cta-foreground hover:opacity-90"
-                                  }`}
-                                >
-                                  {tx.applied ? (
-                                    <>
-                                      <Check className="h-3.5 w-3.5" />
-                                      <span>Tersimpan</span>
-                                    </>
-                                  ) : applyingItemId === tx.id ? (
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                  ) : (
-                                    <span>Simpan Transaksi</span>
-                                  )}
-                                </button>
-                              </div>
+                                draft={tx}
+                                isApplying={applyingItemId === tx.id}
+                                onApply={() =>
+                                  void handleApplyProposedTx(msg.id, tx)
+                                }
+                              />
                             ))}
                           </div>
                         )}
@@ -535,53 +315,14 @@ export const AiCopilotDrawer: React.FC<AiCopilotDrawerProps> = ({
                         msg.proposedBudgets.length > 0 && (
                           <div className="space-y-2 pt-1">
                             {msg.proposedBudgets.map((b) => (
-                              <div
+                              <ProposedBudgetCard
                                 key={b.id}
-                                className="flex items-center justify-between gap-3 rounded-2xl border border-primary/35 bg-primary/[0.06] px-3.5 py-2.5 text-xs"
-                              >
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-1.5">
-                                    <Target className="h-3.5 w-3.5 text-primary shrink-0" />
-                                    <span className="truncate font-bold text-foreground">
-                                      {b.category_name}
-                                    </span>
-                                  </div>
-                                  <p className="mt-0.5 font-mono text-xs font-bold text-primary">
-                                    Batas: {formatRupiah(b.amount_limit)} /bln
-                                  </p>
-                                  {b.reason && (
-                                    <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                                      {b.reason}
-                                    </p>
-                                  )}
-                                </div>
-
-                                <button
-                                  type="button"
-                                  disabled={
-                                    b.applied || applyingItemId === b.id
-                                  }
-                                  onClick={() =>
-                                    void handleApplyProposedBudget(msg.id, b)
-                                  }
-                                  className={`nav-touch-item shrink-0 inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold ${
-                                    b.applied
-                                      ? "border border-emerald-500/40 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                                      : "bg-cta-surface text-cta-foreground hover:opacity-90"
-                                  }`}
-                                >
-                                  {b.applied ? (
-                                    <>
-                                      <Check className="h-3.5 w-3.5" />
-                                      <span>Diterapkan</span>
-                                    </>
-                                  ) : applyingItemId === b.id ? (
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                  ) : (
-                                    <span>Terapkan Anggaran</span>
-                                  )}
-                                </button>
-                              </div>
+                                draft={b}
+                                isApplying={applyingItemId === b.id}
+                                onApply={() =>
+                                  void handleApplyProposedBudget(msg.id, b)
+                                }
+                              />
                             ))}
                           </div>
                         )}
@@ -633,7 +374,7 @@ export const AiCopilotDrawer: React.FC<AiCopilotDrawerProps> = ({
             </div>
             <button
               type="button"
-              onClick={() => setAttachedImage(null)}
+              onClick={clearAttachment}
               aria-label="Hapus lampiran"
               className="inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-black/10 hover:text-foreground dark:hover:bg-white/10"
             >
@@ -646,7 +387,7 @@ export const AiCopilotDrawer: React.FC<AiCopilotDrawerProps> = ({
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            void handleSend();
+            handleSend();
           }}
           className="flex items-center gap-2 border-t border-border/70 p-3.5 sm:px-5 shrink-0"
         >
@@ -656,7 +397,7 @@ export const AiCopilotDrawer: React.FC<AiCopilotDrawerProps> = ({
             accept="image/*"
             className="hidden"
             data-testid="copilot-file-input"
-            onChange={handleFileChange}
+            onChange={(e) => void handleFileChange(e)}
           />
           <input
             type="text"
@@ -672,11 +413,10 @@ export const AiCopilotDrawer: React.FC<AiCopilotDrawerProps> = ({
             className="h-10 flex-1 min-w-0 rounded-full border border-border bg-black/[0.03] px-4 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary dark:bg-white/[0.06]"
           />
 
-          {/* Attachment Button (sebelah tombol send) */}
           <button
             type="button"
             data-testid="copilot-chat-attach-btn"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={openFilePicker}
             disabled={isSending}
             aria-label="Import gambar atau ambil foto"
             title="Import gambar atau ambil foto"
@@ -689,7 +429,6 @@ export const AiCopilotDrawer: React.FC<AiCopilotDrawerProps> = ({
             <Paperclip className="h-4 w-4" />
           </button>
 
-          {/* Send Button */}
           <button
             type="submit"
             data-testid="copilot-chat-send-btn"

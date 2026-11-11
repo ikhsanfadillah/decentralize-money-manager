@@ -9,6 +9,7 @@ import {
   Target,
   TrendingUp,
 } from "lucide-react";
+import { useAiConfig } from "../../hooks/ai";
 import { generateMonthlyReportInsight } from "../../lib/ai-provider";
 import type {
   BudgetProgressItem,
@@ -19,7 +20,6 @@ import type {
 import { pushToast } from "../../lib/toast";
 import { formatMonthLabel, formatRupiah } from "../../lib/utils";
 import {
-  resolveActiveAiConfig,
   toUpsertBudgetInputFromDraft,
   useAiStore,
   type ProposedBudgetDraft,
@@ -44,11 +44,8 @@ export const AiReportInsightCard: React.FC<AiReportInsightCardProps> = ({
   isBusinessBook = false,
   onApplyBudget,
 }) => {
-  const byok = useAiStore((s) => s.byok);
-  const setByokSettingsDrawerOpen = useAiStore(
-    (s) => s.setByokSettingsDrawerOpen
-  );
-  const setCopilotOpen = useAiStore((s) => s.setCopilotOpen);
+  const { activeConfig, ensureConfigured, openByokSettings, openCopilot } =
+    useAiConfig();
   const insight = useAiStore(
     (s) => s.reportInsightsByKey[`${bookId}:${month}`]
   );
@@ -57,20 +54,13 @@ export const AiReportInsightCard: React.FC<AiReportInsightCardProps> = ({
     (s) => s.markInsightBudgetApplied
   );
 
-  const activeConfig = React.useMemo(() => resolveActiveAiConfig(byok), [byok]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [applyingDraftId, setApplyingDraftId] = React.useState<string | null>(
     null
   );
 
   const handleGenerate = async () => {
-    if (!activeConfig.isConfigured) {
-      pushToast("Atur API Key AI terlebih dahulu", {
-        description:
-          "Masukkan API Key pribadi Anda (Gemini, OpenAI, Groq, atau OpenRouter).",
-        variant: "warning",
-      });
-      setByokSettingsDrawerOpen(true);
+    if (!ensureConfigured()) {
       return;
     }
 
@@ -174,7 +164,7 @@ export const AiReportInsightCard: React.FC<AiReportInsightCardProps> = ({
             <button
               type="button"
               data-testid="ai-insight-setup-key-btn"
-              onClick={() => setByokSettingsDrawerOpen(true)}
+              onClick={openByokSettings}
               className="nav-touch-item inline-flex h-8 items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/15 px-3 text-xs font-semibold text-amber-600 dark:text-amber-300 hover:bg-amber-500/25"
             >
               <KeyRound className="h-3.5 w-3.5" />
@@ -276,7 +266,7 @@ export const AiReportInsightCard: React.FC<AiReportInsightCardProps> = ({
                 </span>
                 <button
                   type="button"
-                  onClick={() => setCopilotOpen(true)}
+                  onClick={openCopilot}
                   className="text-[11px] font-semibold text-primary hover:underline"
                 >
                   Diskusikan di Co-Pilot →
@@ -340,7 +330,7 @@ export const AiReportInsightCard: React.FC<AiReportInsightCardProps> = ({
           </span>
           <button
             type="button"
-            onClick={() => setCopilotOpen(true)}
+            onClick={openCopilot}
             className="shrink-0 font-semibold text-primary hover:underline text-left sm:text-right"
           >
             Tanya Co-Pilot Chat →
@@ -350,4 +340,3 @@ export const AiReportInsightCard: React.FC<AiReportInsightCardProps> = ({
     </div>
   );
 };
-

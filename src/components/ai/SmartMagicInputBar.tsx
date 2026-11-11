@@ -9,22 +9,18 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import {
-  compressImageFileToDataUrl,
-  parseSmartTransactionInput,
-} from "../../lib/ai-provider";
+import { useAiConfig, useAiImageAttachment } from "../../hooks/ai";
+import { parseSmartTransactionInput } from "../../lib/ai-provider";
+import { formatDateShort } from "../../lib/date";
 import type {
   AccountView,
   AddTransactionInput,
   CategoryView,
 } from "../../lib/tauri-api";
-import { formatDateShort } from "../../lib/date";
 import { pushToast } from "../../lib/toast";
 import { formatSignedRupiah } from "../../lib/utils";
 import {
-  resolveActiveAiConfig,
   toAddTransactionInputFromDraft,
-  useAiStore,
   type ProposedTransactionDraft,
 } from "../../stores/ai-store";
 
@@ -38,7 +34,14 @@ export interface SmartMagicInputBarProps {
     name: string,
     kind: "EXPENSE" | "INCOME"
   ) => Promise<string | null>;
+  onCloseAiMode?: () => void;
 }
+
+const QUICK_PROMPT_EXAMPLES = [
+  "Makan siang 45rb pakai GoPay",
+  "Kopi 22rb & parkir 3rb tunai",
+  "Gaji bulanan 8,5jt ke BCA",
+];
 
 export const SmartMagicInputBar: React.FC<SmartMagicInputBarProps> = ({
   accounts,
@@ -46,16 +49,20 @@ export const SmartMagicInputBar: React.FC<SmartMagicInputBarProps> = ({
   onApplySingleDraft,
   onSaveMultipleDrafts,
   onQuickCreateCategory,
+  onCloseAiMode,
 }) => {
-  const byok = useAiStore((s) => s.byok);
-  const setByokSettingsDrawerOpen = useAiStore(
-    (s) => s.setByokSettingsDrawerOpen
-  );
-  const activeConfig = React.useMemo(() => resolveActiveAiConfig(byok), [byok]);
+  const { activeConfig, ensureConfigured, openByokSettings } = useAiConfig();
+  const {
+    attachedImage,
+    fileInputRef,
+    handleFileChange,
+    clearAttachment,
+    openFilePicker,
+  } = useAiImageAttachment({
+    invalidTypeTitle: "Pilih file gambar (JPG, PNG, WebP)",
+  });
 
   const [prompt, setPrompt] = React.useState("");
-  const [imageDataUrl, setImageDataUrl] = React.useState<string | null>(null);
-  const [imageName, setImageName] = React.useState<string>("");
   const [isParsing, setIsParsing] = React.useState(false);
   const [isSavingBatch, setIsSavingBatch] = React.useState(false);
   const [multiDrafts, setMultiDrafts] = React.useState<
@@ -68,37 +75,11 @@ export const SmartMagicInputBar: React.FC<SmartMagicInputBarProps> = ({
   const [isCreatingSuggestedCat, setIsCreatingSuggestedCat] =
     React.useState(false);
 
-  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      pushToast("Pilih file gambar (JPG, PNG, WebP)", { variant: "warning" });
-      return;
-    }
-    try {
-      const dataUrl = await compressImageFileToDataUrl(file);
-      setImageDataUrl(dataUrl);
-      setImageName(file.name);
-    } catch (err: unknown) {
-      pushToast(
-        err instanceof Error ? err.message : "Gagal memproses foto struk",
-        { variant: "error" }
-      );
-    } finally {
-      e.target.value = "";
-    }
-  };
+  const imageDataUrl = attachedImage?.dataUrl ?? null;
+  const imageName = attachedImage?.fileName ?? "";
 
   const handleParse = async () => {
-    if (!activeConfig.isConfigured) {
-      pushToast("Atur API Key AI terlebih dahulu", {
-        description:
-          "Masukkan API Key pribadi Anda (Gemini, OpenAI, Groq, atau OpenRouter).",
-        variant: "warning",
-      });
-      setByokSettingsDrawerOpen(true);
+    if (!ensureConfigured()) {
       return;
     }
 
@@ -138,6 +119,7 @@ export const SmartMagicInputBar: React.FC<SmartMagicInputBarProps> = ({
           description: `${single.note} (${formatSignedRupiah(single.amount, single.tx_type)})`,
           variant: "success",
         });
+        onCloseAiMode?.();
       } else {
         setMultiDrafts(drafts);
         pushToast(`${drafts.length} transaksi berhasil diekstrak`, {
@@ -181,7 +163,7 @@ export const SmartMagicInputBar: React.FC<SmartMagicInputBarProps> = ({
       await onSaveMultipleDrafts(inputs);
       setMultiDrafts([]);
       setPrompt("");
-      setImageDataUrl(null);
+      clearAttachment();
     } finally {
       setIsSavingBatch(false);
     }
@@ -190,27 +172,40 @@ export const SmartMagicInputBar: React.FC<SmartMagicInputBarProps> = ({
   return (
     <div
       data-testid="smart-magic-input-bar"
-      className="rounded-2xl border border-primary/35 bg-primary/[0.06] p-3 space-y-2.5"
+      className="rounded-2xl border border-border bg-card p-4 space-y-3.5"
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5">
-          <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
-          <span className="text-xs font-bold text-foreground">
-            AI Smart Input &amp; Scan Struk
-          </span>
-          <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 font-mono text-[9px] font-semibold text-primary">
-            {activeConfig.isConfigured
-              ? activeConfig.providerLabel
-              : "BYOK"}
-          </span>
+      {/* Header Row: Title + Provider / BYOK Action */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary">
+            <Sparkles className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-xs font-bold text-foreground">
+                AI Smart Input &amp; Scan Struk
+              </span>
+              <button
+                type="button"
+                onClick={openByokSettings}
+                title="Pengaturan Provider & API Key AI"
+                className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 font-mono text-[9px] font-semibold text-primary hover:bg-primary/20 transition-colors"
+              >
+                {activeConfig.isConfigured ? activeConfig.providerLabel : "BYOK"}
+              </button>
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Ketik kalimat bebas atau unggah foto struk belanja Anda.
+            </p>
+          </div>
         </div>
 
         {!activeConfig.isConfigured && (
           <button
             type="button"
             data-testid="magic-input-setup-key-btn"
-            onClick={() => setByokSettingsDrawerOpen(true)}
-            className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/15 px-2.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-300 hover:bg-amber-500/25"
+            onClick={openByokSettings}
+            className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/15 px-2.5 py-1 text-[10px] font-semibold text-amber-600 dark:text-amber-300 hover:bg-amber-500/25"
           >
             <KeyRound className="h-3 w-3" />
             <span>Atur API Key</span>
@@ -218,8 +213,57 @@ export const SmartMagicInputBar: React.FC<SmartMagicInputBarProps> = ({
         )}
       </div>
 
-      {/* Input Row: Natural Language + Photo Attachment + Parse Button */}
-      <div className="flex items-center gap-1.5">
+      {/* Spacious Multiline Natural Language Input */}
+      <div className="space-y-2">
+        <div className="relative">
+          <textarea
+            rows={3}
+            data-testid="magic-input-text"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void handleParse();
+              }
+            }}
+            disabled={isParsing}
+            placeholder="Contoh: Makan siang 45rb & kopi 22rb pakai GoPay..."
+            className="w-full resize-none rounded-xl border border-border bg-background/90 p-3 text-xs leading-relaxed text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+          />
+          {prompt && !isParsing && (
+            <button
+              type="button"
+              onClick={() => setPrompt("")}
+              aria-label="Bersihkan teks"
+              className="absolute right-2.5 top-2.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted/80 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* Quick Example Chips */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+          <span className="text-[10px] font-medium text-muted-foreground shrink-0">
+            Contoh:
+          </span>
+          {QUICK_PROMPT_EXAMPLES.map((example) => (
+            <button
+              key={example}
+              type="button"
+              disabled={isParsing}
+              onClick={() => setPrompt(example)}
+              className="nav-touch-item shrink-0 rounded-full border border-border/80 bg-background/70 px-2.5 py-1 text-[10px] font-medium text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
+            >
+              {example}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Receipt / Struk Attachment Section */}
+      <div>
         <input
           ref={fileInputRef}
           type="file"
@@ -229,84 +273,92 @@ export const SmartMagicInputBar: React.FC<SmartMagicInputBarProps> = ({
           data-testid="magic-input-file-upload"
         />
 
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          title="Lampirkan Foto Struk / Bukti Transfer"
-          aria-label="Lampirkan Foto Struk"
-          disabled={isParsing}
-          className={`nav-touch-item inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-colors ${
-            imageDataUrl
-              ? "border-primary bg-primary/20 text-primary"
-              : "border-border bg-background/80 text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <ImagePlus className="h-4 w-4" />
-        </button>
-
-        <input
-          type="text"
-          data-testid="magic-input-text"
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              void handleParse();
-            }
-          }}
-          disabled={isParsing}
-          placeholder="Contoh: Makan siang 45rb & kopi 22rb pakai GoPay..."
-          className="h-9 flex-1 min-w-0 rounded-xl border border-border bg-background/80 px-3 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-        />
-
-        <button
-          type="button"
-          data-testid="magic-input-submit-btn"
-          disabled={isParsing || (!prompt.trim() && !imageDataUrl)}
-          onClick={() => void handleParse()}
-          className="nav-touch-item inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl bg-cta-surface px-3 text-xs font-bold text-cta-foreground hover:opacity-90 disabled:opacity-50"
-        >
-          {isParsing ? (
-            <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              <span>Proses...</span>
-            </>
-          ) : (
-            <>
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>Isi</span>
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Attached Receipt Thumbnail Preview */}
-      {imageDataUrl && (
-        <div className="flex items-center justify-between gap-2 rounded-xl border border-border/80 bg-background/70 px-2.5 py-1.5 text-[11px]">
-          <div className="flex items-center gap-2 min-w-0">
-            <img
-              src={imageDataUrl}
-              alt="Preview Struk"
-              className="h-7 w-7 rounded-md object-cover border border-border shrink-0"
-            />
-            <span className="truncate font-medium text-foreground">
-              {imageName || "Foto Struk Terlampir"}
-            </span>
+        {imageDataUrl ? (
+          <div className="flex items-center justify-between gap-2.5 rounded-xl border border-primary/35 bg-primary/5 p-2.5 text-xs">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <img
+                src={imageDataUrl}
+                alt="Preview Struk"
+                className="h-10 w-10 rounded-lg object-cover border border-border shrink-0"
+              />
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-foreground text-xs">
+                  {imageName || "Foto Struk Terlampir"}
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  Siap dipindai oleh AI Vision
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={openFilePicker}
+                disabled={isParsing}
+                className="rounded-lg border border-border bg-background px-2.5 py-1 text-[10px] font-semibold text-foreground hover:bg-muted"
+              >
+                Ganti
+              </button>
+              <button
+                type="button"
+                onClick={clearAttachment}
+                disabled={isParsing}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-rose-500"
+                aria-label="Hapus foto struk"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
+        ) : (
           <button
             type="button"
-            onClick={() => {
-              setImageDataUrl(null);
-              setImageName("");
-            }}
-            className="inline-flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label="Hapus foto struk"
+            onClick={openFilePicker}
+            title="Lampirkan Foto Struk / Bukti Transfer"
+            aria-label="Lampirkan Foto Struk"
+            disabled={isParsing}
+            className="nav-touch-item flex w-full items-center justify-between gap-3 rounded-xl border border-dashed border-border bg-background/60 px-3.5 py-2.5 text-left hover:border-primary/40 hover:bg-background/90 transition-colors"
           >
-            <X className="h-3.5 w-3.5" />
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-black/[0.04] dark:bg-white/[0.06] text-foreground">
+                <ImagePlus className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-foreground">
+                  Scan Foto Struk / Bukti Transfer
+                </p>
+                <p className="truncate text-[10px] text-muted-foreground">
+                  Pilih foto JPG, PNG, atau WebP untuk diekstrak otomatis
+                </p>
+              </div>
+            </div>
+            <span className="shrink-0 rounded-full border border-border bg-card px-2.5 py-1 text-[10px] font-semibold text-foreground">
+              Pilih Foto
+            </span>
           </button>
-        </div>
-      )}
+        )}
+      </div>
+
+      {/* Primary Parse / Auto-Fill CTA Button */}
+      <button
+        type="button"
+        data-testid="magic-input-submit-btn"
+        disabled={isParsing || (!prompt.trim() && !imageDataUrl)}
+        onClick={() => void handleParse()}
+        className="nav-touch-item flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-cta-surface px-4 text-xs font-bold text-cta-foreground hover:opacity-90 disabled:opacity-40 transition-opacity"
+      >
+        {isParsing ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Mengekstrak Transaksi...</span>
+          </>
+        ) : (
+          <>
+            <Sparkles className="h-4 w-4" />
+            <span>Proses &amp; Isi Otomatis</span>
+          </>
+        )}
+      </button>
 
       {/* Quick Create Suggested Category Chip */}
       {suggestedCategory && onQuickCreateCategory && (
@@ -335,7 +387,7 @@ export const SmartMagicInputBar: React.FC<SmartMagicInputBarProps> = ({
       {multiDrafts.length > 1 && (
         <div
           data-testid="magic-multi-drafts-list"
-          className="rounded-xl border border-border bg-background/90 p-2.5 space-y-2"
+          className="rounded-xl border border-border bg-background/90 p-3 space-y-2.5"
         >
           <div className="flex items-center justify-between text-[11px]">
             <span className="font-semibold text-foreground">
@@ -350,11 +402,11 @@ export const SmartMagicInputBar: React.FC<SmartMagicInputBarProps> = ({
             </button>
           </div>
 
-          <div className="max-h-44 overflow-y-auto divide-y divide-border/60">
+          <div className="max-h-48 overflow-y-auto divide-y divide-border/60">
             {multiDrafts.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center justify-between gap-2 py-1.5 text-xs"
+                className="flex items-center justify-between gap-2 py-2 text-xs"
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold text-foreground">
@@ -397,7 +449,7 @@ export const SmartMagicInputBar: React.FC<SmartMagicInputBarProps> = ({
             data-testid="magic-save-all-btn"
             disabled={isSavingBatch}
             onClick={() => void handleSaveBatch()}
-            className="nav-touch-item flex w-full items-center justify-center gap-1.5 rounded-full bg-cta-surface py-2 text-xs font-bold text-cta-foreground hover:opacity-90 disabled:opacity-50"
+            className="nav-touch-item flex w-full items-center justify-center gap-1.5 rounded-full bg-cta-surface py-2.5 text-xs font-bold text-cta-foreground hover:opacity-90 disabled:opacity-50"
           >
             {isSavingBatch ? (
               <>
@@ -416,4 +468,3 @@ export const SmartMagicInputBar: React.FC<SmartMagicInputBarProps> = ({
     </div>
   );
 };
-

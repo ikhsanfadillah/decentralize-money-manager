@@ -6,8 +6,8 @@ import { type BookMetadata } from "../../lib/tauri-api";
 import { useBookFinance, useBookSyncEvents } from "../../hooks/useBookFinance";
 import { useAiStore } from "../../stores/ai-store";
 import { useUiStore } from "../../stores/ui-store";
+import { AiByokConfigDrawer } from "../ai/AiByokConfigDrawer";
 import { AiCopilotDrawer } from "../ai/AiCopilotDrawer";
-import { AiByokConfigDrawer } from "../settings/AiByokSettingsSection";
 import { TransactionDialog } from "../transactions/TransactionDialog";
 import { FloatingNavbar } from "./FloatingNavbar";
 

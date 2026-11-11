@@ -90,6 +90,54 @@ describe("TransactionDialog (Detail & Delete Action)", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("toggles between Manual Form view and AI Smart Input view via footer spark button", async () => {
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <TransactionDialog
+          isOpen={true}
+          onClose={vi.fn()}
+          bookId={bookId}
+          accounts={mockAccounts}
+          categories={mockCategories}
+          editingTx={null}
+          onAddTransaction={vi.fn().mockResolvedValue(undefined)}
+          onUpdateTransaction={vi.fn().mockResolvedValue(undefined)}
+          onTransferBetweenBooks={vi.fn().mockResolvedValue(undefined)}
+          onDeleteTransaction={vi.fn().mockResolvedValue(undefined)}
+        />
+      </QueryClientProvider>
+    );
+
+    // Initially shows Manual Form and hides AI Smart Input Bar
+    expect(screen.getByLabelText("Nominal Transaksi")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("smart-magic-input-bar")
+    ).not.toBeInTheDocument();
+
+    const sparkBtn = screen.getByTestId("toggle-ai-magic-mode-btn");
+    expect(sparkBtn).toBeInTheDocument();
+
+    // Click Spark button -> switches to AI Smart Input view replacing main form
+    fireEvent.click(sparkBtn);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("smart-magic-input-bar")).toBeInTheDocument();
+      expect(
+        screen.queryByLabelText("Nominal Transaksi")
+      ).not.toBeInTheDocument();
+    });
+
+    // Click close / toggle button again -> returns to Manual Form view
+    fireEvent.click(sparkBtn);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Nominal Transaksi")).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("smart-magic-input-bar")
+      ).not.toBeInTheDocument();
+    });
+  });
+
   it("renders delete button on detail/edit drawer, opens confirmation drawer, and supports cancel or confirm delete", async () => {
     const onDeleteTransaction = vi.fn().mockResolvedValue(undefined);
 

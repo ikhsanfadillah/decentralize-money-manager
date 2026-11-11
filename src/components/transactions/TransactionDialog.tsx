@@ -1,7 +1,17 @@
 import * as React from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeftRight, Plus, Trash2, TrendingDown, TrendingUp, X } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import {
+  ArrowLeft,
+  ArrowLeftRight,
+  Plus,
+  Sparkles,
+  Trash2,
+  TrendingDown,
+  TrendingUp,
+  X,
+} from "lucide-react";
 import { SmartMagicInputBar } from "../ai/SmartMagicInputBar";
 import { DeleteTransactionDrawer } from "./DeleteTransactionDrawer";
 import { CurrencyInput } from "../ui/currency-input";
@@ -94,6 +104,13 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
   );
 
   const queryClient = useQueryClient();
+  const shouldReduceMotion = useReducedMotion();
+  const [isAiModeOpen, setIsAiModeOpen] = React.useState(false);
+  const [aiSuggestedCategory, setAiSuggestedCategory] = React.useState<{
+    name: string;
+    kind: "EXPENSE" | "INCOME";
+  } | null>(null);
+  const [isCreatingAiCategory, setIsCreatingAiCategory] = React.useState(false);
   const [isQuickAddCategory, setIsQuickAddCategory] = React.useState(false);
   const [newCategoryName, setNewCategoryName] = React.useState("");
   const [isAddingCategory, setIsAddingCategory] = React.useState(false);
@@ -147,6 +164,11 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
       (c) => c.kind === targetKind && c.merged_into_id === null
     );
   }, [categories, currentMode]);
+
+  React.useEffect(() => {
+    setIsAiModeOpen(false);
+    setAiSuggestedCategory(null);
+  }, [isOpen, editingTx]);
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -428,7 +450,9 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                 <DrawerDescription className="mt-0.5 text-xs text-muted-foreground">
                   {editingTx
                     ? "Tinjau detail, ubah catatan, atau hapus transaksi ini."
-                    : "Pilih jenis transaksi dan isi nominal uangnya."}
+                    : isAiModeOpen
+                      ? "Ketik kalimat transaksi atau scan struk untuk mengisi otomatis."
+                      : "Pilih jenis transaksi dan isi nominal uangnya."}
                 </DrawerDescription>
               </div>
             <button
@@ -441,405 +465,614 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
             </button>
           </div>
 
-          {/* Scrollable Content Body */}
-          <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4 space-y-4">
-            {!editingTx && (
-              <SmartMagicInputBar
-                bookId={bookId}
-                accounts={accounts}
-                categories={categories}
-                onApplySingleDraft={(draft) => {
-                  setValue("mode", draft.tx_type);
-                  setValue("accountId", draft.account_id);
-                  if (draft.tx_type === "TRANSFER" && draft.to_account_id) {
-                    setValue("toAccountId", draft.to_account_id);
+          {/* Scrollable Content Body with iOS Fluid View Morphing */}
+          <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+            <AnimatePresence mode="popLayout" initial={false}>
+              {!editingTx && isAiModeOpen ? (
+                <motion.div
+                  key="ai-smart-view"
+                  initial={
+                    shouldReduceMotion
+                      ? { opacity: 0 }
+                      : { opacity: 0, scale: 0.96, y: 12 }
                   }
-                  if (draft.category_id) {
-                    setValue("categoryId", draft.category_id);
+                  animate={
+                    shouldReduceMotion
+                      ? { opacity: 1 }
+                      : { opacity: 1, scale: 1, y: 0 }
                   }
-                  setValue("rawAmount", Math.abs(draft.amount));
-                  setValue("txDate", draft.tx_date);
-                  setValue("note", draft.note);
-                }}
-                onSaveMultipleDrafts={async (inputs) => {
-                  for (const inp of inputs) {
-                    await onAddTransaction(inp);
+                  exit={
+                    shouldReduceMotion
+                      ? { opacity: 0 }
+                      : { opacity: 0, scale: 0.96, y: 10 }
                   }
-                  pushToast(`${inputs.length} transaksi berhasil disimpan`, {
-                    variant: "success",
-                  });
-                  onClose();
-                }}
-                onQuickCreateCategory={async (name, kind) => {
-                  try {
-                    const created = await tauriApi.upsertCategory(bookId, {
-                      id: null,
-                      name,
-                      kind,
-                    });
-                    await queryClient.invalidateQueries({
-                      queryKey: bookQueryKeys.categories(bookId),
-                    });
-                    setValue("categoryId", created.id);
-                    pushToast(`Kategori "${name}" berhasil dibuat`, {
-                      variant: "success",
-                    });
-                    return created.id;
-                  } catch (err: unknown) {
-                    pushToast(
-                      err instanceof Error
-                        ? err.message
-                        : "Gagal membuat kategori",
-                      { variant: "error" }
-                    );
-                    return null;
+                  transition={{
+                    type: "spring",
+                    stiffness: 380,
+                    damping: 32,
+                    mass: 0.8,
+                  }}
+                >
+                  <SmartMagicInputBar
+                    bookId={bookId}
+                    accounts={accounts}
+                    categories={categories}
+                    onCloseAiMode={() => setIsAiModeOpen(false)}
+                    onApplySingleDraft={(draft) => {
+                      setValue("mode", draft.tx_type);
+                      setValue("accountId", draft.account_id);
+                      if (draft.tx_type === "TRANSFER" && draft.to_account_id) {
+                        setValue("toAccountId", draft.to_account_id);
+                      }
+                      if (draft.category_id) {
+                        setValue("categoryId", draft.category_id);
+                      }
+                      if (
+                        draft.suggested_new_category &&
+                        (draft.tx_type === "EXPENSE" ||
+                          draft.tx_type === "INCOME")
+                      ) {
+                        setAiSuggestedCategory({
+                          name: draft.suggested_new_category,
+                          kind: draft.tx_type,
+                        });
+                      } else {
+                        setAiSuggestedCategory(null);
+                      }
+                      setValue("rawAmount", Math.abs(draft.amount));
+                      setValue("txDate", draft.tx_date);
+                      setValue("note", draft.note);
+                    }}
+                    onSaveMultipleDrafts={async (inputs) => {
+                      for (const inp of inputs) {
+                        await onAddTransaction(inp);
+                      }
+                      pushToast(`${inputs.length} transaksi berhasil disimpan`, {
+                        variant: "success",
+                      });
+                      onClose();
+                    }}
+                    onQuickCreateCategory={async (name, kind) => {
+                      try {
+                        const created = await tauriApi.upsertCategory(bookId, {
+                          id: null,
+                          name,
+                          kind,
+                        });
+                        await queryClient.invalidateQueries({
+                          queryKey: bookQueryKeys.categories(bookId),
+                        });
+                        setValue("categoryId", created.id);
+                        pushToast(`Kategori "${name}" berhasil dibuat`, {
+                          variant: "success",
+                        });
+                        return created.id;
+                      } catch (err: unknown) {
+                        pushToast(
+                          err instanceof Error
+                            ? err.message
+                            : "Gagal membuat kategori",
+                          { variant: "error" }
+                        );
+                        return null;
+                      }
+                    }}
+                  />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="manual-form-view"
+                  initial={
+                    shouldReduceMotion
+                      ? { opacity: 0 }
+                      : { opacity: 0, scale: 0.97, y: -8 }
                   }
-                }}
-              />
-            )}
-
-            {/* Capsule Transaction Mode Selector */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 rounded-2xl border border-border bg-black/[0.04] dark:bg-white/[0.04] p-1.5">
-              {(
-                [
-                  {
-                    key: "EXPENSE",
-                    label: "Pengeluaran",
-                    color: "text-rose-500",
-                    activeClass:
-                      "border border-rose-500/40 bg-rose-500/15 text-rose-500 dark:text-rose-300",
-                    icon: TrendingDown,
-                  },
-                  {
-                    key: "INCOME",
-                    label: "Pemasukan",
-                    color: "text-emerald-500",
-                    activeClass:
-                      "border border-emerald-500/40 bg-emerald-500/15 text-emerald-600 dark:text-emerald-300",
-                    icon: TrendingUp,
-                  },
-                  {
-                    key: "TRANSFER",
-                    label: "Pindah Saldo",
-                    color: "text-sky-500",
-                    activeClass:
-                      "border border-sky-500/40 bg-sky-500/15 text-sky-600 dark:text-sky-300",
-                    icon: ArrowLeftRight,
-                  },
-                  ...(!editingTx
-                    ? [
+                  animate={
+                    shouldReduceMotion
+                      ? { opacity: 1 }
+                      : { opacity: 1, scale: 1, y: 0 }
+                  }
+                  exit={
+                    shouldReduceMotion
+                      ? { opacity: 0 }
+                      : { opacity: 0, scale: 0.97, y: -8 }
+                  }
+                  transition={{
+                    type: "spring",
+                    stiffness: 380,
+                    damping: 32,
+                    mass: 0.8,
+                  }}
+                  className="space-y-4"
+                >
+                  {/* Capsule Transaction Mode Selector */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 rounded-2xl border border-border bg-black/[0.04] dark:bg-white/[0.04] p-1.5">
+                    {(
+                      [
                         {
-                          key: "CROSS_BOOK_TRANSFER" as const,
-                          label: "Pindah Buku",
-                          color: "text-amber-500",
+                          key: "EXPENSE",
+                          label: "Pengeluaran",
+                          color: "text-rose-500",
                           activeClass:
-                            "border border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-300",
+                            "border border-rose-500/40 bg-rose-500/15 text-rose-500 dark:text-rose-300",
+                          icon: TrendingDown,
+                        },
+                        {
+                          key: "INCOME",
+                          label: "Pemasukan",
+                          color: "text-emerald-500",
+                          activeClass:
+                            "border border-emerald-500/40 bg-emerald-500/15 text-emerald-600 dark:text-emerald-300",
+                          icon: TrendingUp,
+                        },
+                        {
+                          key: "TRANSFER",
+                          label: "Pindah Saldo",
+                          color: "text-sky-500",
+                          activeClass:
+                            "border border-sky-500/40 bg-sky-500/15 text-sky-600 dark:text-sky-300",
                           icon: ArrowLeftRight,
                         },
-                      ]
-                    : []),
-                ] as const
-              ).map((tab) => {
-                const active = currentMode === tab.key;
-                const IconComponent = tab.icon;
-                return (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    onClick={() => setValue("mode", tab.key)}
-                    className={`nav-touch-item inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-2.5 py-2 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
-                      active
-                        ? tab.activeClass
-                        : `border border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground`
-                    }`}
-                  >
-                    <IconComponent
-                      className={`h-3.5 w-3.5 shrink-0 ${active ? "" : tab.color}`}
-                      aria-hidden="true"
-                    />
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </div>
+                        ...(!editingTx
+                          ? [
+                              {
+                                key: "CROSS_BOOK_TRANSFER" as const,
+                                label: "Pindah Buku",
+                                color: "text-amber-500",
+                                activeClass:
+                                  "border border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-300",
+                                icon: ArrowLeftRight,
+                              },
+                            ]
+                          : []),
+                      ] as const
+                    ).map((tab) => {
+                      const active = currentMode === tab.key;
+                      const IconComponent = tab.icon;
+                      return (
+                        <button
+                          key={tab.key}
+                          type="button"
+                          onClick={() => setValue("mode", tab.key)}
+                          className={`nav-touch-item inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-2.5 py-2 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
+                            active
+                              ? tab.activeClass
+                              : `border border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground`
+                          }`}
+                        >
+                          <IconComponent
+                            className={`h-3.5 w-3.5 shrink-0 ${active ? "" : tab.color}`}
+                            aria-hidden="true"
+                          />
+                          <span>{tab.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
 
-            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="tx-account-select"
-                  className="block text-xs font-medium text-foreground"
-                >
-                  {currentMode === "TRANSFER" ||
-                  currentMode === "CROSS_BOOK_TRANSFER"
-                    ? "Dari Rekening / Dompet"
-                    : "Rekening / Dompet"}
-                </label>
-                <select
-                  id="tx-account-select"
-                  {...register("accountId")}
-                  className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-                >
-                  {activeAccounts.map((acc) => (
-                    <option key={acc.id} value={acc.id}>
-                      {acc.name} ({formatAccountTypeLabel(acc.account_type)})
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  {/* AI Suggested New Category Banner (when returning from Single Draft Auto-fill) */}
+                  {aiSuggestedCategory &&
+                    (currentMode === "EXPENSE" || currentMode === "INCOME") && (
+                      <div className="flex items-center justify-between gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-[11px]">
+                        <span className="text-muted-foreground">
+                          Kategori disarankan AI:{" "}
+                          <strong className="text-foreground">
+                            {aiSuggestedCategory.name}
+                          </strong>
+                        </span>
+                        <button
+                          type="button"
+                          disabled={isCreatingAiCategory}
+                          onClick={async () => {
+                            setIsCreatingAiCategory(true);
+                            try {
+                              const created = await tauriApi.upsertCategory(
+                                bookId,
+                                {
+                                  id: null,
+                                  name: aiSuggestedCategory.name,
+                                  kind: aiSuggestedCategory.kind,
+                                }
+                              );
+                              await queryClient.invalidateQueries({
+                                queryKey: bookQueryKeys.categories(bookId),
+                              });
+                              setValue("categoryId", created.id);
+                              setAiSuggestedCategory(null);
+                              pushToast(
+                                `Kategori "${aiSuggestedCategory.name}" berhasil dibuat`,
+                                { variant: "success" }
+                              );
+                            } catch (err: unknown) {
+                              pushToast(
+                                err instanceof Error
+                                  ? err.message
+                                  : "Gagal membuat kategori",
+                                { variant: "error" }
+                              );
+                            } finally {
+                              setIsCreatingAiCategory(false);
+                            }
+                          }}
+                          className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2.5 py-1 font-semibold text-primary hover:bg-primary/25 disabled:opacity-50"
+                        >
+                          <Plus className="h-3 w-3" />
+                          <span>
+                            {isCreatingAiCategory
+                              ? "Membuat..."
+                              : "Buat & Pilih"}
+                          </span>
+                        </button>
+                      </div>
+                    )}
 
-              {currentMode === "TRANSFER" && (
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="tx-to-account-select"
-                    className="block text-xs font-medium text-foreground"
-                  >
-                    Ke Rekening / Dompet Tujuan
-                  </label>
-                  <select
-                    id="tx-to-account-select"
-                    {...register("toAccountId")}
-                    className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-                  >
-                    <option value="">-- Pilih Tujuan --</option>
-                    {activeAccounts.map((acc) => (
-                      <option key={acc.id} value={acc.id}>
-                        {acc.name} ({formatAccountTypeLabel(acc.account_type)})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {(currentMode === "EXPENSE" || currentMode === "INCOME") && (
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label
-                      htmlFor="tx-category-select"
-                      className="block text-xs font-medium text-foreground"
-                    >
-                      Kategori ({currentMode === "EXPENSE" ? "Pengeluaran" : "Pemasukan"})
-                    </label>
-                    {!isQuickAddCategory && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsQuickAddCategory(true);
-                          setNewCategoryName("");
-                        }}
-                        className="nav-touch-item inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                  <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <label
+                        htmlFor="tx-account-select"
+                        className="block text-xs font-medium text-foreground"
                       >
-                        <Plus className="h-3 w-3" />
-                        <span>Kategori Baru</span>
-                      </button>
+                        {currentMode === "TRANSFER" ||
+                        currentMode === "CROSS_BOOK_TRANSFER"
+                          ? "Dari Rekening / Dompet"
+                          : "Rekening / Dompet"}
+                      </label>
+                      <select
+                        id="tx-account-select"
+                        {...register("accountId")}
+                        className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                      >
+                        {activeAccounts.map((acc) => (
+                          <option key={acc.id} value={acc.id}>
+                            {acc.name} ({formatAccountTypeLabel(acc.account_type)})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {currentMode === "TRANSFER" && (
+                      <div className="space-y-1.5">
+                        <label
+                          htmlFor="tx-to-account-select"
+                          className="block text-xs font-medium text-foreground"
+                        >
+                          Ke Rekening / Dompet Tujuan
+                        </label>
+                        <select
+                          id="tx-to-account-select"
+                          {...register("toAccountId")}
+                          className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                        >
+                          <option value="">-- Pilih Tujuan --</option>
+                          {activeAccounts.map((acc) => (
+                            <option key={acc.id} value={acc.id}>
+                              {acc.name} ({formatAccountTypeLabel(acc.account_type)})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {(currentMode === "EXPENSE" || currentMode === "INCOME") && (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <label
+                            htmlFor="tx-category-select"
+                            className="block text-xs font-medium text-foreground"
+                          >
+                            Kategori ({currentMode === "EXPENSE" ? "Pengeluaran" : "Pemasukan"})
+                          </label>
+                          {!isQuickAddCategory && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsQuickAddCategory(true);
+                                setNewCategoryName("");
+                              }}
+                              className="nav-touch-item inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                            >
+                              <Plus className="h-3 w-3" />
+                              <span>Kategori Baru</span>
+                            </button>
+                          )}
+                        </div>
+
+                        {isQuickAddCategory ? (
+                          <div className="rounded-2xl border border-primary/40 bg-primary/10 p-3 space-y-2">
+                            <p className="text-[11px] font-medium text-foreground">
+                              Tambah Kategori {currentMode === "EXPENSE" ? "Pengeluaran" : "Pemasukan"} Baru:
+                            </p>
+                            <div className="flex items-center gap-1.5">
+                              <Input
+                                value={newCategoryName}
+                                onChange={(e) => setNewCategoryName(e.target.value)}
+                                placeholder="Contoh: Belanja Bulanan, Kopi, Hiburan..."
+                                className="h-9 text-xs"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    void handleQuickAddCategory();
+                                  } else if (e.key === "Escape") {
+                                    e.preventDefault();
+                                    setIsQuickAddCategory(false);
+                                  }
+                                }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => void handleQuickAddCategory()}
+                                disabled={isAddingCategory || !newCategoryName.trim()}
+                                className="nav-touch-item shrink-0 h-9 px-3.5 rounded-full bg-cta-surface text-cta-foreground text-xs font-semibold hover:opacity-90 disabled:opacity-50"
+                              >
+                                {isAddingCategory ? "..." : "Simpan"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setIsQuickAddCategory(false)}
+                                className="nav-touch-item shrink-0 h-9 px-3 rounded-full border border-border bg-black/[0.04] dark:bg-white/[0.06] text-muted-foreground text-xs hover:text-foreground"
+                              >
+                                Batal
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <select
+                            id="tx-category-select"
+                            {...register("categoryId")}
+                            onChange={(e) => {
+                              if (e.target.value === "__NEW__") {
+                                setIsQuickAddCategory(true);
+                                setNewCategoryName("");
+                                return;
+                              }
+                              setValue("categoryId", e.target.value);
+                            }}
+                            className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                          >
+                            <option value="">-- Pilih Kategori --</option>
+                            {filteredCategories.map((cat) => (
+                              <option key={cat.id} value={cat.id}>
+                                {cat.name}
+                              </option>
+                            ))}
+                            <option value="__NEW__">+ Tambah Kategori Baru...</option>
+                          </select>
+                        )}
+                      </div>
+                    )}
+
+                    {currentMode === "CROSS_BOOK_TRANSFER" && (
+                      <div className="space-y-1.5">
+                        <label
+                          htmlFor="tx-to-book-select"
+                          className="block text-xs font-medium text-foreground"
+                        >
+                          Ke Buku Tujuan
+                        </label>
+                        <select
+                          id="tx-to-book-select"
+                          {...register("toBookId")}
+                          className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                        >
+                          <option value="">-- Pilih Buku Tujuan --</option>
+                          {otherBooks.map((b) => (
+                            <option key={b.id} value={b.id}>
+                              {b.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     )}
                   </div>
 
-                  {isQuickAddCategory ? (
-                    <div className="rounded-2xl border border-primary/40 bg-primary/10 p-3 space-y-2">
-                      <p className="text-[11px] font-medium text-foreground">
-                        Tambah Kategori {currentMode === "EXPENSE" ? "Pengeluaran" : "Pemasukan"} Baru:
-                      </p>
-                      <div className="flex items-center gap-1.5">
-                        <Input
-                          value={newCategoryName}
-                          onChange={(e) => setNewCategoryName(e.target.value)}
-                          placeholder="Contoh: Belanja Bulanan, Kopi, Hiburan..."
-                          className="h-9 text-xs"
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              void handleQuickAddCategory();
-                            } else if (e.key === "Escape") {
-                              e.preventDefault();
-                              setIsQuickAddCategory(false);
-                            }
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => void handleQuickAddCategory()}
-                          disabled={isAddingCategory || !newCategoryName.trim()}
-                          className="nav-touch-item shrink-0 h-9 px-3.5 rounded-full bg-cta-surface text-cta-foreground text-xs font-semibold hover:opacity-90 disabled:opacity-50"
-                        >
-                          {isAddingCategory ? "..." : "Simpan"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setIsQuickAddCategory(false)}
-                          className="nav-touch-item shrink-0 h-9 px-3 rounded-full border border-border bg-black/[0.04] dark:bg-white/[0.06] text-muted-foreground text-xs hover:text-foreground"
-                        >
-                          Batal
-                        </button>
-                      </div>
+                  {currentMode === "CROSS_BOOK_TRANSFER" && (
+                    <div className="space-y-1.5">
+                      <label
+                        htmlFor="tx-to-book-account-select"
+                        className="block text-xs font-medium text-foreground"
+                      >
+                        Rekening di Buku Tujuan
+                      </label>
+                      <select
+                        id="tx-to-book-account-select"
+                        {...register("toBookAccountId")}
+                        className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                      >
+                        <option value="">-- Pilih Rekening Buku Tujuan --</option>
+                        {destBookAccounts.map((acc) => (
+                          <option key={acc.id} value={acc.id}>
+                            {acc.name} ({formatAccountTypeLabel(acc.account_type)})
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                  ) : (
-                    <select
-                      id="tx-category-select"
-                      {...register("categoryId")}
-                      onChange={(e) => {
-                        if (e.target.value === "__NEW__") {
-                          setIsQuickAddCategory(true);
-                          setNewCategoryName("");
-                          return;
-                        }
-                        setValue("categoryId", e.target.value);
-                      }}
-                      className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                  )}
+
+                  <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <label
+                        htmlFor="tx-amount-input"
+                        className="block text-xs font-medium text-foreground"
+                      >
+                        Nominal Uang (Rp)
+                      </label>
+                      <Controller
+                        name="rawAmount"
+                        control={control}
+                        render={({ field }) => (
+                          <CurrencyInput
+                            id="tx-amount-input"
+                            aria-label="Nominal Transaksi"
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            onBlur={field.onBlur}
+                            ref={field.ref}
+                          />
+                        )}
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label
+                          htmlFor="tx-date-input"
+                          className="block text-xs font-medium text-foreground"
+                        >
+                          Tanggal Transaksi
+                        </label>
+                        {selectedTxDate && (
+                          <span className="text-[11px] font-medium text-primary">
+                            {formatDateReadable(selectedTxDate, { withDayName: true })}
+                          </span>
+                        )}
+                      </div>
+                      <Input
+                        id="tx-date-input"
+                        type="date"
+                        {...register("txDate")}
+                        className="font-mono tabular-nums tracking-tight"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="tx-note-input"
+                      className="block text-xs font-medium text-foreground"
                     >
-                      <option value="">-- Pilih Kategori --</option>
-                      {filteredCategories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.name}
-                        </option>
-                      ))}
-                      <option value="__NEW__">+ Tambah Kategori Baru...</option>
-                    </select>
-                  )}
-                </div>
-              )}
-
-              {currentMode === "CROSS_BOOK_TRANSFER" && (
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="tx-to-book-select"
-                    className="block text-xs font-medium text-foreground"
-                  >
-                    Ke Buku Tujuan
-                  </label>
-                  <select
-                    id="tx-to-book-select"
-                    {...register("toBookId")}
-                    className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-                  >
-                    <option value="">-- Pilih Buku Tujuan --</option>
-                    {otherBooks.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
-
-            {currentMode === "CROSS_BOOK_TRANSFER" && (
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="tx-to-book-account-select"
-                  className="block text-xs font-medium text-foreground"
-                >
-                  Rekening di Buku Tujuan
-                </label>
-                <select
-                  id="tx-to-book-account-select"
-                  {...register("toBookAccountId")}
-                  className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-                >
-                  <option value="">-- Pilih Rekening Buku Tujuan --</option>
-                  {destBookAccounts.map((acc) => (
-                    <option key={acc.id} value={acc.id}>
-                      {acc.name} ({formatAccountTypeLabel(acc.account_type)})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="tx-amount-input"
-                  className="block text-xs font-medium text-foreground"
-                >
-                  Nominal Uang (Rp)
-                </label>
-                <Controller
-                  name="rawAmount"
-                  control={control}
-                  render={({ field }) => (
-                    <CurrencyInput
-                      id="tx-amount-input"
-                      aria-label="Nominal Transaksi"
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      onBlur={field.onBlur}
-                      ref={field.ref}
+                      Catatan Singkat (Opsional)
+                    </label>
+                    <Input
+                      id="tx-note-input"
+                      placeholder="Contoh: Beli makan siang, bayar listrik, gaji..."
+                      {...register("note")}
                     />
+                  </div>
+
+                  {/* Destructive Action inside Detail (Progressive Disclosure) */}
+                  {editingTx && onDeleteTransaction && (
+                    <div className="pt-2 border-t border-border/60">
+                      <button
+                        type="button"
+                        data-testid="tx-detail-delete-button"
+                        onClick={() => {
+                          const target = editingTx;
+                          onClose();
+                          setTxPendingDelete(target);
+                        }}
+                        className="nav-touch-item flex w-full items-center justify-center gap-1.5 rounded-full border border-rose-500/25 bg-rose-500/10 py-2.5 text-xs font-medium text-rose-600 hover:bg-rose-500/15 active:scale-[0.99] dark:text-rose-400 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        <span>Hapus Transaksi Ini</span>
+                      </button>
+                    </div>
                   )}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label
-                    htmlFor="tx-date-input"
-                    className="block text-xs font-medium text-foreground"
-                  >
-                    Tanggal Transaksi
-                  </label>
-                  {selectedTxDate && (
-                    <span className="text-[11px] font-medium text-primary">
-                      {formatDateReadable(selectedTxDate, { withDayName: true })}
-                    </span>
-                  )}
-                </div>
-                <Input
-                  id="tx-date-input"
-                  type="date"
-                  {...register("txDate")}
-                  className="font-mono tabular-nums tracking-tight"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label
-                htmlFor="tx-note-input"
-                className="block text-xs font-medium text-foreground"
-              >
-                Catatan Singkat (Opsional)
-              </label>
-              <Input
-                id="tx-note-input"
-                placeholder="Contoh: Beli makan siang, bayar listrik, gaji..."
-                {...register("note")}
-              />
-            </div>
-
-            {/* Destructive Action inside Detail (Progressive Disclosure) */}
-            {editingTx && onDeleteTransaction && (
-              <div className="pt-2 border-t border-border/60">
-                <button
-                  type="button"
-                  data-testid="tx-detail-delete-button"
-                  onClick={() => {
-                    const target = editingTx;
-                    onClose();
-                    setTxPendingDelete(target);
-                  }}
-                  className="nav-touch-item flex w-full items-center justify-center gap-1.5 rounded-full border border-rose-500/25 bg-rose-500/10 py-2.5 text-xs font-medium text-rose-600 hover:bg-rose-500/15 active:scale-[0.99] dark:text-rose-400 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  <span>Hapus Transaksi Ini</span>
-                </button>
-              </div>
-            )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-end gap-2 border-t border-border/70 p-3 sm:px-5 shrink-0">
-            <ButtonSlideToConfirm
-              key={isOpen ? `open-${editingTx?.id ?? "new"}` : "closed"}
-              disabled={isSubmitting}
-              label={
-                editingTx
-                  ? "Geser untuk Simpan Perubahan"
-                  : "Geser untuk Simpan Transaksi"
-              }
-              onConfirm={handleSlideConfirm}
-              onSuccessComplete={onClose}
-            />
+          {/* Footer: Slide Button + Aligned AI Spark Toggle Button */}
+          <div className="flex items-center gap-2.5 border-t border-border/70 p-3 sm:px-5 shrink-0">
+            <div className="flex-1 min-w-0">
+              <AnimatePresence mode="popLayout" initial={false}>
+                {!editingTx && isAiModeOpen ? (
+                  <motion.button
+                    key="back-to-manual-btn"
+                    type="button"
+                    data-testid="back-to-manual-form-btn"
+                    onClick={() => setIsAiModeOpen(false)}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.16 }}
+                    className="nav-touch-item flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-border bg-black/[0.04] dark:bg-white/[0.06] px-4 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+                  >
+                    <ArrowLeft className="h-4 w-4 text-muted-foreground" />
+                    <span>Kembali ke Form Manual</span>
+                  </motion.button>
+                ) : (
+                  <motion.div
+                    key="slide-to-confirm-wrapper"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.16 }}
+                  >
+                    <ButtonSlideToConfirm
+                      key={isOpen ? `open-${editingTx?.id ?? "new"}` : "closed"}
+                      disabled={isSubmitting}
+                      label={
+                        editingTx
+                          ? "Geser untuk Simpan Perubahan"
+                          : "Geser untuk Simpan Transaksi"
+                      }
+                      onConfirm={handleSlideConfirm}
+                      onSuccessComplete={onClose}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {!editingTx && (
+              <motion.button
+                type="button"
+                data-testid="toggle-ai-magic-mode-btn"
+                onClick={() => setIsAiModeOpen((prev) => !prev)}
+                whileTap={{ scale: 0.92 }}
+                aria-label={
+                  isAiModeOpen
+                    ? "Tutup AI Smart Input"
+                    : "Buka AI Smart Input & Scan Struk"
+                }
+                title={
+                  isAiModeOpen
+                    ? "Tutup AI Smart Input"
+                    : "AI Smart Input & Scan Struk"
+                }
+                className={`relative inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border transition-colors focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
+                  isAiModeOpen
+                    ? "border-border bg-black/[0.06] dark:bg-white/[0.1] text-foreground hover:bg-muted"
+                    : "border-primary/35 bg-primary/10 text-primary hover:bg-primary/20"
+                }`}
+              >
+                <AnimatePresence mode="wait" initial={false}>
+                  {isAiModeOpen ? (
+                    <motion.span
+                      key="close-ai-icon"
+                      initial={{ rotate: -90, opacity: 0, scale: 0.6 }}
+                      animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                      exit={{ rotate: 90, opacity: 0, scale: 0.6 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 420,
+                        damping: 28,
+                      }}
+                      className="inline-flex items-center justify-center"
+                    >
+                      <X className="h-5 w-5" />
+                    </motion.span>
+                  ) : (
+                    <motion.span
+                      key="open-ai-icon"
+                      initial={{ rotate: 90, opacity: 0, scale: 0.6 }}
+                      animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                      exit={{ rotate: -90, opacity: 0, scale: 0.6 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 420,
+                        damping: 28,
+                      }}
+                      className="inline-flex items-center justify-center"
+                    >
+                      <Sparkles className="h-5 w-5" />
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </motion.button>
+            )}
           </div>
         </form>
       </DrawerContent>
