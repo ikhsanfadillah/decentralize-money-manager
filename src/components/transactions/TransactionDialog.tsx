@@ -1,40 +1,21 @@
-import * as React from "react";
-import { useForm, Controller } from "react-hook-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   AlertCircle,
   ArrowLeft,
   ArrowLeftRight,
   Loader2,
   Plus,
-  ScanText,
-  Sparkle,
   Sparkles,
   Trash2,
   TrendingDown,
   TrendingUp,
-  X,
+  X
 } from "lucide-react";
-import {
-  SmartMagicInputBar,
-  type SmartMagicInputActionState,
-  type SmartMagicInputBarHandle,
-} from "../ai/SmartMagicInputBar";
-import { DeleteTransactionDrawer } from "./DeleteTransactionDrawer";
-import { QuickAddCategoryDrawer } from "./QuickAddCategoryDrawer";
-import { CurrencyInput } from "../ui/currency-input";
-import { Input } from "../ui/input";
-import {
-  ButtonSlideToConfirm,
-  type SlideConfirmResult,
-} from "../ui/ButtonSlideToConfirm";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerTitle,
-} from "../ui/drawer";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import * as React from "react";
+import { Controller, useForm } from "react-hook-form";
+import { bookQueryKeys } from "../../hooks/useBookFinance";
+import { formatDateReadable } from "../../lib/date";
 import {
   tauriApi,
   type AccountView,
@@ -45,14 +26,31 @@ import {
   type TransferBetweenBooksInput,
   type UpdateTransactionInput,
 } from "../../lib/tauri-api";
-import { bookQueryKeys } from "../../hooks/useBookFinance";
+import { pushToast } from "../../lib/toast";
 import {
   formatAccountTypeLabel,
   formatRupiah,
   todayIsoDate,
 } from "../../lib/utils";
-import { formatDateReadable } from "../../lib/date";
-import { pushToast } from "../../lib/toast";
+import {
+  SmartMagicInputBar,
+  type SmartMagicInputActionState,
+  type SmartMagicInputBarHandle,
+} from "../ai/SmartMagicInputBar";
+import {
+  ButtonSlideToConfirm,
+  type SlideConfirmResult,
+} from "../ui/ButtonSlideToConfirm";
+import { CurrencyInput } from "../ui/currency-input";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerTitle,
+} from "../ui/drawer";
+import { Input } from "../ui/input";
+import { DeleteTransactionDrawer } from "./DeleteTransactionDrawer";
+import { QuickAddCategoryDrawer } from "./QuickAddCategoryDrawer";
 
 export type DialogTxMode = TransactionType | "CROSS_BOOK_TRANSFER";
 
