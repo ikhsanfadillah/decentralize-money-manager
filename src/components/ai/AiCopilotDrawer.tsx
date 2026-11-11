@@ -124,7 +124,7 @@ export const AiCopilotDrawer: React.FC<AiCopilotDrawerProps> = ({
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
                 <DrawerTitle className="truncate text-sm font-bold text-foreground">
-                  Financial Co-Pilot
+                  Financial Assistant
                 </DrawerTitle>
                 <span className="rounded-full border border-border bg-black/[0.04] px-2 py-0.5 font-mono text-[10px] font-semibold text-muted-foreground dark:bg-white/[0.06]">
                   {activeConfig.isConfigured
@@ -166,7 +166,7 @@ export const AiCopilotDrawer: React.FC<AiCopilotDrawerProps> = ({
             <button
               type="button"
               onClick={() => setOpen(false)}
-              aria-label="Tutup Co-Pilot"
+              aria-label="Tutup Assistant"
               className="nav-touch-item inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-black/[0.04] text-muted-foreground hover:bg-muted hover:text-foreground dark:bg-white/[0.06]"
             >
               <X className="h-4 w-4" />
@@ -213,7 +213,7 @@ export const AiCopilotDrawer: React.FC<AiCopilotDrawerProps> = ({
                   Tanyakan Apa Saja Tentang Keuangan Buku Ini
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  AI Co-Pilot dapat memeriksa saldo, mencari transaksi,
+                  AI Assistant dapat memeriksa saldo, mencari transaksi,
                   menganalisis laporan bulanan, hingga membuatkan draf transaksi
                   dan anggaran untuk Anda.
                 </p>

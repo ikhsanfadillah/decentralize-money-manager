@@ -71,7 +71,7 @@ export const AiByokSettingsSection: React.FC = () => {
             onClick={openCopilot}
             className="nav-touch-item font-semibold text-primary hover:underline"
           >
-            Buka Financial Co-Pilot →
+            Buka Financial Assistant →
           </button>
         </div>
       </div>

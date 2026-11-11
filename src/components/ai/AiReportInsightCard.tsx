@@ -269,7 +269,7 @@ export const AiReportInsightCard: React.FC<AiReportInsightCardProps> = ({
                   onClick={openCopilot}
                   className="text-[11px] font-semibold text-primary hover:underline"
                 >
-                  Diskusikan di Co-Pilot →
+                  Diskusikan di Assistant →
                 </button>
               </div>
 
@@ -333,7 +333,7 @@ export const AiReportInsightCard: React.FC<AiReportInsightCardProps> = ({
             onClick={openCopilot}
             className="shrink-0 font-semibold text-primary hover:underline text-left sm:text-right"
           >
-            Tanya Co-Pilot Chat →
+            Tanya Assistant Chat →
           </button>
         </div>
       )}

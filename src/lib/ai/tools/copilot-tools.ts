@@ -575,7 +575,7 @@ async function handleProposeTransactions(
           : typeof item.category_name === "string" &&
               item.category_name.trim()
             ? item.category_name.trim()
-            : "Transaksi via AI Co-Pilot",
+            : "Transaksi via AI Assistant",
     };
     createdDrafts.push(draft);
     ctx.collectedTransactions.push(draft);

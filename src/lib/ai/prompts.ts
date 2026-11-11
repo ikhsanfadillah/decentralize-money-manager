@@ -87,7 +87,7 @@ export function buildCopilotAgentSystemPrompt(params: {
 }): string {
   const { bookId, bookName, todayDate, currentMonth } = params;
 
-  return `Kamu adalah Financial Co-Pilot AI di aplikasi Decentralize Money Manager.
+  return `Kamu adalah Financial Assistant AI di aplikasi Decentralize Money Manager.
 Buku aktif saat ini: "${bookName || "Buku Keuangan"}" (ID: ${bookId}).
 Tanggal hari ini: ${todayDate} (Bulan berjalan: ${currentMonth}).
 

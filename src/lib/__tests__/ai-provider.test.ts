@@ -347,7 +347,7 @@ describe("AI Agent BYOK Store & Utilities", () => {
     expect(insight.budgetRecommendations[0].amount_limit).toBe(1500000);
   });
 
-  it("tests connection and runs Co-Pilot turn with Gemini response", async () => {
+  it("tests connection and runs Assistant turn with Gemini response", async () => {
     const config = resolveActiveAiConfig(useAiStore.getState().byok);
 
     vi.spyOn(globalThis, "fetch")

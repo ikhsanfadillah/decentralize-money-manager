@@ -72,7 +72,7 @@ describe("BookLayout Top Navbar", () => {
     );
   };
 
-  it("renders Money Manager brand title, subtitle, AI Co-Pilot toggle, and settings link", () => {
+  it("renders Money Manager brand title, subtitle, AI Assistant toggle, and settings link", () => {
     renderLayout();
 
     expect(screen.getByText("Money Manager")).toBeInTheDocument();

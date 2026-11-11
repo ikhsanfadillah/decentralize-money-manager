@@ -22,7 +22,7 @@ import type {
 } from "../types";
 
 /**
- * Runs an interactive Agentic Co-Pilot turn with multi-step tool calling powered by Vercel AI SDK `generateText`.
+ * Runs an interactive Agentic Assistant turn with multi-step tool calling powered by Vercel AI SDK `generateText`.
  */
 export async function runCopilotAgentTurn(options: {
   config: ActiveAiConnectionConfig;

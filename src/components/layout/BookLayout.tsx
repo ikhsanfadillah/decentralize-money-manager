@@ -94,14 +94,14 @@ export const BookLayout: React.FC<BookLayoutProps> = ({
             </div>
           </Link>
 
-          {/* Right: AI Co-Pilot + Settings Action */}
+          {/* Right: AI Assistant + Settings Action */}
           <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
               data-testid="navbar-ai-copilot-toggle"
               onClick={() => setCopilotOpen(true)}
-              aria-label="Buka Financial Co-Pilot AI"
-              title="Financial Co-Pilot AI (BYOK)"
+              aria-label="Buka Financial Assistant AI"
+              title="Financial Assistant AI (BYOK)"
               className={`nav-touch-item inline-flex h-10 items-center gap-1.5 rounded-full px-3 transition-colors focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
                 isCopilotOpen
                   ? "border-transparent bg-cta-surface text-cta-foreground"
@@ -110,7 +110,7 @@ export const BookLayout: React.FC<BookLayoutProps> = ({
             >
               <Sparkles className="h-4 w-4 shrink-0" aria-hidden="true" />
               <span className="hidden text-xs font-bold sm:inline">
-                AI Co-Pilot
+                AI Assistant
               </span>
             </button>
 
