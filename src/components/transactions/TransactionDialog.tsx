@@ -9,6 +9,8 @@ import {
   Loader2,
   Plus,
   ScanText,
+  Sparkle,
+  Sparkles,
   Trash2,
   TrendingDown,
   TrendingUp,
@@ -1083,7 +1085,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                       }
                       className="inline-flex items-center justify-center"
                     >
-                      <ScanText className="h-5 w-5" aria-hidden="true" />
+                      <Sparkles className="h-5 w-5" aria-hidden="true" />
                     </motion.span>
                   )}
                 </AnimatePresence>

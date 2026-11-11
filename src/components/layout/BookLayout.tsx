@@ -58,7 +58,7 @@ export const BookLayout: React.FC<BookLayoutProps> = ({
           duration: shouldReduceMotion ? 0.08 : 0.22,
           ease: [0.22, 1, 0.36, 1],
         }}
-        className="sticky top-0 z-30 border-b border-border/70 bg-background/75 backdrop-blur-md"
+        className="sticky top-0 z-30 border-b border-border/70 bg-dock/70 backdrop-blur-md"
       >
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           {/* Left: Brand Logo + Title & Subtitle */}
