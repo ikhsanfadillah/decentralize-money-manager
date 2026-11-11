@@ -4,7 +4,7 @@ import { cn } from "../../lib/utils";
 
 const Drawer = ({
   shouldScaleBackground = false,
-  repositionInputs = false,
+  repositionInputs = true,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
   <DrawerPrimitive.Root

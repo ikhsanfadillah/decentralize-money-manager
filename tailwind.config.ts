@@ -14,6 +14,7 @@ const config: Config = {
           contrast: "var(--color-card-contrast)",
         },
         border: "var(--color-border)",
+        "control-border": "var(--color-control-border)",
         primary: {
           DEFAULT: "var(--color-primary)",
           foreground: "var(--color-primary-foreground)",

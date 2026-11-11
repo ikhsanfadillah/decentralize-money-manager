@@ -3,16 +3,22 @@ import { useForm, Controller } from "react-hook-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
+  AlertCircle,
   ArrowLeft,
   ArrowLeftRight,
+  Loader2,
   Plus,
-  Sparkles,
+  ScanText,
   Trash2,
   TrendingDown,
   TrendingUp,
   X,
 } from "lucide-react";
-import { SmartMagicInputBar } from "../ai/SmartMagicInputBar";
+import {
+  SmartMagicInputBar,
+  type SmartMagicInputActionState,
+  type SmartMagicInputBarHandle,
+} from "../ai/SmartMagicInputBar";
 import { DeleteTransactionDrawer } from "./DeleteTransactionDrawer";
 import { CurrencyInput } from "../ui/currency-input";
 import { Input } from "../ui/input";
@@ -105,6 +111,12 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
 
   const queryClient = useQueryClient();
   const shouldReduceMotion = useReducedMotion();
+  const magicInputRef = React.useRef<SmartMagicInputBarHandle>(null);
+  const [magicActionState, setMagicActionState] =
+    React.useState<SmartMagicInputActionState>({
+      canSubmit: false,
+      isParsing: false,
+    });
   const [isAiModeOpen, setIsAiModeOpen] = React.useState(false);
   const [aiSuggestedCategory, setAiSuggestedCategory] = React.useState<{
     name: string;
@@ -168,6 +180,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
   React.useEffect(() => {
     setIsAiModeOpen(false);
     setAiSuggestedCategory(null);
+    setMagicActionState({ canSubmit: false, isParsing: false });
   }, [isOpen, editingTx]);
 
   React.useEffect(() => {
@@ -432,7 +445,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
           <form
             onSubmit={(e) => e.preventDefault()}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
+              if (e.key === "Enter" && e.target instanceof HTMLInputElement) {
                 e.preventDefault();
               }
             }}
@@ -451,7 +464,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                   {editingTx
                     ? "Tinjau detail, ubah catatan, atau hapus transaksi ini."
                     : isAiModeOpen
-                      ? "Ketik kalimat transaksi atau scan struk untuk mengisi otomatis."
+                      ? "Tulis kalimat transaksi atau unggah struk untuk mengisi otomatis."
                       : "Pilih jenis transaksi dan isi nominal uangnya."}
                 </DrawerDescription>
               </div>
@@ -459,14 +472,14 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
               type="button"
               onClick={onClose}
               aria-label="Tutup"
-              className="nav-touch-item inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-black/[0.04] dark:bg-white/[0.06] text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
+              className="nav-touch-item inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/[0.04] dark:bg-white/[0.06] text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors"
             >
-              <X className="h-4 w-4" />
+              <X className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
 
           {/* Scrollable Content Body with iOS Fluid View Morphing */}
-          <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-5 py-4">
             <AnimatePresence mode="popLayout" initial={false}>
               {!editingTx && isAiModeOpen ? (
                 <motion.div
@@ -486,17 +499,24 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                       ? { opacity: 0 }
                       : { opacity: 0, scale: 0.96, y: 10 }
                   }
-                  transition={{
-                    type: "spring",
-                    stiffness: 380,
-                    damping: 32,
-                    mass: 0.8,
-                  }}
+                  transition={
+                    shouldReduceMotion
+                      ? { duration: 0.01 }
+                      : {
+                          type: "spring",
+                          stiffness: 380,
+                          damping: 32,
+                          mass: 0.8,
+                        }
+                  }
                 >
                   <SmartMagicInputBar
+                    ref={magicInputRef}
                     bookId={bookId}
                     accounts={accounts}
                     categories={categories}
+                    hideSubmitButton
+                    onActionStateChange={setMagicActionState}
                     onCloseAiMode={() => setIsAiModeOpen(false)}
                     onApplySingleDraft={(draft) => {
                       setValue("mode", draft.tx_type);
@@ -577,40 +597,44 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                       ? { opacity: 0 }
                       : { opacity: 0, scale: 0.97, y: -8 }
                   }
-                  transition={{
-                    type: "spring",
-                    stiffness: 380,
-                    damping: 32,
-                    mass: 0.8,
-                  }}
+                  transition={
+                    shouldReduceMotion
+                      ? { duration: 0.01 }
+                      : {
+                          type: "spring",
+                          stiffness: 380,
+                          damping: 32,
+                          mass: 0.8,
+                        }
+                  }
                   className="space-y-4"
                 >
-                  {/* Capsule Transaction Mode Selector */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 rounded-2xl border border-border bg-black/[0.04] dark:bg-white/[0.04] p-1.5">
+                  {/* Transaction Mode Selector */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-2xl bg-card">
                     {(
                       [
                         {
                           key: "EXPENSE",
                           label: "Pengeluaran",
-                          color: "text-rose-500",
+                          color: "text-rose-700 dark:text-rose-400",
                           activeClass:
-                            "border border-rose-500/40 bg-rose-500/15 text-rose-500 dark:text-rose-300",
+                            "border border-rose-600 bg-rose-500/15 text-rose-800 dark:border-rose-400/60 dark:text-rose-300",
                           icon: TrendingDown,
                         },
                         {
                           key: "INCOME",
                           label: "Pemasukan",
-                          color: "text-emerald-500",
+                          color: "text-emerald-700 dark:text-emerald-400",
                           activeClass:
-                            "border border-emerald-500/40 bg-emerald-500/15 text-emerald-600 dark:text-emerald-300",
+                            "border border-emerald-700 bg-emerald-500/15 text-emerald-800 dark:border-emerald-400/60 dark:text-emerald-300",
                           icon: TrendingUp,
                         },
                         {
                           key: "TRANSFER",
                           label: "Pindah Saldo",
-                          color: "text-sky-500",
+                          color: "text-sky-700 dark:text-sky-400",
                           activeClass:
-                            "border border-sky-500/40 bg-sky-500/15 text-sky-600 dark:text-sky-300",
+                            "border border-sky-700 bg-sky-500/15 text-sky-800 dark:border-sky-400/60 dark:text-sky-300",
                           icon: ArrowLeftRight,
                         },
                         ...(!editingTx
@@ -618,9 +642,9 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                               {
                                 key: "CROSS_BOOK_TRANSFER" as const,
                                 label: "Pindah Buku",
-                                color: "text-amber-500",
+                                color: "text-amber-700 dark:text-amber-400",
                                 activeClass:
-                                  "border border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-300",
+                                  "border border-amber-700 bg-amber-500/15 text-amber-800 dark:border-amber-400/60 dark:text-amber-300",
                                 icon: ArrowLeftRight,
                               },
                             ]
@@ -634,10 +658,10 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                           key={tab.key}
                           type="button"
                           onClick={() => setValue("mode", tab.key)}
-                          className={`nav-touch-item inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-2.5 py-2 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
+                          className={`nav-touch-item inline-flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                             active
                               ? tab.activeClass
-                              : `border border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground`
+                              : "border border-control-border/50 text-foreground hover:bg-muted/60"
                           }`}
                         >
                           <IconComponent
@@ -650,12 +674,12 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                     })}
                   </div>
 
-                  {/* AI Suggested New Category Banner (when returning from Single Draft Auto-fill) */}
+                  {/* Suggested New Category Banner (when returning from Single Draft Auto-fill) */}
                   {aiSuggestedCategory &&
                     (currentMode === "EXPENSE" || currentMode === "INCOME") && (
-                      <div className="flex items-center justify-between gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-[11px]">
+                      <div className="flex items-center justify-between gap-2 rounded-xl border border-control-border bg-primary/5 px-3 py-2 text-xs">
                         <span className="text-muted-foreground">
-                          Kategori disarankan AI:{" "}
+                          Kategori baru yang disarankan:{" "}
                           <strong className="text-foreground">
                             {aiSuggestedCategory.name}
                           </strong>
@@ -694,9 +718,9 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                               setIsCreatingAiCategory(false);
                             }
                           }}
-                          className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2.5 py-1 font-semibold text-primary hover:bg-primary/25 disabled:opacity-50"
+                          className="nav-touch-item inline-flex min-h-11 shrink-0 items-center gap-1 rounded-xl bg-primary/15 px-3.5 text-xs font-semibold text-foreground hover:bg-primary/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
                         >
-                          <Plus className="h-3 w-3" />
+                          <Plus className="h-3.5 w-3.5" aria-hidden="true" />
                           <span>
                             {isCreatingAiCategory
                               ? "Membuat..."
@@ -719,15 +743,25 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                       </label>
                       <select
                         id="tx-account-select"
+                        disabled={activeAccounts.length === 0}
                         {...register("accountId")}
-                        className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                        className="flex h-11 w-full rounded-xl border border-control-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
                       >
-                        {activeAccounts.map((acc) => (
-                          <option key={acc.id} value={acc.id}>
-                            {acc.name} ({formatAccountTypeLabel(acc.account_type)})
-                          </option>
-                        ))}
+                        {activeAccounts.length === 0 ? (
+                          <option value="">-- Belum ada rekening aktif --</option>
+                        ) : (
+                          activeAccounts.map((acc) => (
+                            <option key={acc.id} value={acc.id}>
+                              {acc.name} ({formatAccountTypeLabel(acc.account_type)})
+                            </option>
+                          ))
+                        )}
                       </select>
+                      {activeAccounts.length === 0 && (
+                        <p className="text-xs text-amber-800 dark:text-amber-300">
+                          Belum ada rekening aktif di buku ini. Tambahkan rekening terlebih dahulu di halaman Rekening.
+                        </p>
+                      )}
                     </div>
 
                     {currentMode === "TRANSFER" && (
@@ -740,8 +774,9 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                         </label>
                         <select
                           id="tx-to-account-select"
+                          disabled={activeAccounts.length < 2}
                           {...register("toAccountId")}
-                          className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                          className="flex h-11 w-full rounded-xl border border-control-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
                         >
                           <option value="">-- Pilih Tujuan --</option>
                           {activeAccounts.map((acc) => (
@@ -750,12 +785,17 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                             </option>
                           ))}
                         </select>
+                        {activeAccounts.length < 2 && (
+                          <p className="text-xs text-muted-foreground">
+                            Pindah saldo membutuhkan minimal 2 rekening aktif.
+                          </p>
+                        )}
                       </div>
                     )}
 
                     {(currentMode === "EXPENSE" || currentMode === "INCOME") && (
                       <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-2">
                           <label
                             htmlFor="tx-category-select"
                             className="block text-xs font-medium text-foreground"
@@ -769,25 +809,29 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                                 setIsQuickAddCategory(true);
                                 setNewCategoryName("");
                               }}
-                              className="nav-touch-item inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                              className="nav-touch-item inline-flex min-h-11 items-center gap-1 rounded-xl px-2.5 text-xs font-semibold text-primary hover:bg-muted hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                             >
-                              <Plus className="h-3 w-3" />
+                              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
                               <span>Kategori Baru</span>
                             </button>
                           )}
                         </div>
 
                         {isQuickAddCategory ? (
-                          <div className="rounded-2xl border border-primary/40 bg-primary/10 p-3 space-y-2">
-                            <p className="text-[11px] font-medium text-foreground">
+                          <div className="rounded-xl border border-control-border bg-primary/10 p-3 space-y-2">
+                            <label
+                              htmlFor="tx-new-category-input"
+                              className="block text-xs font-medium text-foreground"
+                            >
                               Tambah Kategori {currentMode === "EXPENSE" ? "Pengeluaran" : "Pemasukan"} Baru:
-                            </p>
-                            <div className="flex items-center gap-1.5">
+                            </label>
+                            <div className="flex items-center gap-2">
                               <Input
+                                id="tx-new-category-input"
                                 value={newCategoryName}
                                 onChange={(e) => setNewCategoryName(e.target.value)}
                                 placeholder="Contoh: Belanja Bulanan, Kopi, Hiburan..."
-                                className="h-9 text-xs"
+                                className="h-11 text-xs"
                                 autoFocus
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") {
@@ -803,41 +847,48 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                                 type="button"
                                 onClick={() => void handleQuickAddCategory()}
                                 disabled={isAddingCategory || !newCategoryName.trim()}
-                                className="nav-touch-item shrink-0 h-9 px-3.5 rounded-full bg-cta-surface text-cta-foreground text-xs font-semibold hover:opacity-90 disabled:opacity-50"
+                                className="nav-touch-item shrink-0 h-11 px-3.5 rounded-xl bg-cta-surface text-cta-foreground text-xs font-semibold hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:border disabled:border-control-border disabled:bg-zinc-200 disabled:text-zinc-700 dark:disabled:bg-zinc-800 dark:disabled:text-zinc-300"
                               >
                                 {isAddingCategory ? "..." : "Simpan"}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setIsQuickAddCategory(false)}
-                                className="nav-touch-item shrink-0 h-9 px-3 rounded-full border border-border bg-black/[0.04] dark:bg-white/[0.06] text-muted-foreground text-xs hover:text-foreground"
+                                className="nav-touch-item shrink-0 h-11 px-3 rounded-full bg-black/[0.04] dark:bg-white/[0.06] text-foreground text-xs font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                               >
                                 Batal
                               </button>
                             </div>
                           </div>
                         ) : (
-                          <select
-                            id="tx-category-select"
-                            {...register("categoryId")}
-                            onChange={(e) => {
-                              if (e.target.value === "__NEW__") {
-                                setIsQuickAddCategory(true);
-                                setNewCategoryName("");
-                                return;
-                              }
-                              setValue("categoryId", e.target.value);
-                            }}
-                            className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-                          >
-                            <option value="">-- Pilih Kategori --</option>
-                            {filteredCategories.map((cat) => (
-                              <option key={cat.id} value={cat.id}>
-                                {cat.name}
-                              </option>
-                            ))}
-                            <option value="__NEW__">+ Tambah Kategori Baru...</option>
-                          </select>
+                          <>
+                            <select
+                              id="tx-category-select"
+                              {...register("categoryId")}
+                              onChange={(e) => {
+                                if (e.target.value === "__NEW__") {
+                                  setIsQuickAddCategory(true);
+                                  setNewCategoryName("");
+                                  return;
+                                }
+                                setValue("categoryId", e.target.value);
+                              }}
+                              className="flex h-11 w-full rounded-xl border border-control-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                            >
+                              <option value="">-- Pilih Kategori --</option>
+                              {filteredCategories.map((cat) => (
+                                <option key={cat.id} value={cat.id}>
+                                  {cat.name}
+                                </option>
+                              ))}
+                              <option value="__NEW__">+ Tambah Kategori Baru...</option>
+                            </select>
+                            {filteredCategories.length === 0 && (
+                              <p className="text-xs text-muted-foreground">
+                                Belum ada kategori. Pilih Kategori Baru untuk membuat.
+                              </p>
+                            )}
+                          </>
                         )}
                       </div>
                     )}
@@ -852,16 +903,31 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                         </label>
                         <select
                           id="tx-to-book-select"
+                          disabled={booksQuery.isLoading || otherBooks.length === 0}
                           {...register("toBookId")}
-                          className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                          className="flex h-11 w-full rounded-xl border border-control-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
                         >
-                          <option value="">-- Pilih Buku Tujuan --</option>
+                          <option value="">
+                            {booksQuery.isLoading
+                              ? "Memuat daftar buku..."
+                              : "-- Pilih Buku Tujuan --"}
+                          </option>
                           {otherBooks.map((b) => (
                             <option key={b.id} value={b.id}>
                               {b.name}
                             </option>
                           ))}
                         </select>
+                        {booksQuery.isError ? (
+                          <p role="alert" className="flex items-center gap-1.5 text-xs text-rose-700 dark:text-rose-400">
+                            <AlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                            <span>Gagal memuat daftar buku tujuan.</span>
+                          </p>
+                        ) : !booksQuery.isLoading && otherBooks.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">
+                            Belum ada buku lain sebagai tujuan transfer.
+                          </p>
+                        ) : null}
                       </div>
                     )}
                   </div>
@@ -876,16 +942,37 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                       </label>
                       <select
                         id="tx-to-book-account-select"
+                        disabled={
+                          !selectedToBookId ||
+                          destBookAccountsQuery.isLoading ||
+                          destBookAccounts.length === 0
+                        }
                         {...register("toBookAccountId")}
-                        className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
+                        className="flex h-11 w-full rounded-xl border border-control-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
                       >
-                        <option value="">-- Pilih Rekening Buku Tujuan --</option>
+                        <option value="">
+                          {destBookAccountsQuery.isLoading
+                            ? "Memuat rekening buku tujuan..."
+                            : "-- Pilih Rekening Buku Tujuan --"}
+                        </option>
                         {destBookAccounts.map((acc) => (
                           <option key={acc.id} value={acc.id}>
                             {acc.name} ({formatAccountTypeLabel(acc.account_type)})
                           </option>
                         ))}
                       </select>
+                      {destBookAccountsQuery.isError ? (
+                        <p role="alert" className="flex items-center gap-1.5 text-xs text-rose-700 dark:text-rose-400">
+                          <AlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                          <span>Gagal memuat rekening buku tujuan.</span>
+                        </p>
+                      ) : selectedToBookId &&
+                        !destBookAccountsQuery.isLoading &&
+                        destBookAccounts.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          Buku tujuan belum memiliki rekening aktif.
+                        </p>
+                      ) : null}
                     </div>
                   )}
 
@@ -914,7 +1001,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                     </div>
 
                     <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <label
                           htmlFor="tx-date-input"
                           className="block text-xs font-medium text-foreground"
@@ -922,7 +1009,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                           Tanggal Transaksi
                         </label>
                         {selectedTxDate && (
-                          <span className="text-[11px] font-medium text-primary">
+                          <span className="text-xs font-medium text-primary">
                             {formatDateReadable(selectedTxDate, { withDayName: true })}
                           </span>
                         )}
@@ -961,9 +1048,9 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                           onClose();
                           setTxPendingDelete(target);
                         }}
-                        className="nav-touch-item flex w-full items-center justify-center gap-1.5 rounded-full border border-rose-500/25 bg-rose-500/10 py-2.5 text-xs font-medium text-rose-600 hover:bg-rose-500/15 active:scale-[0.99] dark:text-rose-400 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary transition-colors"
+                        className="nav-touch-item flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-rose-700/40 bg-rose-500/12 py-2.5 text-xs font-semibold text-rose-800 hover:bg-rose-500/20 dark:border-rose-400/50 dark:text-rose-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
                         <span>Hapus Transaksi Ini</span>
                       </button>
                     </div>
@@ -973,32 +1060,119 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
             </AnimatePresence>
           </div>
 
-          {/* Footer: Slide Button + Aligned AI Spark Toggle Button */}
-          <div className="flex items-center gap-2.5 border-t border-border/70 p-3 sm:px-5 shrink-0">
+          {/* Footer: Primary CTA (Slide or Proses & Isi Otomatis) + Mode Toggle / Back */}
+          <div className="flex items-center gap-2.5 border-t border-border/70 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5 shrink-0">
+            {!editingTx && (
+              <motion.button
+                type="button"
+                data-testid="toggle-ai-magic-mode-btn"
+                onClick={() => setIsAiModeOpen((prev) => !prev)}
+                whileTap={shouldReduceMotion ? undefined : { scale: 0.92 }}
+                aria-label={
+                  isAiModeOpen
+                    ? "Kembali ke Form Manual"
+                    : "Buka Isi Otomatis dari Teks & Struk"
+                }
+                title={
+                  isAiModeOpen
+                    ? "Kembali ke Form Manual"
+                    : "Isi Otomatis dari Teks & Struk"
+                }
+                className={`bg-muted border-border relative inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                  isAiModeOpen
+                    ? "text-foreground"
+                    : "hover:opacity-90"
+                }`}
+              >
+                <AnimatePresence mode="wait" initial={false}>
+                  {isAiModeOpen ? (
+                    <motion.span
+                      key="close-ai-icon"
+                      initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.6 }}
+                      animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
+                      exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.6 }}
+                      transition={
+                        shouldReduceMotion
+                          ? { duration: 0.01 }
+                          : {
+                              type: "spring",
+                              stiffness: 420,
+                              damping: 28,
+                            }
+                      }
+                      className="inline-flex items-center justify-center"
+                    >
+                      <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+                    </motion.span>
+                  ) : (
+                    <motion.span
+                      key="open-ai-icon"
+                      initial={
+                        shouldReduceMotion
+                          ? { opacity: 0 }
+                          : { opacity: 0, scale: 0.6 }
+                      }
+                      animate={
+                        shouldReduceMotion
+                          ? { opacity: 1 }
+                          : { opacity: 1, scale: 1 }
+                      }
+                      exit={
+                        shouldReduceMotion
+                          ? { opacity: 0 }
+                          : { opacity: 0, scale: 0.6 }
+                      }
+                      transition={
+                        shouldReduceMotion
+                          ? { duration: 0.01 }
+                          : {
+                              type: "spring",
+                              stiffness: 420,
+                              damping: 28,
+                            }
+                      }
+                      className="inline-flex items-center justify-center"
+                    >
+                      <ScanText className="h-5 w-5" aria-hidden="true" />
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </motion.button>
+            )}
             <div className="flex-1 min-w-0">
               <AnimatePresence mode="popLayout" initial={false}>
                 {!editingTx && isAiModeOpen ? (
                   <motion.button
-                    key="back-to-manual-btn"
+                    key="ai-submit-btn"
                     type="button"
-                    data-testid="back-to-manual-form-btn"
-                    onClick={() => setIsAiModeOpen(false)}
-                    initial={{ opacity: 0, y: 6 }}
+                    data-testid="magic-input-submit-btn"
+                    disabled={magicActionState.isParsing || !magicActionState.canSubmit}
+                    onClick={() => magicInputRef.current?.submit()}
+                    initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    transition={{ duration: 0.16 }}
-                    className="nav-touch-item flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-border bg-black/[0.04] dark:bg-white/[0.06] px-4 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+                    exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
+                    transition={{ duration: shouldReduceMotion ? 0.01 : 0.16 }}
+                    className="nav-touch-item flex h-12 w-full items-center justify-center gap-2 rounded-full bg-cta-surface px-4 text-xs font-bold text-cta-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:border disabled:border-none disabled:bg-zinc-200 disabled:text-zinc-700 disabled:hover:opacity-100 dark:disabled:bg-zinc-800 dark:disabled:text-zinc-300 transition-colors"
                   >
-                    <ArrowLeft className="h-4 w-4 text-muted-foreground" />
-                    <span>Kembali ke Form Manual</span>
+                    {magicActionState.isParsing ? (
+                      <>
+                        <Loader2
+                          className={`h-4 w-4 shrink-0 ${shouldReduceMotion ? "" : "animate-spin"}`}
+                          aria-hidden="true"
+                        />
+                        <span>Membaca transaksi...</span>
+                      </>
+                    ) : (
+                      <span>Proses &amp; Isi Otomatis</span>
+                    )}
                   </motion.button>
                 ) : (
                   <motion.div
                     key="slide-to-confirm-wrapper"
-                    initial={{ opacity: 0, y: 6 }}
+                    initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    transition={{ duration: 0.16 }}
+                    exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
+                    transition={{ duration: shouldReduceMotion ? 0.01 : 0.16 }}
                   >
                     <ButtonSlideToConfirm
                       key={isOpen ? `open-${editingTx?.id ?? "new"}` : "closed"}
@@ -1016,63 +1190,6 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
               </AnimatePresence>
             </div>
 
-            {!editingTx && (
-              <motion.button
-                type="button"
-                data-testid="toggle-ai-magic-mode-btn"
-                onClick={() => setIsAiModeOpen((prev) => !prev)}
-                whileTap={{ scale: 0.92 }}
-                aria-label={
-                  isAiModeOpen
-                    ? "Tutup AI Smart Input"
-                    : "Buka AI Smart Input & Scan Struk"
-                }
-                title={
-                  isAiModeOpen
-                    ? "Tutup AI Smart Input"
-                    : "AI Smart Input & Scan Struk"
-                }
-                className={`relative inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border transition-colors focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary ${
-                  isAiModeOpen
-                    ? "border-border bg-black/[0.06] dark:bg-white/[0.1] text-foreground hover:bg-muted"
-                    : "border-primary/35 bg-primary/10 text-primary hover:bg-primary/20"
-                }`}
-              >
-                <AnimatePresence mode="wait" initial={false}>
-                  {isAiModeOpen ? (
-                    <motion.span
-                      key="close-ai-icon"
-                      initial={{ rotate: -90, opacity: 0, scale: 0.6 }}
-                      animate={{ rotate: 0, opacity: 1, scale: 1 }}
-                      exit={{ rotate: 90, opacity: 0, scale: 0.6 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 420,
-                        damping: 28,
-                      }}
-                      className="inline-flex items-center justify-center"
-                    >
-                      <X className="h-5 w-5" />
-                    </motion.span>
-                  ) : (
-                    <motion.span
-                      key="open-ai-icon"
-                      initial={{ rotate: 90, opacity: 0, scale: 0.6 }}
-                      animate={{ rotate: 0, opacity: 1, scale: 1 }}
-                      exit={{ rotate: -90, opacity: 0, scale: 0.6 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 420,
-                        damping: 28,
-                      }}
-                      className="inline-flex items-center justify-center"
-                    >
-                      <Sparkles className="h-5 w-5" />
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </motion.button>
-            )}
           </div>
         </form>
       </DrawerContent>

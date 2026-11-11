@@ -4,6 +4,7 @@ import {
   AnimatePresence,
   useMotionValue,
   useTransform,
+  useReducedMotion,
   animate,
 } from "motion/react";
 import { cn } from "../../lib/utils";
@@ -69,6 +70,7 @@ export const ButtonSlideToConfirm: React.FC<ButtonSlideToConfirmProps> = ({
   "data-testid": testId = "button-slide-to-confirm",
 }) => {
   const trackRef = React.useRef<HTMLDivElement>(null);
+  const shouldReduceMotion = useReducedMotion();
   const maxDragRef = React.useRef<number>(240);
   const statusRef = React.useRef<SlideConfirmStatus>("idle");
   const [status, setStatusState] = React.useState<SlideConfirmStatus>("idle");
@@ -376,13 +378,13 @@ export const ButtonSlideToConfirm: React.FC<ButtonSlideToConfirmProps> = ({
       data-vaul-no-drag=""
       onPointerDown={(e) => e.stopPropagation()}
       animate={
-        status === "error"
+        status === "error" && !shouldReduceMotion
           ? { x: [0, -9, 9, -6, 6, -3, 3, 0] }
           : { x: 0 }
       }
-      transition={{ duration: 0.42, ease: "easeInOut" }}
+      transition={{ duration: shouldReduceMotion ? 0.01 : 0.42, ease: "easeInOut" }}
       className={cn(
-        "relative flex h-12 w-full select-none items-center overflow-hidden rounded-2xl border border-border bg-black/[0.04] dark:bg-white/[0.06] p-1 touch-none transition-colors duration-200",
+        "relative flex h-12 w-full select-none items-center overflow-hidden rounded-full bg-black/[0.04] dark:bg-white/[0.06] p-1 touch-none transition-colors duration-200",
         disabled && "opacity-50 pointer-events-none",
         status === "error" && "border-rose-600! bg-rose-500/15!",
         status === "loading" && "border-cta-surface bg-cta-surface",
@@ -399,7 +401,7 @@ export const ButtonSlideToConfirm: React.FC<ButtonSlideToConfirmProps> = ({
           opacity: fillOpacity,
         }}
         className={cn(
-          "pointer-events-none absolute inset-y-0 left-0 z-0 rounded-xl bg-cta-surface transition-colors duration-150",
+          "pointer-events-none absolute inset-y-0 left-0 z-0 rounded-full bg-cta-surface transition-colors duration-150",
           status === "error" && "bg-rose-600!",
           status === "loading" && "w-full! bg-cta-surface! opacity-100!",
           status === "success" && "w-full! bg-emerald-700! opacity-100!"
@@ -454,12 +456,17 @@ export const ButtonSlideToConfirm: React.FC<ButtonSlideToConfirmProps> = ({
               className="flex items-center gap-2 text-xs font-semibold text-cta-foreground"
             >
               <motion.span
-                animate={{ rotate: 360 }}
-                transition={{
-                  repeat: Infinity,
-                  duration: 0.75,
-                  ease: "linear",
-                }}
+                animate={shouldReduceMotion ? undefined : { rotate: 360 }}
+                transition={
+                  shouldReduceMotion
+                    ? undefined
+                    : {
+                        repeat: Infinity,
+                        duration: 0.75,
+                        ease: "linear",
+                      }
+                }
+                aria-hidden="true"
                 className="inline-block h-4 w-4 rounded-full border-2 border-cta-foreground/30 border-t-cta-foreground"
               />
               <span>{loadingLabel}</span>
@@ -482,34 +489,38 @@ export const ButtonSlideToConfirm: React.FC<ButtonSlideToConfirmProps> = ({
             >
               {/* Celebratory Checkmark Badge + Ring + Burst Particles */}
               <div className="relative flex h-7 w-7 items-center justify-center">
-                {/* Expanding Ripple Ring */}
-                <motion.span
-                  initial={{ scale: 0.6, opacity: 0.85 }}
-                  animate={{ scale: 2.1, opacity: 0 }}
-                  transition={{ duration: 0.6, ease: "easeOut" }}
-                  className="absolute inset-0 rounded-full border-2 border-white"
-                />
-
-                {/* Radial Particle Burst */}
-                {BURST_ANGLES.map((deg) => {
-                  const rad = (deg * Math.PI) / 180;
-                  const tx = Math.cos(rad) * 18;
-                  const ty = Math.sin(rad) * 18;
-                  return (
+                {!shouldReduceMotion && (
+                  <>
+                    {/* Expanding Ripple Ring */}
                     <motion.span
-                      key={deg}
-                      initial={{ x: 0, y: 0, scale: 0, opacity: 1 }}
-                      animate={{
-                        x: tx,
-                        y: ty,
-                        scale: [0, 1.15, 0],
-                        opacity: [1, 1, 0],
-                      }}
-                      transition={{ duration: 0.52, ease: "easeOut" }}
-                      className="absolute h-1.5 w-1.5 rounded-full bg-emerald-200"
+                      initial={{ scale: 0.6, opacity: 0.85 }}
+                      animate={{ scale: 2.1, opacity: 0 }}
+                      transition={{ duration: 0.6, ease: "easeOut" }}
+                      className="absolute inset-0 rounded-full border-2 border-white"
                     />
-                  );
-                })}
+
+                    {/* Radial Particle Burst */}
+                    {BURST_ANGLES.map((deg) => {
+                      const rad = (deg * Math.PI) / 180;
+                      const tx = Math.cos(rad) * 18;
+                      const ty = Math.sin(rad) * 18;
+                      return (
+                        <motion.span
+                          key={deg}
+                          initial={{ x: 0, y: 0, scale: 0, opacity: 1 }}
+                          animate={{
+                            x: tx,
+                            y: ty,
+                            scale: [0, 1.15, 0],
+                            opacity: [1, 1, 0],
+                          }}
+                          transition={{ duration: 0.52, ease: "easeOut" }}
+                          className="absolute h-1.5 w-1.5 rounded-full bg-emerald-200"
+                        />
+                      );
+                    })}
+                  </>
+                )}
 
                 {/* Circle Container */}
                 <motion.div
@@ -641,7 +652,7 @@ export const ButtonSlideToConfirm: React.FC<ButtonSlideToConfirmProps> = ({
             onPointerCancel={handlePointerCancel}
             onKeyDown={handleKeyDown}
             className={cn(
-              "relative z-20 flex h-10 w-10 shrink-0 cursor-grab items-center justify-center rounded-xl border border-border bg-cta-surface text-cta-foreground transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary active:cursor-grabbing",
+              "relative z-20 flex h-10 w-10 shrink-0 cursor-grab items-center justify-center rounded-full border border-control-border bg-cta-surface text-cta-foreground transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:cursor-grabbing",
               isReadyToRelease &&
                 status !== "error" &&
                 "bg-cta-foreground text-cta-surface border-cta-foreground/20",
@@ -655,18 +666,26 @@ export const ButtonSlideToConfirm: React.FC<ButtonSlideToConfirmProps> = ({
                 <motion.span
                   key="press-pulse"
                   data-testid={`${testId}-pulse`}
-                  initial={{ scale: 0.95, opacity: 0.65 }}
-                  animate={{
-                    scale: [1, 1.38],
-                    opacity: [0.6, 0],
-                  }}
+                  initial={shouldReduceMotion ? { opacity: 0.45 } : { scale: 0.95, opacity: 0.65 }}
+                  animate={
+                    shouldReduceMotion
+                      ? { opacity: 0.45 }
+                      : {
+                          scale: [1, 1.38],
+                          opacity: [0.6, 0],
+                        }
+                  }
                   exit={{ opacity: 0 }}
-                  transition={{
-                    duration: 0.9,
-                    repeat: Infinity,
-                    ease: "easeOut",
-                  }}
-                  className="pointer-events-none absolute inset-0 rounded-md border-2 border-cta-surface/60 bg-cta-surface/20"
+                  transition={
+                    shouldReduceMotion
+                      ? { duration: 0.01 }
+                      : {
+                          duration: 0.9,
+                          repeat: Infinity,
+                          ease: "easeOut",
+                        }
+                  }
+                  className="pointer-events-none absolute inset-0 rounded-full border-2 border-cta-surface/60 bg-cta-surface/20"
                 />
               )}
             </AnimatePresence>
@@ -674,13 +693,16 @@ export const ButtonSlideToConfirm: React.FC<ButtonSlideToConfirmProps> = ({
             {/* Knob Icon: Arrow on idle/drag, Check preview when >= 90%, X when error */}
             <motion.div
               animate={{
-                x: isPressed && !isReadyToRelease ? [0, 2.5, 0] : 0,
-                scale: isReadyToRelease || status === "error" ? 1.1 : 1,
+                x: isPressed && !isReadyToRelease && !shouldReduceMotion ? [0, 2.5, 0] : 0,
+                scale:
+                  !shouldReduceMotion && (isReadyToRelease || status === "error")
+                    ? 1.1
+                    : 1,
               }}
               transition={
-                isPressed && !isReadyToRelease
+                isPressed && !isReadyToRelease && !shouldReduceMotion
                   ? { duration: 0.7, repeat: Infinity, ease: "easeInOut" }
-                  : { duration: 0.18 }
+                  : { duration: shouldReduceMotion ? 0.01 : 0.18 }
               }
               className="relative z-10 flex items-center justify-center"
             >

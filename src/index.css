@@ -9,6 +9,7 @@
     --color-card: rgba(255, 255, 255, 0.85);
     --color-card-contrast: #18181b;
     --color-border: rgba(24, 24, 27, 0.1);
+    --color-control-border: rgba(24, 24, 27, 0.45);
     --color-foreground: #09090b;
     --color-primary: #27272a;
     --color-primary-foreground: #ffffff;
@@ -27,6 +28,7 @@
     --color-card: rgba(20, 20, 24, 0.92);
     --color-card-contrast: rgba(20, 20, 24, 0.92);
     --color-border: rgba(255, 255, 255, 0.11);
+    --color-control-border: rgba(255, 255, 255, 0.4);
     --color-foreground: #fafafa;
     --color-primary: #e4e4e7;
     --color-primary-foreground: #09090b;
@@ -70,6 +72,34 @@
     background-attachment: fixed;
     color: var(--color-foreground);
   }
+
+  a[href],
+  button,
+  summary,
+  select,
+  label[for],
+  label:has(> input[type="checkbox"], > input[type="radio"]),
+  [role="button"],
+  [role="link"],
+  [role="tab"],
+  [role="menuitem"],
+  [role="option"],
+  [role="switch"],
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="file"],
+  input[type="submit"],
+  input[type="button"],
+  input[type="reset"],
+  input[type="range"],
+  input[type="color"] {
+    cursor: pointer;
+  }
+
+  :disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
 }
 
 @theme {
@@ -77,6 +107,7 @@
   --color-card: var(--color-card);
   --color-card-contrast: var(--color-card-contrast);
   --color-border: var(--color-border);
+  --color-control-border: var(--color-control-border);
   --color-foreground: var(--color-foreground);
   --color-primary: var(--color-primary);
   --color-primary-foreground: var(--color-primary-foreground);
@@ -167,6 +198,18 @@
   .animate-page-in,
   .animate-card-up {
     animation-duration: 0.08s;
+  }
+
+  .nav-touch-item,
+  .fab-touch {
+    transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+  }
+
+  .nav-touch-item:active,
+  .nav-touch-item.active,
+  .fab-touch:active {
+    transform: none;
+    animation: none;
   }
 }
 

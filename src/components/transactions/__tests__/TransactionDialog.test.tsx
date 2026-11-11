@@ -3,6 +3,8 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TransactionDialog } from "../TransactionDialog";
+import { useAiStore } from "../../../stores/ai-store";
+import * as aiProvider from "../../../lib/ai-provider";
 import {
   tauriApi,
   type AccountView,
@@ -242,5 +244,182 @@ describe("TransactionDialog (Detail & Delete Action)", () => {
         screen.queryByText("Hapus Transaksi Ini?")
       ).not.toBeInTheDocument();
     });
+  });
+
+  it("renders 'Proses & Isi Otomatis' in the footer without duplicate back button, submits prompt, and applies single draft", async () => {
+    useAiStore.setState({
+      byok: {
+        activeProvider: "gemini",
+        providers: {
+          gemini: {
+            apiKey: "test-key-123",
+            model: "gemini-3.8-flash",
+            baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+          },
+          openai: {
+            apiKey: "",
+            model: "gpt-4o-mini",
+            baseUrl: "https://api.openai.com/v1",
+          },
+          deepseek: {
+            apiKey: "",
+            model: "deepseek-chat",
+            baseUrl: "https://api.deepseek.com",
+          },
+          groq: {
+            apiKey: "",
+            model: "llama-3.3-70b-versatile",
+            baseUrl: "https://api.groq.com/openai/v1",
+          },
+          openrouter: {
+            apiKey: "",
+            model: "google/gemini-2.5-flash",
+            baseUrl: "https://openrouter.ai/api/v1",
+          },
+        },
+      },
+    });
+
+    const parseSpy = vi
+      .spyOn(aiProvider, "parseSmartTransactionInput")
+      .mockResolvedValue([
+        {
+          id: "draft-1",
+          tx_type: "EXPENSE",
+          account_id: "acc-1",
+          account_name: "BCA",
+          to_account_id: null,
+          to_account_name: null,
+          category_id: "cat-1",
+          category_name: "Jajan",
+          suggested_new_category: null,
+          amount: 45000,
+          tx_date: "2026-11-11",
+          note: "Makan siang",
+        },
+      ]);
+
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <TransactionDialog
+          isOpen={true}
+          onClose={vi.fn()}
+          bookId={bookId}
+          accounts={mockAccounts}
+          categories={mockCategories}
+          editingTx={null}
+          onAddTransaction={vi.fn().mockResolvedValue(undefined)}
+          onUpdateTransaction={vi.fn().mockResolvedValue(undefined)}
+          onTransferBetweenBooks={vi.fn().mockResolvedValue(undefined)}
+          onDeleteTransaction={vi.fn().mockResolvedValue(undefined)}
+        />
+      </QueryClientProvider>
+    );
+
+    const toggleBtn = screen.getByTestId("toggle-ai-magic-mode-btn");
+    fireEvent.click(toggleBtn);
+
+    const submitBtn = await screen.findByTestId("magic-input-submit-btn");
+    expect(submitBtn).toHaveTextContent("Proses & Isi Otomatis");
+    expect(submitBtn).toBeDisabled();
+    expect(
+      screen.queryByTestId("back-to-manual-form-btn")
+    ).not.toBeInTheDocument();
+    expect(toggleBtn).toHaveAttribute("aria-label", "Kembali ke Form Manual");
+
+    // Enter text into labeled textarea -> footer submit button becomes enabled
+    const textarea = screen.getByLabelText("Kalimat Transaksi");
+    fireEvent.change(textarea, {
+      target: { value: "Makan siang 45rb pakai BCA" },
+    });
+
+    await waitFor(() => {
+      expect(submitBtn).not.toBeDisabled();
+    });
+
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(parseSpy).toHaveBeenCalledTimes(1);
+      expect(screen.getByLabelText("Nominal Transaksi")).toBeInTheDocument();
+    });
+
+    expect(screen.getByDisplayValue("Makan siang")).toBeInTheDocument();
+  });
+
+  it("shows persistent inline error alert when extraction fails and empty-account guidance when no accounts exist", async () => {
+    useAiStore.setState({
+      byok: {
+        activeProvider: "gemini",
+        providers: {
+          gemini: {
+            apiKey: "test-key-123",
+            model: "gemini-3.8-flash",
+            baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+          },
+          openai: {
+            apiKey: "",
+            model: "gpt-4o-mini",
+            baseUrl: "https://api.openai.com/v1",
+          },
+          deepseek: {
+            apiKey: "",
+            model: "deepseek-chat",
+            baseUrl: "https://api.deepseek.com",
+          },
+          groq: {
+            apiKey: "",
+            model: "llama-3.3-70b-versatile",
+            baseUrl: "https://api.groq.com/openai/v1",
+          },
+          openrouter: {
+            apiKey: "",
+            model: "google/gemini-2.5-flash",
+            baseUrl: "https://openrouter.ai/api/v1",
+          },
+        },
+      },
+    });
+
+    vi.spyOn(aiProvider, "parseSmartTransactionInput").mockRejectedValue(
+      new Error("Koneksi AI gagal")
+    );
+
+    render(
+      <QueryClientProvider client={createQueryClient()}>
+        <TransactionDialog
+          isOpen={true}
+          onClose={vi.fn()}
+          bookId={bookId}
+          accounts={[]}
+          categories={[]}
+          editingTx={null}
+          onAddTransaction={vi.fn().mockResolvedValue(undefined)}
+          onUpdateTransaction={vi.fn().mockResolvedValue(undefined)}
+          onTransferBetweenBooks={vi.fn().mockResolvedValue(undefined)}
+          onDeleteTransaction={vi.fn().mockResolvedValue(undefined)}
+        />
+      </QueryClientProvider>
+    );
+
+    expect(
+      screen.getByText(/Belum ada rekening aktif di buku ini/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Belum ada kategori\. Pilih Kategori Baru/i)
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("toggle-ai-magic-mode-btn"));
+    fireEvent.change(await screen.findByLabelText("Kalimat Transaksi"), {
+      target: { value: "Kopi 20rb" },
+    });
+
+    const submitBtn = await screen.findByTestId("magic-input-submit-btn");
+    await waitFor(() => expect(submitBtn).not.toBeDisabled());
+    fireEvent.click(submitBtn);
+
+    const errorAlert = await screen.findByTestId("magic-input-error");
+    expect(errorAlert).toHaveAttribute("role", "alert");
+    expect(errorAlert).toHaveTextContent("Koneksi AI gagal");
   });
 });
