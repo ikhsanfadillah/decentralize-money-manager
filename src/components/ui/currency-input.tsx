@@ -11,6 +11,60 @@ import { cn, formatRupiah } from "../../lib/utils";
 
 export const MAX_RUPIAH_VALUE = 999_999_999_999_999; // 15 digits, safe for Number.isSafeInteger
 
+function isCoarsePointerDevice(): boolean {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return false;
+  }
+  return Boolean(window.matchMedia("(pointer: coarse)")?.matches);
+}
+
+function blurActiveEditableElement(targetInput?: HTMLInputElement | null): void {
+  if (typeof document === "undefined") {
+    return;
+  }
+  const active = document.activeElement;
+  if (!(active instanceof HTMLElement) || active === document.body) {
+    return;
+  }
+  if (
+    active === targetInput ||
+    active instanceof HTMLInputElement ||
+    active instanceof HTMLTextAreaElement ||
+    active instanceof HTMLSelectElement ||
+    active.isContentEditable
+  ) {
+    active.blur();
+  }
+}
+
+const CurrencyNumericInnerInput = React.forwardRef<
+  HTMLInputElement,
+  React.InputHTMLAttributes<HTMLInputElement>
+>(({ readOnly, onFocus, onMouseUp, ...props }, ref) => {
+  return (
+    <Input
+      ref={ref}
+      readOnly={readOnly}
+      onFocus={(e) => {
+        if (readOnly || e.currentTarget.readOnly) {
+          e.currentTarget.blur();
+          return;
+        }
+        onFocus?.(e);
+      }}
+      onMouseUp={(e) => {
+        if (readOnly || e.currentTarget.readOnly) {
+          return;
+        }
+        onMouseUp?.(e);
+      }}
+      {...props}
+    />
+  );
+});
+
+CurrencyNumericInnerInput.displayName = "CurrencyNumericInnerInput";
+
 export interface CurrencyInputProps {
   value: number | null;
   onValueChange: (value: number | null) => void;
@@ -151,6 +205,9 @@ export const CurrencyInput = React.forwardRef<
     ref
   ) => {
     const [isCalcOpen, setIsCalcOpen] = React.useState(false);
+    const [isTouchInput, setIsTouchInput] = React.useState<boolean>(() =>
+      isCoarsePointerDevice()
+    );
     const [expression, setExpression] = React.useState<string>(() =>
       value === null || value === undefined || Number.isNaN(value)
         ? ""
@@ -159,6 +216,90 @@ export const CurrencyInput = React.forwardRef<
 
     const wrapperRef = React.useRef<HTMLDivElement>(null);
     const drawerContentRef = React.useRef<HTMLDivElement>(null);
+    const inputRef = React.useRef<HTMLInputElement | null>(null);
+
+    const setMergedInputRef = React.useCallback(
+      (node: HTMLInputElement | null) => {
+        inputRef.current = node;
+        if (typeof ref === "function") {
+          ref(node);
+        } else if (ref) {
+          ref.current = node;
+        }
+      },
+      [ref]
+    );
+
+    const activateTouchInput = React.useCallback(() => {
+      if (inputRef.current) {
+        inputRef.current.readOnly = true;
+      }
+      setIsTouchInput(true);
+    }, []);
+
+    const activateKeyboardInput = React.useCallback(() => {
+      if (inputRef.current) {
+        inputRef.current.readOnly = false;
+      }
+      setIsTouchInput(false);
+    }, []);
+
+    // Switch dynamically between touch-readonly (suppresses virtual keyboard) and desktop mouse/Tab typing
+    React.useEffect(() => {
+      if (typeof window === "undefined") {
+        return;
+      }
+      const mql =
+        typeof window.matchMedia === "function"
+          ? window.matchMedia("(pointer: coarse)")
+          : null;
+
+      const handleMediaChange = (e: MediaQueryListEvent) => {
+        if (e.matches) {
+          activateTouchInput();
+        } else {
+          activateKeyboardInput();
+        }
+      };
+
+      const handleDocumentPointerDown = (e: PointerEvent) => {
+        if (e.pointerType === "touch") {
+          activateTouchInput();
+        } else if (e.pointerType === "mouse") {
+          activateKeyboardInput();
+        }
+      };
+
+      const handleDocumentTouchStart = () => {
+        activateTouchInput();
+      };
+
+      const handleDocumentKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Tab") {
+          activateKeyboardInput();
+        }
+      };
+
+      mql?.addEventListener?.("change", handleMediaChange);
+      document.addEventListener("pointerdown", handleDocumentPointerDown, true);
+      document.addEventListener("touchstart", handleDocumentTouchStart, {
+        capture: true,
+        passive: true,
+      });
+      document.addEventListener("keydown", handleDocumentKeyDown, true);
+      return () => {
+        mql?.removeEventListener?.("change", handleMediaChange);
+        document.removeEventListener(
+          "pointerdown",
+          handleDocumentPointerDown,
+          true
+        );
+        document.removeEventListener("touchstart", handleDocumentTouchStart, {
+          capture: true,
+        });
+        document.removeEventListener("keydown", handleDocumentKeyDown, true);
+      };
+    }, [activateTouchInput, activateKeyboardInput]);
 
     // Keep expression synced when value changes externally (e.g. form reset, edit mode, or keyboard typing)
     React.useEffect(() => {
@@ -365,9 +506,16 @@ export const CurrencyInput = React.forwardRef<
           disabled={disabled}
           data-testid="currency-calc-trigger"
           title="Buka Kalkulator Nominal"
-          onMouseDown={(e) => e.preventDefault()}
+          onMouseDown={(e) => {
+            if (!isTouchInput) {
+              e.preventDefault();
+            }
+          }}
           onClick={() => {
             if (!disabled) {
+              if (isTouchInput || inputRef.current?.readOnly) {
+                blurActiveEditableElement(inputRef.current);
+              }
               setIsCalcOpen((prev) => !prev);
             }
           }}
@@ -399,8 +547,8 @@ export const CurrencyInput = React.forwardRef<
         </button>
 
         <NumericFormat
-          getInputRef={ref}
-          customInput={Input}
+          getInputRef={setMergedInputRef}
+          customInput={CurrencyNumericInnerInput}
           value={normalizedValue}
           onValueChange={handleValueChange}
           isAllowed={isAllowed}
@@ -414,16 +562,31 @@ export const CurrencyInput = React.forwardRef<
           disabled={disabled}
           placeholder={placeholder}
           onBlur={onBlur}
+          onPointerDown={(e) => {
+            if (e.pointerType === "touch") {
+              activateTouchInput();
+            } else if (e.pointerType === "mouse") {
+              activateKeyboardInput();
+            }
+          }}
+          onTouchStart={() => {
+            activateTouchInput();
+          }}
           onClick={() => {
             if (!disabled) {
+              if (isTouchInput || inputRef.current?.readOnly) {
+                blurActiveEditableElement(inputRef.current);
+              }
               setIsCalcOpen(true);
             }
           }}
           className={cn(
             "pl-8 font-mono tabular-nums tracking-tight text-right shadow-none",
+            isTouchInput && "cursor-pointer select-none",
             className
           )}
           {...rest}
+          readOnly={isTouchInput}
         />
 
         <Drawer
@@ -472,7 +635,11 @@ export const CurrencyInput = React.forwardRef<
             {/* 4x5 Custom Numeric & Calculator Keypad */}
             <div
               data-vaul-no-drag=""
-              onMouseDown={(e) => e.preventDefault()}
+              onMouseDown={(e) => {
+                if (!isTouchInput) {
+                  e.preventDefault();
+                }
+              }}
               onPointerDown={(e) => e.stopPropagation()}
               onPointerUp={(e) => e.stopPropagation()}
               className="grid grid-cols-4 gap-1.5 px-4"

@@ -1,6 +1,6 @@
 import * as React from "react";
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useForm, Controller } from "react-hook-form";
 import { CurrencyInput } from "../currency-input";
@@ -203,6 +203,141 @@ describe("CurrencyInput (react-number-format v5.4.5)", () => {
     expect(input.value).toBe("Rp 55.000");
     expect(onChange).toHaveBeenLastCalledWith(55000);
     expect(screen.queryByTestId("currency-calculator-drawer")).not.toBeInTheDocument();
+  });
+
+  describe("touch virtual keyboard suppression", () => {
+    const originalMatchMedia = window.matchMedia;
+
+    afterEach(() => {
+      window.matchMedia = originalMatchMedia;
+    });
+
+    const mockCoarsePointer = (matches: boolean) => {
+      window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+        matches: query === "(pointer: coarse)" ? matches : false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }));
+    };
+
+    it("renders readOnly with inputMode='none' on coarse-pointer devices, blurs on tap/Rp-prefix mouseup, and still calculates via drawer", () => {
+      mockCoarsePointer(true);
+      const onChange = vi.fn<(val: number | null) => void>();
+      const CoarseHarness: React.FC = () => {
+        const [val, setVal] = React.useState<number | null>(50000);
+        return (
+          <div>
+            <input aria-label="Catatan" />
+            <label htmlFor="nominal-coarse">Nominal</label>
+            <CurrencyInput
+              id="nominal-coarse"
+              aria-label="Nominal Uang"
+              value={val}
+              onValueChange={(next) => {
+                setVal(next);
+                onChange(next);
+              }}
+            />
+          </div>
+        );
+      };
+      render(<CoarseHarness />);
+
+      const noteInput = screen.getByLabelText("Catatan") as HTMLInputElement;
+      noteInput.focus();
+      expect(document.activeElement).toBe(noteInput);
+
+      const input = screen.getByLabelText("Nominal Uang") as HTMLInputElement;
+      expect(input).toHaveAttribute("readonly");
+      expect(input).toHaveAttribute("inputmode", "none");
+
+      // Simulate mobile tap hitting the "Rp " prefix (index 0), focusing, releasing, and clicking
+      fireEvent.touchStart(input);
+      input.focus();
+      input.setSelectionRange(0, 0);
+      fireEvent.mouseUp(input);
+      fireEvent.click(input);
+
+      // Should dismiss focus from previous input and never keep CurrencyInput focused
+      expect(document.activeElement).not.toBe(noteInput);
+      expect(document.activeElement).not.toBe(input);
+
+      expect(screen.getByTestId("currency-calculator-drawer")).toBeInTheDocument();
+
+      fireEvent.touchStart(screen.getByTestId("calc-key-add"));
+      fireEvent.click(screen.getByTestId("calc-key-add"));
+      fireEvent.touchStart(screen.getByTestId("calc-key-5"));
+      fireEvent.click(screen.getByTestId("calc-key-5"));
+      fireEvent.touchStart(screen.getByTestId("calc-key-000"));
+      fireEvent.click(screen.getByTestId("calc-key-000"));
+      fireEvent.touchStart(screen.getByTestId("calc-key-done"));
+      fireEvent.click(screen.getByTestId("calc-key-done"));
+
+      expect(input.value).toBe("Rp 55.000");
+      expect(onChange).toHaveBeenLastCalledWith(55000);
+      expect(document.activeElement).not.toBe(input);
+    });
+
+    it("switches dynamically to touch readOnly on touchstart and restores desktop typing on mouse click", async () => {
+      mockCoarsePointer(false);
+      const user = userEvent.setup();
+      const onChange = vi.fn<(val: number | null) => void>();
+      render(<ControlledCurrencyHarness onObservedChange={onChange} />);
+
+      const input = screen.getByLabelText("Nominal Uang") as HTMLInputElement;
+      expect(input).not.toHaveAttribute("readonly");
+
+      // Touch tap on 2-in-1 / hybrid device activates touch protection synchronously
+      fireEvent.touchStart(input);
+      expect(input.readOnly).toBe(true);
+      input.focus();
+      fireEvent.mouseUp(input);
+      fireEvent.click(input);
+
+      expect(document.activeElement).not.toBe(input);
+      expect(screen.getByTestId("currency-calculator-drawer")).toBeInTheDocument();
+
+      fireEvent.touchStart(screen.getByTestId("calc-key-done"));
+      fireEvent.click(screen.getByTestId("calc-key-done"));
+      expect(screen.queryByTestId("currency-calculator-drawer")).not.toBeInTheDocument();
+      expect(input.readOnly).toBe(true);
+
+      // Mouse interaction restores editable keyboard input
+      await user.click(input);
+      expect(input.readOnly).toBe(false);
+      await user.type(input, "25000");
+      expect(input.value).toBe("Rp 25.000");
+      expect(onChange).toHaveBeenLastCalledWith(25000);
+    });
+
+    it("opens calculator without keeping input focused when tapping label on coarse-pointer device", () => {
+      mockCoarsePointer(true);
+      render(
+        <div>
+          <label htmlFor="nominal-label-test">Nominal Tap</label>
+          <CurrencyInput
+            id="nominal-label-test"
+            value={null}
+            onValueChange={vi.fn()}
+          />
+        </div>
+      );
+
+      const label = screen.getByText("Nominal Tap");
+      const input = document.getElementById("nominal-label-test") as HTMLInputElement;
+      expect(input.readOnly).toBe(true);
+
+      fireEvent.touchStart(label);
+      fireEvent.click(label);
+
+      expect(document.activeElement).not.toBe(input);
+      expect(screen.getByTestId("currency-calculator-drawer")).toBeInTheDocument();
+    });
   });
 });
 
