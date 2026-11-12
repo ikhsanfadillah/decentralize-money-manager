@@ -446,15 +446,43 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                 >
                   {editingTx ? "Detail & Ubah Transaksi" : "Catat Transaksi Baru"}
                 </DrawerTitle>
-                <DrawerDescription className="mt-0.5 text-xs text-muted-foreground">
+                <DrawerDescription className="relative mt-0.5 text-xs text-muted-foreground overflow-hidden">
                   <AnimatePresence mode="popLayout" initial={false}>
-                    <motion.div>
+                    <motion.span
+                      key={
+                        editingTx
+                          ? "edit"
+                          : isAiModeOpen
+                            ? "ai"
+                            : "manual"
+                      }
+                      initial={
+                        shouldReduceMotion
+                          ? { opacity: 0 }
+                          : { opacity: 0, y: 4 }
+                      }
+                      animate={
+                        shouldReduceMotion
+                          ? { opacity: 1 }
+                          : { opacity: 1, y: 0 }
+                      }
+                      exit={
+                        shouldReduceMotion
+                          ? { opacity: 0 }
+                          : { opacity: 0, y: -4 }
+                      }
+                      transition={{
+                        duration: shouldReduceMotion ? 0.01 : .6,
+                        ease: [0.23, 1, 0.32, 1],
+                      }}
+                      className="block w-full"
+                    >
                       {editingTx
                         ? "Tinjau detail, ubah catatan, atau hapus transaksi ini."
                         : isAiModeOpen
                           ? "Tulis kalimat transaksi atau unggah struk untuk mengisi otomatis."
                           : "Pilih jenis transaksi dan isi nominal uangnya."}
-                    </motion.div>
+                    </motion.span>
                   </AnimatePresence>
                 </DrawerDescription>
               </div>
@@ -954,7 +982,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                     : "hover:opacity-90"
                 }`}
               >
-                <AnimatePresence mode="wait" initial={false}>
+                <AnimatePresence mode="popLayout" initial={false}>
                   {isAiModeOpen ? (
                     <motion.span
                       key="close-ai-icon"
