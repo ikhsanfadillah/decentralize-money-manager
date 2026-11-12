@@ -117,11 +117,11 @@ export const QuickAddCategoryDrawer: React.FC<QuickAddCategoryDrawerProps> = ({
         overlayClassName="z-[60]"
         aria-describedby="quick-add-category-desc"
         data-testid="quick-add-category-drawer"
-        className="z-[60] w-full p-0 sm:mx-auto sm:max-w-md"
+        className="z-[60] p-0 data-[vaul-drawer-direction=bottom]:w-full data-[vaul-drawer-direction=bottom]:sm:mx-auto sm:max-w-md"
       >
-        <form onSubmit={handleSubmit} className="flex flex-col">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {/* Header */}
-          <div className="flex items-start justify-between gap-3 border-b border-border/70 px-5 py-3.5">
+          <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border/70 px-5 py-3.5">
             <div className="min-w-0 space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <DrawerTitle className="text-sm font-bold text-foreground">
@@ -162,7 +162,7 @@ export const QuickAddCategoryDrawer: React.FC<QuickAddCategoryDrawerProps> = ({
           </div>
 
           {/* Body */}
-          <div className="space-y-4 px-5 py-4">
+          <div className="flex-auto min-h-0 space-y-4 overflow-y-auto overscroll-contain px-5 py-4">
             <div className="space-y-1.5">
               <label
                 htmlFor="quick-add-category-input"
@@ -274,7 +274,7 @@ export const QuickAddCategoryDrawer: React.FC<QuickAddCategoryDrawerProps> = ({
           </div>
 
           {/* Footer */}
-          <div className="flex items-center gap-2.5 border-t border-border/70 px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="mt-auto flex shrink-0 items-center gap-2.5 border-t border-border/70 px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <button
               type="button"
               onClick={onClose}

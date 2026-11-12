@@ -332,43 +332,45 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ bookId }) => {
       >
         <DrawerContent
           aria-describedby="delete-budget-confirm-desc"
-          className="p-0 sm:mx-auto sm:max-w-md sm:rounded-t-3xl"
+          className="p-0 data-[vaul-drawer-direction=bottom]:sm:mx-auto sm:max-w-md"
         >
-          <div className="flex flex-col items-center px-5 pt-5 pb-3 text-center">
-            <DeleteTransactionIllustration className="my-1 h-24 w-24" />
+          <div className="flex flex-auto min-h-0 flex-col overflow-y-auto overscroll-contain px-5 pt-5 pb-3 text-center">
+            <div className="my-auto flex w-full flex-col items-center">
+              <DeleteTransactionIllustration className="my-1 h-24 w-24" />
 
-            <DrawerHeader className="mt-2 space-y-1 border-0 p-0">
-              <DrawerTitle className="text-center text-base font-bold text-foreground sm:text-lg">
-                Hapus Anggaran Ini?
-              </DrawerTitle>
-              <DrawerDescription
-                id="delete-budget-confirm-desc"
-                className="mx-auto max-w-xs text-center text-xs text-muted-foreground"
-              >
-                Batas belanja untuk kategori ini akan dihapus dari buku.
-                Transaksi pengeluaran Anda tidak akan terhapus.
-              </DrawerDescription>
-            </DrawerHeader>
+              <DrawerHeader className="mt-2 space-y-1 border-0 p-0">
+                <DrawerTitle className="text-center text-base font-bold text-foreground sm:text-lg">
+                  Hapus Anggaran Ini?
+                </DrawerTitle>
+                <DrawerDescription
+                  id="delete-budget-confirm-desc"
+                  className="mx-auto max-w-xs text-center text-xs text-muted-foreground"
+                >
+                  Batas belanja untuk kategori ini akan dihapus dari buku.
+                  Transaksi pengeluaran Anda tidak akan terhapus.
+                </DrawerDescription>
+              </DrawerHeader>
 
-            {budgetPendingDelete && (
-              <div className="mt-3 w-full space-y-1.5 rounded-2xl border border-border bg-muted p-3.5 text-left text-xs">
-                <div className="flex items-center justify-between font-semibold">
-                  <span className="truncate text-sm text-foreground">
-                    {budgetPendingDelete.category_name}
-                  </span>
-                  <span className="font-mono text-xs text-foreground">
-                    Batas: {formatRupiah(budgetPendingDelete.amount_limit)}
-                  </span>
+              {budgetPendingDelete && (
+                <div className="mt-3 w-full space-y-1.5 rounded-2xl border border-border bg-muted p-3.5 text-left text-xs">
+                  <div className="flex items-center justify-between font-semibold">
+                    <span className="truncate text-sm text-foreground">
+                      {budgetPendingDelete.category_name}
+                    </span>
+                    <span className="font-mono text-xs text-foreground">
+                      Batas: {formatRupiah(budgetPendingDelete.amount_limit)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-border pt-1.5 text-xs text-muted-foreground">
+                    <span>Realisasi Saat Ini:</span>
+                    <span className="font-mono font-bold text-foreground">
+                      {formatRupiah(budgetPendingDelete.spent)} (
+                      {budgetPendingDelete.pct}%)
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between border-t border-border pt-1.5 text-xs text-muted-foreground">
-                  <span>Realisasi Saat Ini:</span>
-                  <span className="font-mono font-bold text-foreground">
-                    {formatRupiah(budgetPendingDelete.spent)} (
-                    {budgetPendingDelete.pct}%)
-                  </span>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           <DrawerFooter className="flex flex-row items-center gap-2 border-t border-border px-5 py-3.5">

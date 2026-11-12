@@ -1,8 +1,34 @@
 import * as React from "react";
 import { Drawer as DrawerPrimitive } from "vaul";
+import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { cn } from "../../lib/utils";
 
-const DrawerRepositionContext = React.createContext(false);
+export type DrawerDirection = "top" | "bottom" | "left" | "right";
+
+export const DRAWER_DESKTOP_MEDIA_QUERY = "(min-width: 768px)";
+
+interface DrawerInternalContextValue {
+  direction: DrawerDirection;
+  repositionInputs: boolean;
+}
+
+const DrawerInternalContext = React.createContext<DrawerInternalContextValue>({
+  direction: "bottom",
+  repositionInputs: false,
+});
+
+export function useDrawerDirection(): DrawerDirection {
+  return React.useContext(DrawerInternalContext).direction;
+}
+
+const DIRECTION_CONTENT_CLASSES: Record<DrawerDirection, string> = {
+  bottom: "inset-x-0 bottom-0 max-h-[85dvh] rounded-t-3xl border-t",
+  top: "inset-x-0 top-0 max-h-[85dvh] rounded-b-3xl border-b",
+  right:
+    "inset-y-0 right-0 h-dvh max-h-dvh w-[92vw] max-w-md rounded-l-3xl border-l sm:w-full",
+  left:
+    "inset-y-0 left-0 h-dvh max-h-dvh w-[92vw] max-w-md rounded-r-3xl border-r sm:w-full",
+};
 
 const KEYBOARD_OVERLAP_THRESHOLD_PX = 100;
 const VIEWPORT_TOP_GAP_PX = 16;
@@ -57,31 +83,70 @@ function scrollFocusedFieldIntoNearestDrawerBody(
 const Drawer = ({
   shouldScaleBackground = false,
   repositionInputs = false,
+  direction,
+  handleOnly,
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
-  <DrawerRepositionContext.Provider value={repositionInputs}>
-    <DrawerPrimitive.Root
-      shouldScaleBackground={shouldScaleBackground}
-      repositionInputs={repositionInputs}
-      {...props}
-    />
-  </DrawerRepositionContext.Provider>
-);
+}: React.ComponentProps<typeof DrawerPrimitive.Root>) => {
+  const isDesktop = useMediaQuery(DRAWER_DESKTOP_MEDIA_QUERY);
+  const resolvedDirection: DrawerDirection =
+    direction ?? (isDesktop ? "right" : "bottom");
+  const resolvedHandleOnly =
+    handleOnly ?? (resolvedDirection === "left" || resolvedDirection === "right");
+
+  const contextValue = React.useMemo(
+    () => ({
+      direction: resolvedDirection,
+      repositionInputs,
+    }),
+    [resolvedDirection, repositionInputs]
+  );
+
+  return (
+    <DrawerInternalContext.Provider value={contextValue}>
+      <DrawerPrimitive.Root
+        direction={resolvedDirection}
+        handleOnly={resolvedHandleOnly}
+        shouldScaleBackground={shouldScaleBackground}
+        repositionInputs={repositionInputs}
+        {...props}
+      />
+    </DrawerInternalContext.Provider>
+  );
+};
 Drawer.displayName = "Drawer";
 
 const DrawerNested = ({
   shouldScaleBackground = false,
   repositionInputs = false,
+  direction,
+  handleOnly,
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.NestedRoot>) => (
-  <DrawerRepositionContext.Provider value={repositionInputs}>
-    <DrawerPrimitive.NestedRoot
-      shouldScaleBackground={shouldScaleBackground}
-      repositionInputs={repositionInputs}
-      {...props}
-    />
-  </DrawerRepositionContext.Provider>
-);
+}: React.ComponentProps<typeof DrawerPrimitive.NestedRoot>) => {
+  const parent = React.useContext(DrawerInternalContext);
+  const resolvedDirection: DrawerDirection = direction ?? parent.direction;
+  const resolvedHandleOnly =
+    handleOnly ?? (resolvedDirection === "left" || resolvedDirection === "right");
+
+  const contextValue = React.useMemo(
+    () => ({
+      direction: resolvedDirection,
+      repositionInputs,
+    }),
+    [resolvedDirection, repositionInputs]
+  );
+
+  return (
+    <DrawerInternalContext.Provider value={contextValue}>
+      <DrawerPrimitive.NestedRoot
+        direction={resolvedDirection}
+        handleOnly={resolvedHandleOnly}
+        shouldScaleBackground={shouldScaleBackground}
+        repositionInputs={repositionInputs}
+        {...props}
+      />
+    </DrawerInternalContext.Provider>
+  );
+};
 DrawerNested.displayName = "DrawerNested";
 
 const DrawerTrigger = DrawerPrimitive.Trigger;
@@ -108,6 +173,7 @@ const DrawerContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content> & {
     hideOverlay?: boolean;
     overlayClassName?: string;
+    showHandle?: boolean;
   }
 >(
   (
@@ -116,6 +182,7 @@ const DrawerContent = React.forwardRef<
       children,
       hideOverlay = false,
       overlayClassName,
+      showHandle,
       onPointerDownOutside,
       onInteractOutside,
       onFocusOutside,
@@ -124,7 +191,11 @@ const DrawerContent = React.forwardRef<
     },
     ref
   ) => {
-    const useVaulReposition = React.useContext(DrawerRepositionContext);
+    const { direction, repositionInputs: useVaulReposition } = React.useContext(
+      DrawerInternalContext
+    );
+    const shouldShowHandle =
+      showHandle ?? (direction === "bottom" || direction === "top");
     const externalRef = React.useRef(ref);
     externalRef.current = ref;
     const styleRef = React.useRef(style);
@@ -144,7 +215,12 @@ const DrawerContent = React.forwardRef<
     }, []);
 
     React.useEffect(() => {
-      if (useVaulReposition || !contentNode || typeof window === "undefined") {
+      if (
+        useVaulReposition ||
+        direction !== "bottom" ||
+        !contentNode ||
+        typeof window === "undefined"
+      ) {
         return;
       }
       const vv = window.visualViewport;
@@ -245,7 +321,7 @@ const DrawerContent = React.forwardRef<
         document.removeEventListener("focusout", scheduleSync);
         restoreDrawerViewportStyles();
       };
-    }, [contentNode, useVaulReposition]);
+    }, [contentNode, useVaulReposition, direction]);
 
     return (
       <DrawerPortal>
@@ -282,13 +358,27 @@ const DrawerContent = React.forwardRef<
           }}
           data-floating-surface="true"
           className={cn(
-            "floating-surface fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] flex-col rounded-t-3xl border-t border-border text-foreground focus:outline-none overscroll-contain",
+            "floating-surface group fixed z-50 flex flex-col border-border text-foreground focus:outline-none overscroll-contain",
+            DIRECTION_CONTENT_CLASSES[direction],
             className
           )}
           {...props}
         >
-          <div className="mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-muted-foreground/30" />
+          {shouldShowHandle && direction === "bottom" && (
+            <div
+              data-drawer-handle="bottom"
+              aria-hidden="true"
+              className="mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-muted-foreground/30"
+            />
+          )}
           {children}
+          {shouldShowHandle && direction === "top" && (
+            <div
+              data-drawer-handle="top"
+              aria-hidden="true"
+              className="mx-auto mb-3 h-1.5 w-12 shrink-0 rounded-full bg-muted-foreground/30"
+            />
+          )}
         </DrawerPrimitive.Content>
       </DrawerPortal>
     );
@@ -302,7 +392,7 @@ const DrawerHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "grid gap-1.5 border-b border-border p-4 text-left",
+      "grid shrink-0 gap-1.5 border-b border-border p-4 text-left",
       className
     )}
     {...props}
@@ -316,7 +406,7 @@ const DrawerFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "mt-auto flex flex-col gap-2 border-t border-border bg-muted/20 p-4",
+      "mt-auto flex shrink-0 flex-col gap-2 border-t border-border bg-muted/20 p-4 group-data-[vaul-drawer-direction=right]:rounded-bl-3xl group-data-[vaul-drawer-direction=left]:rounded-br-3xl",
       className
     )}
     {...props}

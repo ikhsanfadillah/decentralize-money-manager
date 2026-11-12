@@ -2,13 +2,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   ArrowLeft,
-  ArrowLeftRight,
   Loader2,
   Plus,
   Sparkles,
   Trash2,
-  TrendingDown,
-  TrendingUp,
   X
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
@@ -21,7 +18,6 @@ import {
   type AccountView,
   type AddTransactionInput,
   type CategoryView,
-  type TransactionType,
   type TransactionView,
   type TransferBetweenBooksInput,
   type UpdateTransactionInput,
@@ -29,7 +25,6 @@ import {
 import { pushToast } from "../../lib/toast";
 import {
   formatAccountTypeLabel,
-  formatRupiah,
   todayIsoDate,
 } from "../../lib/utils";
 import {
@@ -51,8 +46,13 @@ import {
 import { Input } from "../ui/input";
 import { DeleteTransactionDrawer } from "./DeleteTransactionDrawer";
 import { QuickAddCategoryDrawer } from "./QuickAddCategoryDrawer";
+import { checkBudgetThresholdAfterExpense } from "./dialog/budget-alert-helper";
+import {
+  TransactionModeTabs,
+  type DialogTxMode,
+} from "./dialog/TransactionModeTabs";
 
-export type DialogTxMode = TransactionType | "CROSS_BOOK_TRANSFER";
+export { type DialogTxMode };
 
 export interface TransactionDialogProps {
   isOpen: boolean;
@@ -288,33 +288,6 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
     }
   };
 
-  const checkBudgetThresholdAfterExpense = async (
-    txDate: string,
-    categoryId: string
-  ) => {
-    const month = txDate.slice(0, 7);
-    try {
-      const progressList = await tauriApi.getBudgetProgress(bookId, month);
-      for (const b of progressList) {
-        const isRelevant =
-          b.category_id === null || b.category_id === categoryId;
-        if (isRelevant && (b.status === "OVER" || b.status === "WARNING")) {
-          pushToast(
-            b.status === "OVER"
-              ? `Anggaran "${b.category_name}" Melebihi Batas (${b.pct}%)`
-              : `Peringatan Anggaran "${b.category_name}" (${b.pct}%)`,
-            {
-              description: `Terpakai ${formatRupiah(b.spent)} dari batas ${formatRupiah(b.amount_limit)} pada bulan ${month}.`,
-              variant: b.status === "OVER" ? "error" : "warning",
-            }
-          );
-        }
-      }
-    } catch {
-      // Non-fatal check
-    }
-  };
-
   const handleSlideConfirm = async (): Promise<SlideConfirmResult> => {
     const values = getValues();
 
@@ -406,6 +379,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
 
       if (values.mode === "EXPENSE") {
         await checkBudgetThresholdAfterExpense(
+          bookId,
           values.txDate,
           values.categoryId
         );
@@ -453,7 +427,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
         }}
         shouldScaleBackground={false}
       >
-        <DrawerContent className="h-[92dvh] max-h-[92dvh] w-full p-0 sm:mx-auto sm:h-auto sm:max-h-[90vh] sm:max-w-xl">
+        <DrawerContent className="p-0 data-[vaul-drawer-direction=bottom]:h-[92dvh] data-[vaul-drawer-direction=bottom]:max-h-[92dvh] data-[vaul-drawer-direction=bottom]:w-full data-[vaul-drawer-direction=bottom]:sm:mx-auto sm:max-w-xl">
           <form
             onSubmit={(e) => e.preventDefault()}
             onKeyDown={(e) => {
@@ -461,7 +435,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                 e.preventDefault();
               }
             }}
-            className="flex h-full sm:h-auto flex-1 flex-col overflow-hidden"
+            className="flex min-h-0 flex-1 flex-col overflow-hidden"
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border/70 px-5 py-3.5 shrink-0">
@@ -473,11 +447,15 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                   {editingTx ? "Detail & Ubah Transaksi" : "Catat Transaksi Baru"}
                 </DrawerTitle>
                 <DrawerDescription className="mt-0.5 text-xs text-muted-foreground">
-                  {editingTx
-                    ? "Tinjau detail, ubah catatan, atau hapus transaksi ini."
-                    : isAiModeOpen
-                      ? "Tulis kalimat transaksi atau unggah struk untuk mengisi otomatis."
-                      : "Pilih jenis transaksi dan isi nominal uangnya."}
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    <motion.div>
+                      {editingTx
+                        ? "Tinjau detail, ubah catatan, atau hapus transaksi ini."
+                        : isAiModeOpen
+                          ? "Tulis kalimat transaksi atau unggah struk untuk mengisi otomatis."
+                          : "Pilih jenis transaksi dan isi nominal uangnya."}
+                    </motion.div>
+                  </AnimatePresence>
                 </DrawerDescription>
               </div>
             <button
@@ -491,7 +469,7 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
           </div>
 
           {/* Scrollable Content Body with iOS Fluid View Morphing */}
-          <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-5 py-4">
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-5 py-4">
             <AnimatePresence mode="popLayout" initial={false}>
               {!editingTx && isAiModeOpen ? (
                 <motion.div
@@ -622,69 +600,11 @@ export const TransactionDialog: React.FC<TransactionDialogProps> = ({
                   className="space-y-4"
                 >
                   {/* Transaction Mode Selector */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-2xl bg-card">
-                    {(
-                      [
-                        {
-                          key: "EXPENSE",
-                          label: "Pengeluaran",
-                          color: "text-rose-700 dark:text-rose-400",
-                          activeClass:
-                            "border border-rose-600 bg-rose-500/15 text-rose-800 dark:border-rose-400/60 dark:text-rose-300",
-                          icon: TrendingDown,
-                        },
-                        {
-                          key: "INCOME",
-                          label: "Pemasukan",
-                          color: "text-emerald-700 dark:text-emerald-400",
-                          activeClass:
-                            "border border-emerald-700 bg-emerald-500/15 text-emerald-800 dark:border-emerald-400/60 dark:text-emerald-300",
-                          icon: TrendingUp,
-                        },
-                        {
-                          key: "TRANSFER",
-                          label: "Pindah Saldo",
-                          color: "text-sky-700 dark:text-sky-400",
-                          activeClass:
-                            "border border-sky-700 bg-sky-500/15 text-sky-800 dark:border-sky-400/60 dark:text-sky-300",
-                          icon: ArrowLeftRight,
-                        },
-                        ...(!editingTx
-                          ? [
-                              {
-                                key: "CROSS_BOOK_TRANSFER" as const,
-                                label: "Pindah Buku",
-                                color: "text-amber-700 dark:text-amber-400",
-                                activeClass:
-                                  "border border-amber-700 bg-amber-500/15 text-amber-800 dark:border-amber-400/60 dark:text-amber-300",
-                                icon: ArrowLeftRight,
-                              },
-                            ]
-                          : []),
-                      ] as const
-                    ).map((tab) => {
-                      const active = currentMode === tab.key;
-                      const IconComponent = tab.icon;
-                      return (
-                        <button
-                          key={tab.key}
-                          type="button"
-                          onClick={() => setValue("mode", tab.key)}
-                          className={`nav-touch-item inline-flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-                            active
-                              ? tab.activeClass
-                              : "border border-control-border/50 text-foreground hover:bg-muted/60"
-                          }`}
-                        >
-                          <IconComponent
-                            className={`h-3.5 w-3.5 shrink-0 ${active ? "" : tab.color}`}
-                            aria-hidden="true"
-                          />
-                          <span>{tab.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <TransactionModeTabs
+                    currentMode={currentMode}
+                    isEditing={Boolean(editingTx)}
+                    onSelectMode={(mode) => setValue("mode", mode)}
+                  />
 
                   {/* Suggested New Category Banner (when returning from Single Draft Auto-fill) */}
                   {aiSuggestedCategory &&

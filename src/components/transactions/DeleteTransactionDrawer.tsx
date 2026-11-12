@@ -212,59 +212,61 @@ export const DeleteTransactionDrawer: React.FC<DeleteTransactionDrawerProps> = (
   >
     <DrawerContent
       aria-describedby="delete-confirm-desc"
-      className="p-0 sm:mx-auto sm:max-w-md"
+      className="p-0 data-[vaul-drawer-direction=bottom]:sm:mx-auto sm:max-w-md"
     >
-      <div className="flex flex-col items-center px-5 pt-5 pb-3 text-center">
-        {/* Vector Illustration */}
-        <DeleteTransactionIllustration className="my-1 h-28 w-28" />
+      <div className="flex flex-auto min-h-0 flex-col overflow-y-auto overscroll-contain px-5 pt-5 pb-3 text-center">
+        <div className="my-auto flex w-full flex-col items-center">
+          {/* Vector Illustration */}
+          <DeleteTransactionIllustration className="my-1 h-28 w-28" />
 
-        <DrawerHeader className="mt-2 space-y-1 border-0 p-0">
-          <DrawerTitle className="text-center text-base font-bold text-foreground sm:text-lg">
-            Hapus Transaksi Ini?
-          </DrawerTitle>
-          <DrawerDescription
-            id="delete-confirm-desc"
-            className="mx-auto max-w-xs text-center text-xs text-muted-foreground"
-          >
-            Catatan transaksi ini akan dihapus dari buku kas. Saldo dompet akan
-            disesuaikan kembali secara otomatis.
-          </DrawerDescription>
-        </DrawerHeader>
+          <DrawerHeader className="mt-2 space-y-1 border-0 p-0">
+            <DrawerTitle className="text-center text-base font-bold text-foreground sm:text-lg">
+              Hapus Transaksi Ini?
+            </DrawerTitle>
+            <DrawerDescription
+              id="delete-confirm-desc"
+              className="mx-auto max-w-xs text-center text-xs text-muted-foreground"
+            >
+              Catatan transaksi ini akan dihapus dari buku kas. Saldo dompet akan
+              disesuaikan kembali secara otomatis.
+            </DrawerDescription>
+          </DrawerHeader>
 
-        {/* Transaction Receipt Preview Box */}
-        {tx && (
-          <div className="mt-3 w-full space-y-1.5 rounded-2xl border border-border bg-black/[0.03] p-3.5 text-left text-xs dark:bg-white/[0.05]">
-            <div className="flex items-center justify-between font-semibold">
-              <span className="truncate text-foreground">
-                {tx.tx_type === "TRANSFER"
-                  ? `${tx.account_name} → ${tx.to_account_name ?? "-"}`
-                  : (tx.category_name ?? "Tanpa Kategori")}
-              </span>
-              <span
-                className={`font-mono font-bold tabular-nums tracking-tight ${
-                  tx.tx_type === "EXPENSE"
-                    ? "text-rose-500"
-                    : tx.tx_type === "INCOME"
-                      ? "text-emerald-500"
-                      : "text-sky-500"
-                }`}
-              >
-                {formatSignedRupiah(tx.amount, tx.tx_type)}
-              </span>
+          {/* Transaction Receipt Preview Box */}
+          {tx && (
+            <div className="mt-3 w-full space-y-1.5 rounded-2xl border border-border bg-black/[0.03] p-3.5 text-left text-xs dark:bg-white/[0.05]">
+              <div className="flex items-center justify-between font-semibold">
+                <span className="truncate text-foreground">
+                  {tx.tx_type === "TRANSFER"
+                    ? `${tx.account_name} → ${tx.to_account_name ?? "-"}`
+                    : (tx.category_name ?? "Tanpa Kategori")}
+                </span>
+                <span
+                  className={`font-mono font-bold tabular-nums tracking-tight ${
+                    tx.tx_type === "EXPENSE"
+                      ? "text-rose-500"
+                      : tx.tx_type === "INCOME"
+                        ? "text-emerald-500"
+                        : "text-sky-500"
+                  }`}
+                >
+                  {formatSignedRupiah(tx.amount, tx.tx_type)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                <span title={tx.tx_date} className="font-medium text-foreground">
+                  {formatDateReadable(tx.tx_date, { withDayName: true })}
+                </span>
+                <span className="font-mono">{tx.account_name}</span>
+              </div>
+              {tx.note && (
+                <p className="border-t border-border/60 pt-1 text-[11px] italic text-muted-foreground">
+                  "{tx.note}"
+                </p>
+              )}
             </div>
-            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-              <span title={tx.tx_date} className="font-medium text-foreground">
-                {formatDateReadable(tx.tx_date, { withDayName: true })}
-              </span>
-              <span className="font-mono">{tx.account_name}</span>
-            </div>
-            {tx.note && (
-              <p className="border-t border-border/60 pt-1 text-[11px] italic text-muted-foreground">
-                "{tx.note}"
-              </p>
-            )}
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <DrawerFooter className="flex flex-row items-center gap-2 border-t border-border/70 px-5 py-3.5">

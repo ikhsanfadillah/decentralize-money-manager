@@ -1603,6 +1603,7 @@ mod tests {
             known_peer_addrs: vec![],
             preferred_hub_node_id: None,
             preferred_hub_hlc: None,
+            device_name: None,
         };
         t_attacker
             .send_batch(

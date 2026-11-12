@@ -467,10 +467,10 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
         }}
         shouldScaleBackground={false}
       >
-        <DrawerContent className="max-h-[90vh] p-0 sm:mx-auto sm:max-w-lg">
-          <form onSubmit={handleSaveAccountDirect} className="flex flex-col">
+        <DrawerContent className="p-0 data-[vaul-drawer-direction=bottom]:max-h-[90dvh] data-[vaul-drawer-direction=bottom]:w-full data-[vaul-drawer-direction=bottom]:sm:mx-auto sm:max-w-lg">
+          <form onSubmit={handleSaveAccountDirect} className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {/* Header */}
-            <div className="border-b border-border/70 py-3.5">
+            <div className="shrink-0 border-b border-border/70 py-3.5">
               <div className="flex items-center justify-between px-5">
                 <div>
                   <DrawerTitle className="text-sm font-bold text-foreground">
@@ -513,7 +513,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
             </div>
 
             {/* Body */}
-            <div className="space-y-4 px-5 py-4">
+            <div className="flex-auto min-h-0 space-y-4 overflow-y-auto overscroll-contain px-5 py-4">
               {/* Financial & Ledger Summary for Existing Account */}
               {editingAccount && (
                 <div className="space-y-2.5">
@@ -635,7 +635,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
             </div>
 
             {/* Direct Save Action Buttons */}
-            <div className="flex items-center justify-end gap-2 border-t border-border/70 px-5 py-3">
+            <div className="mt-auto flex shrink-0 items-center justify-end gap-2 border-t border-border/70 px-5 py-3">
               <button
                 type="submit"
                 disabled={upsertAccountMutation.isPending}
@@ -661,47 +661,49 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
       >
         <DrawerContent
           aria-describedby="delete-account-confirm-desc"
-          className="p-0 sm:mx-auto sm:max-w-md"
+          className="p-0 data-[vaul-drawer-direction=bottom]:sm:mx-auto sm:max-w-md"
         >
-          <div className="flex flex-col items-center px-5 pt-5 pb-3 text-center">
-            {/* Vector Illustration */}
-            <DeleteTransactionIllustration className="h-24 w-24 my-1" />
+          <div className="flex flex-auto min-h-0 flex-col overflow-y-auto overscroll-contain px-5 pt-5 pb-3 text-center">
+            <div className="my-auto flex w-full flex-col items-center">
+              {/* Vector Illustration */}
+              <DeleteTransactionIllustration className="h-24 w-24 my-1" />
 
-            <DrawerHeader className="p-0 mt-2 space-y-1 border-0">
-              <DrawerTitle className="text-center text-base font-bold text-foreground sm:text-lg">
-                Hapus Akun Ini?
-              </DrawerTitle>
-              <DrawerDescription
-                id="delete-account-confirm-desc"
-                className="text-center text-xs text-muted-foreground max-w-xs mx-auto"
-              >
-                Akun ini beserta seluruh catatan saldo akan dihapus dari buku.
-                Tindakan ini tidak dapat dibatalkan.
-              </DrawerDescription>
-            </DrawerHeader>
+              <DrawerHeader className="p-0 mt-2 space-y-1 border-0">
+                <DrawerTitle className="text-center text-base font-bold text-foreground sm:text-lg">
+                  Hapus Akun Ini?
+                </DrawerTitle>
+                <DrawerDescription
+                  id="delete-account-confirm-desc"
+                  className="text-center text-xs text-muted-foreground max-w-xs mx-auto"
+                >
+                  Akun ini beserta seluruh catatan saldo akan dihapus dari buku.
+                  Tindakan ini tidak dapat dibatalkan.
+                </DrawerDescription>
+              </DrawerHeader>
 
-            {/* Account Preview Box */}
-            {accountPendingDelete && (
-              <div className="w-full mt-3 rounded-2xl border border-border bg-black/[0.04] dark:bg-white/[0.05] p-3.5 text-left text-xs space-y-1.5">
-                <div className="flex items-center justify-between font-semibold">
-                  <span className="truncate text-foreground text-sm">
-                    {accountPendingDelete.name}
-                  </span>
-                  <span className="rounded-full border border-border bg-black/[0.04] dark:bg-white/[0.06] px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
-                    {formatAccountTypeLabel(accountPendingDelete.account_type)}
-                  </span>
+              {/* Account Preview Box */}
+              {accountPendingDelete && (
+                <div className="w-full mt-3 rounded-2xl border border-border bg-black/[0.04] dark:bg-white/[0.05] p-3.5 text-left text-xs space-y-1.5">
+                  <div className="flex items-center justify-between font-semibold">
+                    <span className="truncate text-foreground text-sm">
+                      {accountPendingDelete.name}
+                    </span>
+                    <span className="rounded-full border border-border bg-black/[0.04] dark:bg-white/[0.06] px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
+                      {formatAccountTypeLabel(accountPendingDelete.account_type)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground pt-1.5 border-t border-border/50">
+                    <span>Saldo Terakhir:</span>
+                    <span className="font-mono font-bold text-foreground">
+                      {formatRupiah(
+                        balanceMap.get(accountPendingDelete.id) ??
+                          accountPendingDelete.initial_balance
+                      )}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground pt-1.5 border-t border-border/50">
-                  <span>Saldo Terakhir:</span>
-                  <span className="font-mono font-bold text-foreground">
-                    {formatRupiah(
-                      balanceMap.get(accountPendingDelete.id) ??
-                        accountPendingDelete.initial_balance
-                    )}
-                  </span>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           <DrawerFooter className="border-t border-border/70 px-5 py-3 flex flex-row items-center gap-2">
@@ -733,13 +735,13 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
         onOpenChange={setIsMergeModalOpen}
         shouldScaleBackground={false}
       >
-        <DrawerContent className="max-h-[90vh] p-0 sm:mx-auto sm:max-w-lg">
+        <DrawerContent className="p-0 data-[vaul-drawer-direction=bottom]:max-h-[90dvh] data-[vaul-drawer-direction=bottom]:w-full data-[vaul-drawer-direction=bottom]:sm:mx-auto sm:max-w-lg">
           <form
             onSubmit={(e) => e.preventDefault()}
-            className="flex flex-col overflow-hidden"
+            className="flex min-h-0 flex-1 flex-col overflow-hidden"
           >
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-border/70 px-5 py-3.5">
+            <div className="flex shrink-0 items-center justify-between border-b border-border/70 px-5 py-3.5">
               <div>
                 <DrawerTitle className="text-sm font-bold text-foreground">
                   Gabungkan Dua Akun
@@ -759,7 +761,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
             </div>
 
             {/* Body */}
-            <div className="space-y-4 px-5 py-4">
+            <div className="flex-auto min-h-0 space-y-4 overflow-y-auto overscroll-contain px-5 py-4">
               <div className="space-y-1.5">
                 <label
                   htmlFor="merge-source-account"
@@ -811,7 +813,7 @@ export const AccountsPage: React.FC<AccountsPageProps> = ({ bookId }) => {
             </div>
 
             {/* Slider Konfirmasi untuk Safety */}
-            <div className="border-t border-border/70 p-3.5 sm:px-5">
+            <div className="mt-auto shrink-0 border-t border-border/70 p-3.5 sm:px-5">
               <ButtonSlideToConfirm
                 key={isMergeModalOpen ? "merge-open" : "merge-closed"}
                 disabled={mergeAccountsMutation.isPending}

@@ -170,10 +170,10 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
       }}
       shouldScaleBackground={false}
     >
-      <DrawerContent className="max-h-[90vh] p-0 sm:mx-auto sm:max-w-lg">
-        <form onSubmit={handleDirectSubmit} className="flex flex-col">
+      <DrawerContent className="p-0 data-[vaul-drawer-direction=bottom]:max-h-[90dvh] data-[vaul-drawer-direction=bottom]:w-full data-[vaul-drawer-direction=bottom]:sm:mx-auto sm:max-w-lg">
+        <form onSubmit={handleDirectSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-border/70 px-5 py-3.5">
+          <div className="flex shrink-0 items-center justify-between border-b border-border/70 px-5 py-3.5">
             <div>
               <DrawerTitle
                 id="budget-dialog-title"
@@ -200,7 +200,7 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
           </div>
 
           {/* Form Body */}
-          <div className="space-y-4 px-5 py-4">
+          <div className="flex-auto min-h-0 space-y-4 overflow-y-auto overscroll-contain px-5 py-4">
             <div className="space-y-1.5">
               <label
                 htmlFor="budget-category-select"
@@ -289,7 +289,7 @@ export const BudgetDialog: React.FC<BudgetDialogProps> = ({
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-2 border-t border-border/70 px-5 py-3">
+          <div className="mt-auto flex shrink-0 items-center justify-end gap-2 border-t border-border/70 px-5 py-3">
             <button
               type="button"
               onClick={onClose}

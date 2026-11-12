@@ -338,10 +338,10 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({ bookId }) => {
         }}
         shouldScaleBackground={false}
       >
-        <DrawerContent className="max-h-[90vh] p-0 sm:mx-auto sm:max-w-lg">
-          <form onSubmit={handleSaveCategoryDirect} className="flex flex-col">
+        <DrawerContent className="p-0 data-[vaul-drawer-direction=bottom]:max-h-[90dvh] data-[vaul-drawer-direction=bottom]:w-full data-[vaul-drawer-direction=bottom]:sm:mx-auto sm:max-w-lg">
+          <form onSubmit={handleSaveCategoryDirect} className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-border/70 px-5 py-3.5">
+            <div className="flex shrink-0 items-center justify-between border-b border-border/70 px-5 py-3.5">
               <div>
                 <DrawerTitle
                   id="category-dialog-title"
@@ -368,7 +368,7 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({ bookId }) => {
             </div>
 
             {/* Body */}
-            <div className="space-y-4 px-5 py-4">
+            <div className="flex-auto min-h-0 space-y-4 overflow-y-auto overscroll-contain px-5 py-4">
               <div className="space-y-1.5">
                 <label
                   htmlFor="category-name-input"
@@ -443,7 +443,7 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({ bookId }) => {
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-end gap-2 border-t border-border/70 px-5 py-3">
+            <div className="mt-auto flex shrink-0 items-center justify-end gap-2 border-t border-border/70 px-5 py-3">
               <button
                 type="button"
                 onClick={handleCloseDrawer}
@@ -476,45 +476,47 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({ bookId }) => {
       >
         <DrawerContent
           aria-describedby="delete-category-confirm-desc"
-          className="p-0 sm:mx-auto sm:max-w-md"
+          className="p-0 data-[vaul-drawer-direction=bottom]:sm:mx-auto sm:max-w-md"
         >
-          <div className="flex flex-col items-center px-5 pt-5 pb-3 text-center">
-            {/* Vector Illustration */}
-            <DeleteTransactionIllustration className="h-24 w-24 my-1" />
+          <div className="flex flex-auto min-h-0 flex-col overflow-y-auto overscroll-contain px-5 pt-5 pb-3 text-center">
+            <div className="my-auto flex w-full flex-col items-center">
+              {/* Vector Illustration */}
+              <DeleteTransactionIllustration className="h-24 w-24 my-1" />
 
-            <DrawerHeader className="p-0 mt-2 space-y-1 border-0">
-              <DrawerTitle className="text-center text-base font-bold text-foreground sm:text-lg">
-                Hapus Kategori Ini?
-              </DrawerTitle>
-              <DrawerDescription
-                id="delete-category-confirm-desc"
-                className="text-center text-xs text-muted-foreground max-w-xs mx-auto"
-              >
-                Kategori ini akan dihapus dari buku. Transaksi lama dengan kategori ini tidak akan hilang, namun kategorinya akan menjadi tidak terdefinisi.
-              </DrawerDescription>
-            </DrawerHeader>
+              <DrawerHeader className="p-0 mt-2 space-y-1 border-0">
+                <DrawerTitle className="text-center text-base font-bold text-foreground sm:text-lg">
+                  Hapus Kategori Ini?
+                </DrawerTitle>
+                <DrawerDescription
+                  id="delete-category-confirm-desc"
+                  className="text-center text-xs text-muted-foreground max-w-xs mx-auto"
+                >
+                  Kategori ini akan dihapus dari buku. Transaksi lama dengan kategori ini tidak akan hilang, namun kategorinya akan menjadi tidak terdefinisi.
+                </DrawerDescription>
+              </DrawerHeader>
 
-            {/* Category Preview Box */}
-            {categoryPendingDelete && (
-              <div className="w-full mt-3 rounded-2xl border border-border bg-black/[0.04] dark:bg-white/[0.05] p-3.5 text-left text-xs space-y-1.5">
-                <div className="flex items-center justify-between font-semibold">
-                  <span className="truncate text-foreground text-sm">
-                    {categoryPendingDelete.name}
-                  </span>
-                  <span
-                    className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${
-                      categoryPendingDelete.kind === "EXPENSE"
-                        ? "border-rose-500/30 bg-rose-500/10 text-rose-500"
-                        : "border-emerald-500/30 bg-emerald-500/10 text-emerald-500"
-                    }`}
-                  >
-                    {categoryPendingDelete.kind === "EXPENSE"
-                      ? "Pengeluaran"
-                      : "Pemasukan"}
-                  </span>
+              {/* Category Preview Box */}
+              {categoryPendingDelete && (
+                <div className="w-full mt-3 rounded-2xl border border-border bg-black/[0.04] dark:bg-white/[0.05] p-3.5 text-left text-xs space-y-1.5">
+                  <div className="flex items-center justify-between font-semibold">
+                    <span className="truncate text-foreground text-sm">
+                      {categoryPendingDelete.name}
+                    </span>
+                    <span
+                      className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${
+                        categoryPendingDelete.kind === "EXPENSE"
+                          ? "border-rose-500/30 bg-rose-500/10 text-rose-500"
+                          : "border-emerald-500/30 bg-emerald-500/10 text-emerald-500"
+                      }`}
+                    >
+                      {categoryPendingDelete.kind === "EXPENSE"
+                        ? "Pengeluaran"
+                        : "Pemasukan"}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           <DrawerFooter className="border-t border-border/70 px-5 py-3 flex flex-row items-center gap-2">

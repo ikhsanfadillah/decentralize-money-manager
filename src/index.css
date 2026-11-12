@@ -277,6 +277,13 @@
   box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.55) !important;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  [data-vaul-drawer][data-vaul-drawer-direction="right"],
+  [data-vaul-drawer][data-vaul-drawer-direction="left"] {
+    user-select: text;
+  }
+}
+
 .money-mono {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;

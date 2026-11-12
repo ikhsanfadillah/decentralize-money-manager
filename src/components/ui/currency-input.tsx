@@ -593,6 +593,7 @@ export const CurrencyInput = React.forwardRef<
           open={isCalcOpen && !disabled}
           onOpenChange={setIsCalcOpen}
           modal={false}
+          direction="bottom"
         >
           <DrawerContent
             ref={drawerContentRef}

@@ -240,7 +240,7 @@ export const AiByokConfigDrawer: React.FC = () => {
     >
       <DrawerContent
         aria-describedby="ai-byok-drawer-desc"
-        className="max-h-[90dvh] w-full p-0 sm:mx-auto sm:max-w-lg"
+        className="p-0 data-[vaul-drawer-direction=bottom]:max-h-[90dvh] data-[vaul-drawer-direction=bottom]:w-full data-[vaul-drawer-direction=bottom]:sm:mx-auto sm:max-w-lg"
       >
         <DrawerHeader className="flex flex-row items-center justify-between border-b border-border/70 px-5 py-3.5">
           <div>
@@ -265,7 +265,7 @@ export const AiByokConfigDrawer: React.FC = () => {
           </button>
         </DrawerHeader>
 
-        <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4 space-y-4">
+        <div className="flex-auto min-h-0 overflow-y-auto overscroll-contain px-5 py-4 space-y-4">
           {/* 1. Provider Select Box */}
           <div className="space-y-1.5">
             <label

@@ -5,7 +5,6 @@ import {
   legacyCreateColumnHelper as createColumnHelper,
   useLegacyTable as useReactTable,
 } from "@tanstack/react-table/legacy";
-import { CurrencyInput } from "../ui/currency-input";
 import { EmptyStateIllustration } from "../ui/EmptyStateIllustration";
 import { Input } from "../ui/input";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
@@ -53,307 +52,18 @@ import {
   formatTxTypeLabel,
 } from "../../lib/utils";
 import { formatDateReadable } from "../../lib/date";
+import { FilterForm, type FilterFormProps } from "./TransactionFilterForm";
+import {
+  TransactionItem,
+  type TransactionItemProps,
+} from "./TransactionMobileItem";
 
-interface FilterFormProps {
-  filter: TransactionFilter;
-  accounts: AccountView[];
-  categories: CategoryView[];
-  onFilterChange: (
-    updater:
-      | TransactionFilter
-      | ((prev: TransactionFilter) => TransactionFilter)
-  ) => void;
-}
-
-const FilterForm: React.FC<FilterFormProps> = ({
-  filter,
-  accounts,
-  categories,
-  onFilterChange,
-}) => (
-  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-    {/* 1. Pencarian Kata Kunci */}
-    <div className="space-y-1 sm:col-span-2">
-      <label className="block font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-        Pencarian Kata Kunci
-      </label>
-      <Input
-        placeholder="Cari catatan / akun / kategori..."
-        value={filter.search ?? ""}
-        onChange={(e) =>
-          onFilterChange((prev) => ({
-            ...prev,
-            search: e.target.value || null,
-            offset: 0,
-          }))
-        }
-      />
-    </div>
-
-    {/* 2. Filter Akun */}
-    <div className="space-y-1.5">
-      <label className="block font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-        Filter Akun
-      </label>
-      <select
-        value={filter.account_id ?? ""}
-        onChange={(e) =>
-          onFilterChange((prev) => ({
-            ...prev,
-            account_id: e.target.value || null,
-            offset: 0,
-          }))
-        }
-        className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-      >
-        <option value="">Semua Akun</option>
-        {accounts
-          .filter((a) => a.merged_into_id === null)
-          .map((acc) => (
-            <option key={acc.id} value={acc.id}>
-              {acc.name}
-            </option>
-          ))}
-      </select>
-    </div>
-
-    {/* 3. Filter Kategori */}
-    <div className="space-y-1.5">
-      <label className="block font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-        Filter Kategori
-      </label>
-      <select
-        value={filter.category_id ?? ""}
-        onChange={(e) =>
-          onFilterChange((prev) => ({
-            ...prev,
-            category_id: e.target.value || null,
-            offset: 0,
-          }))
-        }
-        className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-      >
-        <option value="">Semua Kategori</option>
-        {categories
-          .filter((c) => c.merged_into_id === null)
-          .map((cat) => (
-            <option key={cat.id} value={cat.id}>
-              {cat.name} ({cat.kind === "EXPENSE" ? "Pengeluaran" : "Pemasukan"})
-            </option>
-          ))}
-      </select>
-    </div>
-
-    {/* 4. Tipe Transaksi */}
-    <div className="space-y-1.5 sm:col-span-2">
-      <label className="block font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-        Jenis Transaksi
-      </label>
-      <select
-        value={filter.tx_type ?? ""}
-        onChange={(e) =>
-          onFilterChange((prev) => ({
-            ...prev,
-            tx_type:
-              (e.target.value as TransactionFilter["tx_type"]) || null,
-            offset: 0,
-          }))
-        }
-        className="flex h-10 w-full rounded-xl border border-border bg-black/[0.03] dark:bg-white/[0.06] px-3.5 py-2 text-xs text-foreground shadow-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-      >
-        <option value="">Semua Jenis Transaksi</option>
-        <option value="EXPENSE">Pengeluaran</option>
-        <option value="INCOME">Pemasukan</option>
-        <option value="TRANSFER">Pindah Saldo Antar Rekening</option>
-      </select>
-    </div>
-
-    {/* 5. Dari Tanggal */}
-    <div className="space-y-1">
-      <label className="block font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-        Dari Tanggal
-      </label>
-      <Input
-        type="date"
-        value={filter.start_date ?? ""}
-        onChange={(e) =>
-          onFilterChange((prev) => ({
-            ...prev,
-            start_date: e.target.value || null,
-            offset: 0,
-          }))
-        }
-        className="font-mono tabular-nums tracking-tight"
-      />
-    </div>
-
-    {/* 6. Sampai Tanggal */}
-    <div className="space-y-1">
-      <label className="block font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-        Sampai Tanggal
-      </label>
-      <Input
-        type="date"
-        value={filter.end_date ?? ""}
-        onChange={(e) =>
-          onFilterChange((prev) => ({
-            ...prev,
-            end_date: e.target.value || null,
-            offset: 0,
-          }))
-        }
-        className="font-mono tabular-nums tracking-tight"
-      />
-    </div>
-
-    {/* 7. Nominal Minimum */}
-    <div className="space-y-1">
-      <label className="block font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-        Nominal Minimum
-      </label>
-      <CurrencyInput
-        aria-label="Filter Nominal Minimum"
-        placeholder="Rp Min"
-        value={filter.min_amount ?? null}
-        onValueChange={(val) =>
-          onFilterChange((prev) => ({
-            ...prev,
-            min_amount: val,
-            offset: 0,
-          }))
-        }
-      />
-    </div>
-
-    {/* 8. Nominal Maksimum */}
-    <div className="space-y-1">
-      <label className="block font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-        Nominal Maksimum
-      </label>
-      <CurrencyInput
-        aria-label="Filter Nominal Maksimum"
-        placeholder="Rp Maks"
-        value={filter.max_amount ?? null}
-        onValueChange={(val) =>
-          onFilterChange((prev) => ({
-            ...prev,
-            max_amount: val,
-            offset: 0,
-          }))
-        }
-      />
-    </div>
-  </div>
-);
-
-export { DeleteTransactionIllustration };
-
-export interface TransactionItemProps {
-  tx: TransactionView;
-  onEdit: (tx: TransactionView) => void;
-}
-
-export const TransactionItem: React.FC<TransactionItemProps> = ({
-  tx,
-  onEdit,
-}) => {
-  const isExpense = tx.tx_type === "EXPENSE";
-  const isIncome = tx.tx_type === "INCOME";
-  const isTransfer = tx.tx_type === "TRANSFER";
-
-  const dotColor = isExpense
-    ? "bg-rose-500"
-    : isIncome
-      ? "bg-emerald-500"
-      : "bg-sky-500";
-
-  const amountColor = isExpense
-    ? "text-rose-500"
-    : isIncome
-      ? "text-emerald-500"
-      : "text-sky-500";
-
-  const title = isTransfer
-    ? `${tx.account_name} → ${tx.to_account_name ?? "-"}`
-    : (tx.category_name ?? "Tanpa Kategori");
-
-  const accountDisplay = isTransfer ? "Pindah Saldo" : tx.account_name;
-
-  return (
-    <div
-      data-testid={`tx-mobile-card-${tx.id}`}
-      role="button"
-      tabIndex={0}
-      aria-label={`Detail dan edit transaksi ${title}`}
-      onClick={() => onEdit(tx)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onEdit(tx);
-        }
-      }}
-      className="group cursor-pointer bg-card px-4 py-3 transition-colors hover:bg-black/[0.03] active:bg-black/[0.05] dark:hover:bg-white/[0.04] dark:active:bg-white/[0.07] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary"
-    >
-      {/* Row 1: Category (+ inline note) & Nominal */}
-      <div className="flex items-baseline justify-between gap-2">
-        <div className="flex min-w-0 flex-1 items-baseline gap-2">
-          {isExpense ? (
-            <TrendingDown
-              className="h-3.5 w-3.5 shrink-0 self-center text-rose-400"
-              aria-hidden="true"
-            />
-          ) : isIncome ? (
-            <TrendingUp
-              className="h-3.5 w-3.5 shrink-0 self-center text-emerald-400"
-              aria-hidden="true"
-            />
-          ) : (
-            <span
-              className={`h-2 w-2 shrink-0 self-center rounded-full ${dotColor}`}
-              aria-hidden="true"
-            />
-          )}
-          <span className="truncate text-xs font-semibold text-foreground">
-            {title}
-          </span>
-          {tx.note && (
-            <span className="truncate text-[11px] text-muted-foreground">
-              · {tx.note}
-            </span>
-          )}
-          {tx.link_id && (
-            <span className="shrink-0 rounded-full border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary">
-              Pindah Buku
-            </span>
-          )}
-        </div>
-
-        <span
-          className={`shrink-0 font-mono text-xs font-bold tabular-nums tracking-tight ${amountColor}`}
-        >
-          {formatSignedRupiah(tx.amount, tx.tx_type)}
-        </span>
-      </div>
-
-      {/* Row 2: Date, Account, Device */}
-      <div className="mt-1 flex items-center justify-between gap-2 pl-5">
-        <p
-          title={`Tanggal: ${tx.tx_date} · Rekening: ${accountDisplay} · Dibuat oleh perangkat ID: ${tx.created_by_device.slice(0, 8)}`}
-          className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground"
-        >
-          <span className="font-mono">
-            {formatDateReadable(tx.tx_date)}
-            <span className="sr-only"> ({tx.tx_date})</span>
-          </span>
-          <span className="mx-1.5 opacity-50">·</span>
-          <span className="font-medium text-foreground/80">
-            {accountDisplay}
-          </span>
-          <span className="sr-only">#{tx.created_by_device.slice(0, 6)}</span>
-        </p>
-      </div>
-    </div>
-  );
+export {
+  DeleteTransactionIllustration,
+  FilterForm,
+  TransactionItem,
+  type FilterFormProps,
+  type TransactionItemProps,
 };
 
 export interface TransactionTableProps {
@@ -1158,7 +868,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
               </div>
             </DrawerHeader>
 
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-auto min-h-0 overflow-y-auto overscroll-contain p-4">
               <FilterForm
                 filter={filter}
                 accounts={accounts}
@@ -1216,7 +926,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
             </div>
           </DrawerHeader>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          <div className="flex-auto min-h-0 overflow-y-auto overscroll-contain p-4 space-y-2">
             {[
               {
                 label: "Tanggal Terbaru",

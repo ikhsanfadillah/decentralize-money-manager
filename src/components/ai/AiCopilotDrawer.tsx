@@ -113,7 +113,7 @@ export const AiCopilotDrawer: React.FC<AiCopilotDrawerProps> = ({
     >
       <DrawerContent
         aria-describedby="ai-copilot-drawer-desc"
-        className="h-screen max-h-screen w-full p-0 sm:mx-auto sm:max-w-xl"
+        className="p-0 data-[vaul-drawer-direction=bottom]:h-dvh data-[vaul-drawer-direction=bottom]:max-h-dvh data-[vaul-drawer-direction=bottom]:w-full data-[vaul-drawer-direction=bottom]:rounded-none data-[vaul-drawer-direction=bottom]:sm:mx-auto sm:max-w-xl"
       >
         {/* Header */}
         <DrawerHeader className="flex flex-row items-center justify-between border-b border-border/70 px-5 py-3.5 shrink-0">
@@ -176,7 +176,7 @@ export const AiCopilotDrawer: React.FC<AiCopilotDrawerProps> = ({
 
         {/* Unconfigured API Key Banner */}
         {!activeConfig.isConfigured && (
-          <div className="mx-5 mt-3 flex items-center justify-between gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-3.5 py-2.5 text-xs">
+          <div className="mx-5 mt-3 flex shrink-0 items-center justify-between gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-3.5 py-2.5 text-xs">
             <div className="min-w-0">
               <p className="font-semibold text-amber-600 dark:text-amber-300">
                 API Key BYOK Belum Diatur
@@ -201,7 +201,7 @@ export const AiCopilotDrawer: React.FC<AiCopilotDrawerProps> = ({
         {/* Messages Stream */}
         <div
           ref={scrollContainerRef}
-          className="flex-1 overflow-y-auto overscroll-contain px-5 py-4 space-y-4"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 space-y-4"
         >
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-6 text-center space-y-4">

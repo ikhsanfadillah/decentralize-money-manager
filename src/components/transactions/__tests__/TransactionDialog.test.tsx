@@ -328,7 +328,7 @@ describe("TransactionDialog (Detail & Delete Action)", () => {
     expect(toggleBtn).toHaveAttribute("aria-label", "Kembali ke Form Manual");
 
     // Enter text into labeled textarea -> footer submit button becomes enabled
-    const textarea = screen.getByLabelText("Kalimat Transaksi");
+    const textarea = screen.getByLabelText(/Prompt|Kalimat Transaksi/i);
     fireEvent.change(textarea, {
       target: { value: "Makan siang 45rb pakai BCA" },
     });
@@ -410,7 +410,7 @@ describe("TransactionDialog (Detail & Delete Action)", () => {
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("toggle-ai-magic-mode-btn"));
-    fireEvent.change(await screen.findByLabelText("Kalimat Transaksi"), {
+    fireEvent.change(await screen.findByLabelText(/Prompt|Kalimat Transaksi/i), {
       target: { value: "Kopi 20rb" },
     });
 
